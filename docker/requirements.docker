@@ -1,4 +1,4 @@
--e git+https://github.com/IdentityPython/idpy-oidc.git@issuer_metadata#egg=idpyoidc
--e git+https://github.com/rohe/openid4v.git#egg=openid4v
--e git+https://github.com/rohe/idpy-sdjwt.git#egg=idpysdjwt
+git+https://github.com/IdentityPython/idpy-oidc.git@issuer_metadata#egg=idpyoidc
+git+https://github.com/SUNET/openid4v.git#egg=openid4v
+git+https://github.com/SUNET/idpy-sdjwt.git#egg=idpysdjwt
 flask

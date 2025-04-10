@@ -5,11 +5,10 @@ services:
     ports:
       - "5001:5001"
     environment:
-      FEDSERVICE_ENTITYID: https://example.com:5001
+      FEDSERVICE_ENTITYID: https://${DOMAIN:-localhost}:5001
       FEDSERVICE_WEBCERT_KEY: /certs/privkey.pem
-      FEDSERVICE_WEBCERT_CHAIN: /certs/chain.pem
-      FEDSERVICE_WEBCERT_CERT: /certs/cert.pem
-      FEDSERVICE_SECRET_KEY: 12345678909987654321
+      FEDSERVICE_WEBCERT_CERT: /certs/cert+chain.pem
+      FEDSERVICE_SECRET_KEY: A2345678909987654321
       FEDSERVICE_DEBUG: true
       FEDSERVICE_PORT: 5001
       FEDSERVICE_BIND: 0.0.0.0
@@ -22,11 +21,10 @@ services:
     ports:
       - "6001:6001"
     environment:
-      FEDSERVICE_ENTITYID: https://example.com:6001
+      FEDSERVICE_ENTITYID: https://${DOMAIN:-localhost}:6001
       FEDSERVICE_WEBCERT_KEY: /certs/privkey.pem
-      FEDSERVICE_WEBCERT_CHAIN: /certs/chain.pem
-      FEDSERVICE_WEBCERT_CERT: /certs/cert.pem
-      FEDSERVICE_SECRET_KEY: 12345678909987654321
+      FEDSERVICE_WEBCERT_CERT: /certs/cert+chain.pem
+      FEDSERVICE_SECRET_KEY: B2345678909987654321
       FEDSERVICE_DEBUG: true
       FEDSERVICE_PORT: 6001
       FEDSERVICE_BIND: 0.0.0.0
@@ -39,31 +37,30 @@ services:
     ports:
       - "7001:7001"
     environment:
-      FEDSERVICE_ENTITYID: https://example.com:7001
+      FEDSERVICE_ENTITYID: https://${DOMAIN:-localhost}:7001
       FEDSERVICE_WEBCERT_KEY: /certs/privkey.pem
-      FEDSERVICE_WEBCERT_CHAIN: /certs/chain.pem
-      FEDSERVICE_WEBCERT_CERT: /certs/cert.pem
-      FEDSERVICE_SECRET_KEY: 12345678909987654321
+      FEDSERVICE_WEBCERT_CERT: /certs/cert+chain.pem
+      FEDSERVICE_SECRET_KEY: C12345678909987654321
       FEDSERVICE_DEBUG: true
       FEDSERVICE_PORT: 7001
       FEDSERVICE_BIND: 0.0.0.0
     volumes:
     - ./trust_anchor:/trust_anchor:rw
     - ./certificates:/certs:ro
-#  flask_wallet:
-#    image: fedservice
-#    command: "flask_wallet"
-#    ports:
-#      - "5005:5005"
-#    environment:
-#      FEDSERVICE_ENTITYID: https://example.com:5005
-#      FEDSERVICE_WEBCERT_KEY: /cert/privkey.pem
-#      FEDSERVICE_WEBCERT_CHAIN: /cert/chain.pem
-#      FEDSERVICE_SECRET_KEY: 12345678909987654321
-#      FEDSERVICE_DEBUG: true
-#      FEDSERVICE_PORT: 5005
-#      FEDSERVICE_BIND: 0.0.0.0
-#    volumes:
-#    - ./flask_wallet:/flask_wallet:rw
-#    - ./certificates:/certs:ro
+  flask_wallet:
+    image: fedservice
+    command: "flask_wallet"
+    ports:
+      - "5005:5005"
+    environment:
+      FEDSERVICE_ENTITYID: https://${DOMAIN:-localhost}:5005
+      FEDSERVICE_WEBCERT_KEY: /certs/privkey.pem
+      FEDSERVICE_WEBCERT_CERT: /certs/cert+chain.pem
+      FEDSERVICE_SECRET_KEY: D12345678909987654321
+      FEDSERVICE_DEBUG: true
+      FEDSERVICE_PORT: 5005
+      FEDSERVICE_BIND: 0.0.0.0
+    volumes:
+    - ./flask_wallet:/flask_wallet:rw
+    - ./certificates:/certs:ro
 

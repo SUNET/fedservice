@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     libssl-dev \
     xmlsec1 \
-    libyaml-dev
+    libyaml-dev \
+    jq
 RUN pip3 install --upgrade pip setuptools
 COPY . /fedservice
 RUN pip3 install -r fedservice/docker/requirements.docker

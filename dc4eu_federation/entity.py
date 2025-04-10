@@ -44,14 +44,12 @@ def init_app(dir_name, **kwargs) -> Flask:
 if __name__ == "__main__":
     print(sys.argv)
     directory_name = sys.argv[1]
-    template_dir = os.path.join(directory_name, 'templates')
-    app = init_app(directory_name, template_folder=template_dir)
+    app = init_app(directory_name)
     if "logging" in app.cnf:
         configure_logging(config=app.cnf["logging"])
     _web_conf = app.cnf["webserver"]
     if os.environ.get('FEDSERVICE_WEBCERT_KEY'):
         _web_conf['server_key'] = os.environ.get('FEDSERVICE_WEBCERT_KEY')
-        _web_conf['server_chain'] = os.environ.get('FEDSERVICE_WEBCERT_CHAIN')
         _web_conf['server_cert'] = os.environ.get('FEDSERVICE_WEBCERT_CERT')
     context = create_context(dir_path, _web_conf)
     _cert = "{}/{}".format(dir_path, lower_or_upper(_web_conf, "server_cert"))
