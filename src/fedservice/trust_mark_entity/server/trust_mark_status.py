@@ -38,15 +38,13 @@ class TrustMarkStatus(Endpoint):
 
         if 'trust_mark' in request:
             _mark = _trust_mark_issuer.unpack_trust_mark(request['trust_mark'])
-            if _trust_mark_issuer.find(_mark['id'], _mark['sub']):
+            if _trust_mark_issuer.find(_mark['trust_mark_id'], _mark['sub']):
                 return {'response_args': {'active': True}}
         else:
             if 'sub' in request:
                 _id = ""
                 if 'trust_mark_id' in request:
                     _id = request['trust_mark_id']
-                elif 'id' in request:
-                    _id = request['id']
 
                 if _id:
                     if _trust_mark_issuer.find(_id, request['sub']):

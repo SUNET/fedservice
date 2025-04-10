@@ -88,7 +88,7 @@ class Who(Endpoint):
                     for _mark in _ec["trust_marks"]:
                         _verified_trust_mark = _federation_entity.verify_trust_mark(
                             _mark, check_with_issuer=True)
-                        if _verified_trust_mark.get("id") == tm_id:
+                        if _verified_trust_mark.get("trust_mark_id") == tm_id:
                             server_to_use.append(eid)
         else:
             server_to_use = list(_srv.keys())

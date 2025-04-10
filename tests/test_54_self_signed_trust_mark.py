@@ -59,7 +59,7 @@ class TestSelfSignedTrustMark(object):
         _payload = _jws.jwt.payload()
         assert _payload['sub'] == _payload["iss"]
         assert _payload['iss'] == self.leaf.entity_id
-        assert _payload['id'] == REFEDS_PERSONALIZED
+        assert _payload['trust_mark_id'] == REFEDS_PERSONALIZED
 
         entity_conf_endpoint = self.leaf.get_endpoint("entity_configuration")
         entity_conf = entity_conf_endpoint.process_request({})

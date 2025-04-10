@@ -42,6 +42,8 @@ class FederationContext(ImpExp):
                  authority_hints: Optional[Union[list, str, Callable]] = None,
                  keyjar: Optional[KeyJar] = None,
                  preference: Optional[dict] = None,
+                 trust_mark_issuers: Optional[dict] = None,
+                 trust_mark_owners: Optional[dict] = None,
                  **kwargs
                  ):
 
@@ -59,6 +61,9 @@ class FederationContext(ImpExp):
         self.trust_marks = trust_marks or config.get('trust_marks', [])
         self.trusted_roots = trusted_roots or config.get('trusted_roots', {})
         self.authority_hints = authority_hints or config.get('authority_hints', [])
+        self.trust_mark_issuers = trust_mark_issuers or config.get('trust_mark_issuers', {})
+        self.trust_mark_owners = trust_mark_owners or config.get('trust_mark_owners', {})
+        self.trusted_roots = trusted_roots or config.get('trusted_roots', {})
 
         self.trust_chain = {}
         # self.issuer = self.entity_id

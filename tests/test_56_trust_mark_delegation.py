@@ -32,14 +32,13 @@ FEDERATION_CONFIG = {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org",
-                "trust_mark_owners": {
-                    SIRTIFI_TRUST_MARK_ID: {'jwks': TRUST_MARK_OWNERS_KEYS.export_jwks(),
-                                            'sub': TM_OWNERS_ID}
-                },
-                "trust_mark_issuers": {
-                    SIRTIFI_TRUST_MARK_ID: TMI_ID
-                }
-
+            },
+            "trust_mark_owners": {
+                SIRTIFI_TRUST_MARK_ID: {'jwks': TRUST_MARK_OWNERS_KEYS.export_jwks(),
+                                        'sub': TM_OWNERS_ID}
+            },
+            "trust_mark_issuers": {
+                SIRTIFI_TRUST_MARK_ID: TMI_ID
             },
             "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
@@ -85,8 +84,7 @@ FEDERATION_CONFIG = {
                         "trust_mark_status": {
                             "path": "trust_mark_status",
                             "class":
-                                "fedservice.trust_mark_entity.server.trust_mark_status"
-                                ".TrustMarkStatus",
+                                "fedservice.trust_mark_entity.server.trust_mark_status.TrustMarkStatus",
                             "kwargs": {}
                         }
                     }
@@ -113,7 +111,7 @@ def tm_receiver():
 @pytest.fixture()
 def trust_mark_delegation(tm_receiver):
     _jwt = JWT(TRUST_MARK_OWNERS_KEYS, iss=TM_OWNERS_ID, sign_alg='RS256')
-    return _jwt.pack({'sub': TMI_ID, "id": SIRTIFI_TRUST_MARK_ID},
+    return _jwt.pack({'sub': TMI_ID, "trust_mark_id": SIRTIFI_TRUST_MARK_ID},
                      jws_headers={"typ":"trust-mark-delegation+jwt"})
 
 
@@ -169,7 +167,7 @@ class TestTrustMarkDelegation():
         req = service.get_request_parameters(
             request_args={
                 'sub': verified_trust_mark['sub'],
-                'trust_mark_id': verified_trust_mark['id']
+                'trust_mark_id': verified_trust_mark['trust_mark_id']
             },
             fetch_endpoint=tm_issuer_metadata["federation_entity"][
                 'federation_trust_mark_status_endpoint']

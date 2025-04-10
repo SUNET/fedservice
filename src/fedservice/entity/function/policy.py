@@ -8,17 +8,78 @@ from fedservice.entity_statement.statement import TrustChain
 
 logger = logging.getLogger(__name__)
 
+COMBINATION = {
+    "value": ["essential", "value"],
+    "add": ["default", "subset_of", "superset_of", "essential", "add"],
+    "default": ["add", "one_of", "subset_of", "superset_of", "essential", "default"],
+    "one_of": ["default", "essential", "one_of"],
+    "subset_of": ["add", "default", "superset_of", "essential", "subset_of"],
+    "superset_of": ["add", "default", "subset_of", "essential", "superset_of"],
+    # "essential": None
+}
 
-def combine_subset_of(s1, s2):
-    return list(set(s1).intersection(set(s2)))
+
+def combine_subset_of(sup, sub):
+    if isinstance(sup, list):
+        # if sup == []:  # ????
+        #     if sub != []:
+        #       raise PolicyError("Subordinates subset not subset of superior")
+        res = set(sup)
+    else:
+        res = set()
+        res.add(sup)
+
+    return list(res.intersection(set(sub)))
 
 
-def combine_superset_of(s1, s2):
-    return list(set(s1).intersection(set(s2)))
+def combine_superset_of(sup, sub):
+    if sup == []:
+        return sub
+    elif set(sub).issuperset(set(sup)):
+        return sub
+    else:
+        raise PolicyError("Subordinant's superset_of not superset of superior's superset_of")
+
+def test_superset_of(s1, s2):
+    sub = set(s2)
+    if isinstance(s1, list):
+        if s1 == []:  # ????
+            return False
+        sup = set(s1)
+    else:
+        sup = set()
+        sup.add(s1)
+
+    return sup.issuperset(sub)
+
+
+def test_is_subset_of(s1, s2):
+    if s2 == []:  # Nothing can be a subset of []
+        return False
+
+    sub = set(s2)
+    if isinstance(s1, list):
+        sup = set(s1)
+    else:
+        sup = set()
+        sup.add(s1)
+
+    return sup.issubset(sub)
 
 
 def combine_one_of(s1, s2):
-    return list(set(s1).intersection(set(s2)))
+    if isinstance(s1, list):
+        if s1 == []:  # ????
+            return list(set(s2))
+        sup = set(s1)
+    else:
+        sup = set()
+        sup.add(s1)
+
+    if sup.issubset(set(s2)):
+        return list(set(s2))
+    else:
+        return []
 
 
 def combine_add(s1, s2):
@@ -46,10 +107,10 @@ OP2FUNC = {
 def do_sub_one_super_add(superior, child, policy):
     if policy in superior and policy in child:
         comb = OP2FUNC[policy](superior[policy], child[policy])
-        if comb:
-            return comb
-        else:
-            raise PolicyError("Value sets doesn't overlap")
+        #  if comb:
+        return comb
+        # else:
+        #     raise PolicyError("Value sets doesn't overlap")
     elif policy in superior:
         return superior[policy]
     elif policy in child:
@@ -71,10 +132,10 @@ def do_value(superior, child, policy):
 def do_default(superior, child, policy):
     # A child's default can not override a superiors
     if policy in superior and policy in child:
-        if superior['default'] == child['default']:
-            return superior['default']
+        if superior[policy] == child[policy]:
+            return superior[policy]
         else:
-            raise PolicyError("Not allowed to change default")
+            raise PolicyError(f"Not allowed to change {policy}")
     elif policy in superior:
         return superior[policy]
     elif policy in child:
@@ -109,6 +170,153 @@ DO_POLICY = {
 }
 
 
+def _comb_value(superior, child):
+    child_set = set(child).intersection(POLICY_FUNCTIONS)
+
+    if "value" in child_set:
+        if child["value"] != superior["value"]:  # Not OK
+            raise PolicyError("Child can not set another value then superior")
+        else:
+            child_set.remove("value")
+            del child["value"]
+            if child_set:
+                for key in child_set:
+                    if key not in ["default", "essential"]:
+                        raise PolicyError(f"{key} in subordinate")
+            if child:
+                superior.update(child)
+            return superior
+
+    for key in child_set:
+        if key == "essential":
+            if key in superior:
+                if superior[key] == True and child[key] == False:
+                    raise PolicyError(f"{key} mismatch")
+                elif superior[key] == False and child[key] == True:
+                    superior[key] = True
+            else:
+                superior[key] = child[key]
+        elif key == "default":
+            if key in superior:
+                if superior[key] != child[key]:
+                    raise PolicyError(f"{key} mismatch")
+            else:
+                superior[key] = child[key]
+        elif key == "superset_of":
+            if key in superior:
+                _sup_set = combine_superset_of(superior[key], child[key])
+                if _sup_set:
+                    if superior["value"] not in _sup_set:
+                        raise PolicyError(f"value ({superior['value']}) not in superset_of: ({_sup_set})")
+                    superior[key] = _sup_set
+            else:
+                if test_superset_of(superior["value"], child[key]) is False:
+                    raise PolicyError(f"value ({superior['value']}) not superset_of: ({child[key]})")
+        elif key == "one_of":
+            if key in superior:
+                _sup_set = combine_one_of(superior[key], child[key])
+                if _sup_set:
+                    if superior["value"] not in _sup_set:
+                        raise PolicyError(f"value ({superior['value']}) not in one_of: ({_sup_set})")
+                    superior[key] = _sup_set
+            else:
+                if combine_one_of(superior["value"], child[key]) == []:
+                    raise PolicyError(f"value ({superior['value']}) not in one_of: ({child[key]})")
+        elif key == "subset_of":
+            if key in superior:
+                _sup_set = combine_subset_of(superior[key], child[key])
+                if _sup_set:
+                    if superior["value"] not in _sup_set:
+                        raise PolicyError(f"value ({superior['value']}) not in subset_of: ({_sup_set})")
+                    superior[key] = _sup_set
+            else:
+                if combine_subset_of(superior["value"], child[key]) == []:
+                    raise PolicyError(f"value ({superior['value']}) not in subset_of: ({child[key]})")
+        else:
+            raise PolicyError(f"{key} can not be combined with value")
+
+    # else:
+    #     raise PolicyError(
+    #         f"Not allowed combination of policies: {superior} + {child}")
+
+    superior.update(child)
+    return superior
+
+
+def can_be_combined(set1, set2):
+    for op1 in set1:
+        if op1 == "essential":
+            continue
+        for op2 in set2:
+            if op2 not in COMBINATION[op1]:
+                return False
+
+    return True
+
+
+def value_combination_check(value, policy):
+    for op in ["add", "one_of", "subset_of", "superset_of", "essential"]:
+        policy_val = policy.get(op)
+        if policy_val is not None:
+            if op == "add":
+                if isinstance(value, list):
+                    if isinstance(policy_val, list):
+                        if set(policy_val).issubset(set(value)):
+                            pass
+                        else:
+                            return False
+            elif op == "one_of":
+                if value not in policy_val:
+                    return False
+            elif op == "subset_of":
+                if isinstance(value, list):
+                    if set(value).issubset(set(policy_val)) is False:
+                        return False
+                else:
+                    sv = set()
+                    sv.add(value)
+                    if sv.issubset(set(policy_val)) is False:
+                        return False
+            elif op == "superset_of":
+                if isinstance(value, list) is False:
+                    return False
+                if set(value).issuperset(set(policy_val)) is False:
+                    return False
+            elif op == "essential":
+                if policy_val is True and value is None:
+                    return False
+
+    return True
+
+
+def combination_check(superior, child):
+    value = superior.get("value", None)
+    if value is not None:
+        if value_combination_check(value, child):
+            return True
+    else:
+        value = child.get("value", None)
+        if value:
+            if value_combination_check(value, superior):
+                return True
+    for one, two, typ in [("add", "subset_of", "sub"), ("subset_of", "superset_of", "super")]:
+        if one in superior and two in child:
+            if typ == "sub":
+                if set(superior.get(one)).issubset(child.get(two)):
+                    return True
+            else:
+                if set(superior.get(one)).issuperset(child.get(two)):
+                    return True
+        elif two in superior and one in child:
+            if typ == "sub":
+                if set(superior.get(one)).issubset(child.get(two)):
+                    return True
+            else:
+                if set(superior.get(one)).issuperset(child.get(two)):
+                    return True
+    return False
+
+
 def combine_claim_policy(superior, child):
     """
     Combine policy rules.
@@ -118,27 +326,55 @@ def combine_claim_policy(superior, child):
     :param child: Intermediates policy
     """
 
-    # weed out everything I don't recognize
+    # weed out every operator I don't recognize
     superior_set = set(superior).intersection(POLICY_FUNCTIONS)
     child_set = set(child).intersection(POLICY_FUNCTIONS)
 
+    if can_be_combined(superior_set, child_set) is False:
+        if combination_check(superior, child) is False:
+            raise PolicyError(f"Illegal operator combination")
+
     if "value" in superior_set:  # An exact value can not be restricted.
-        if child_set:
-            if "essential" in child_set:
-                if len(child_set) == 1:
-                    return {"value": superior["value"], "essential": child["essential"]}
-                else:
-                    raise PolicyError(
-                        f"value can only be combined with essential, not {child_set}")
-            elif "value" in child_set:
-                if child["value"] != superior["value"]:  # Not OK
-                    raise PolicyError("Child can not set another value then superior")
-                else:
-                    return superior
+        _sup_value = superior.get("value", None)
+        _child_value = child.get("value", None)
+        _sup_essential = superior.get("essential", None)
+        _child_essential = child.get("essential", None)
+
+        # The superior value MUST be None if _sup_value is None
+        rule = {"value": _sup_value}
+
+        if _sup_essential is True:
+            if _child_essential is True:
+                rule["essential"] = _sup_essential
+            elif _child_essential is False:
+                raise PolicyError("Subordinate can not set essential to false is superior has set it to True")
             else:
-                raise PolicyError(
-                    f"Not allowed combination of policies: {superior} + {child}")
-        return superior
+                rule["essential"] = _sup_essential
+        elif _sup_essential is False:
+            if _child_essential is not None:
+                rule["essential"] = _child_essential
+        else:
+            if _sup_value is None and _child_essential is True:
+                raise PolicyError("Illegal value/essential combination")
+            if _child_essential is not None:
+                rule["essential"] = _child_essential
+
+        if _child_value is not None:
+            # if value in both then value must be equal
+                if _child_value != _sup_value:
+                    raise PolicyError("Can not combine two unequal values")
+
+        _sup_default = superior.get("default", None)
+        _child_default = child.get("default", None)
+        if _sup_default is not None:
+            if _child_default is not None:
+                if _sup_default != _child_default:
+                    raise PolicyError("Can not combine two unequal defaults")
+            rule["default"] = _sup_default
+        elif _child_default is not None:
+            rule["default"] = _child_default
+
+        return rule
     else:
         if "essential" in superior_set and "essential" in child_set:
             # can only go from False to True
@@ -146,45 +382,34 @@ def combine_claim_policy(superior, child):
                 raise PolicyError("Essential can not go from True to False")
 
         comb_policy = superior_set.union(child_set)
+        comb_policy.discard('essential')
+
         if "one_of" in comb_policy:
             if "subset_of" in comb_policy or "superset_of" in comb_policy:
                 raise PolicyError("one_of can not be combined with subset_of/superset_of")
 
         rule = {}
+        # operators that appear in both policies
         for policy in comb_policy:
             rule[policy] = DO_POLICY[policy](superior, child, policy)
 
         if comb_policy == {'superset_of', 'subset_of'}:
-            # make sure the subset_of is a superset of superset_of.
+            # make sure the superset_of is a superset of superset_of.
             if set(rule['superset_of']).difference(set(rule['subset_of'])):
                 raise PolicyError('superset_of not a super set of subset_of')
-        elif comb_policy == {'superset_of', 'subset_of', 'default'}:
-            # make sure the subset_of is a superset of superset_of.
-            if set(rule['superset_of']).difference(set(rule['subset_of'])):
-                raise PolicyError('superset_of not a super set of subset_of')
-            if set(rule['default']).difference(set(rule['subset_of'])):
-                raise PolicyError('default not a sub set of subset_of')
-            if set(rule['superset_of']).difference(set(rule['default'])):
-                raise PolicyError('default not a super set of subset_of')
-        elif comb_policy == {'subset_of', 'default'}:
-            if set(rule['default']).difference(set(rule['subset_of'])):
-                raise PolicyError('default not a sub set of subset_of')
-        elif comb_policy == {'superset_of', 'default'}:
-            if set(rule['superset_of']).difference(set(rule['default'])):
-                raise PolicyError('default not a super set of subset_of')
-        elif comb_policy == {'one_of', 'default'}:
-            if isinstance(rule['default'], list):
-                if set(rule['default']).difference(set(rule['one_of'])):
-                    raise PolicyError('default not a super set of one_of')
-            else:
-                if {rule['default']}.difference(set(rule['one_of'])):
-                    raise PolicyError('default not a super set of one_of')
+        elif comb_policy == {'superset_of', 'value'}:
+            # make sure the subset_of is a superset of value.
+            if test_superset_of(rule['value'], rule['superset_of']) is False:
+                raise PolicyError('value is not a super set of superset_of')
+        elif comb_policy == {'subset_of', 'value'}:
+            # make sure the value is a subset of subset_of.
+            if test_is_subset_of(rule['value'], rule['subset_of']) is False:
+                raise PolicyError('value is not a sub set of subset_of')
         elif comb_policy == {'subset_of', 'add'}:
-            if not set(rule['add']).issubset(set(rule['subset_of'])):
+            if rule["add"] == []:
+                pass
+            elif not set(rule['add']).issubset(set(rule['subset_of'])):
                 raise PolicyError('"add" not a subset of "subset"')
-        elif comb_policy == {'superset_of', 'add'}:
-            if not set(rule['add']).issuperset(set(rule['superset_of'])):
-                raise PolicyError('"add" not a superset of "superset"')
     return rule
 
 
@@ -213,9 +438,11 @@ def combine(superior: dict, subordinate: dict) -> dict:
     :param subordinate: Dictionary with two keys metadata_policy and metadata
     :return:
     """
-    _metadata = combine_metadata(superior.get('metadata', {}), subordinate.get('metadata', {}))
-    if _metadata:
-        superior['metadata'] = _metadata
+
+    # Policy metadata only applies to subordinate
+    # _metadata = combine_metadata(superior.get('metadata', {}), subordinate.get('metadata', {}))
+    # if _metadata:
+    #     superior['metadata'] = _metadata
 
     # Now for metadata_policies
     _sup_policy = superior.get('metadata_policy', {})
@@ -252,6 +479,7 @@ def op_place(operator_name, policy_operators, index):
             break
     return None
 
+
 def apply_metadata_policy(metadata, metadata_policy, policy_operators):
     """
     Apply a metadata policy to a metadata statement.
@@ -262,34 +490,15 @@ def apply_metadata_policy(metadata, metadata_policy, policy_operators):
 
     # Metadata claims that there exists a policy for
     for claim in policy_set:
-        i = 0
-        while True:
-            _policy_op = policy_operators[i]
-            if _policy_op.name in metadata_policy.get(claim, {}):
-                _next = _policy_op(claim, metadata, metadata_policy)
-                if _next:
-                    i = op_place(_next, policy_operators, i)
-                    continue
-            i += 1
-            if i >= len(policy_operators):
-                break
-
-
-    # In policy but not in metadata
-    # for claim in policy_set.difference(metadata_set):
-    #     if "value" in metadata_policy[claim]:
-    #         metadata[claim] = metadata_policy[claim]['value']
-    #     elif "add" in metadata_policy[claim]:
-    #         metadata[claim] = metadata_policy[claim]['add']
-    #     elif "default" in metadata_policy[claim]:
-    #         metadata[claim] = metadata_policy[claim]['default']
-    #
-    #     if claim not in metadata:
-    #         if "essential" in metadata_policy[claim] and metadata_policy[claim]["essential"]:
-    #             raise PolicyError(f"Essential claim '{claim}' missing")
+        #
+        # value_set = False
+        for operator in policy_operators:
+            if operator.name in metadata_policy.get(claim, {}):
+                # if operator.name == "value":
+                #     value_set = True
+                operator(claim, metadata, metadata_policy)
 
     return metadata
-
 
 
 class TrustChainPolicy(Function):
@@ -331,7 +540,7 @@ class TrustChainPolicy(Function):
 
         return _rule
 
-    def apply_policy(self, metadata: dict, policy: dict) -> dict:
+    def apply_policy(self, metadata: dict, policy: dict, protocol: Optional[str] = "oidc") -> dict:
         """
         Apply a metadata policy on metadata
 
@@ -342,8 +551,8 @@ class TrustChainPolicy(Function):
 
         _metadata = policy.get("metadata", None)
         if _metadata:
-            _metadata = _metadata.copy()
-            _metadata.update(metadata)
+            # what's in metadata policy metadata overrides what's in leaf's metadata
+            metadata.update(_metadata)
             metadata = _metadata
 
         _metadata_policy = policy.get('metadata_policy', None)
@@ -353,7 +562,11 @@ class TrustChainPolicy(Function):
         # All that are in metadata but not in policy should just remain
         # metadata.update(policy.get('metadata', {}))
 
-        return metadata
+        # This is a protocol specific adjustment
+        if protocol in ["oidc", "oauth2"]:
+            return {k: v for k, v in metadata.items() if v != []}
+        else:
+            return metadata
 
     def _policy(self, trust_chain: TrustChain, entity_type: str):
         combined_policy = self.gather_policies(trust_chain.verified_chain[:-1], entity_type)

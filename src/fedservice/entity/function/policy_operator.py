@@ -32,8 +32,12 @@ class Value(PolicyOperator):
     default_next = "essential"
 
     def __call__(self, claim, metadata, metadata_policy):
-        # value overrides everything
-        metadata[claim] = metadata_policy[claim][self.name]
+        if metadata_policy[claim][self.name] == None:
+            if claim in metadata:
+                del metadata[claim]
+        else:
+            # value overrides everything
+            metadata[claim] = metadata_policy[claim][self.name]
         return self.next
 
 
@@ -60,7 +64,14 @@ class Add(PolicyOperator):
 
     def __call__(self, claim, metadata, metadata_policy):
         if claim in metadata:
-            metadata[claim] = list(union(metadata[claim], metadata_policy[claim][self.name]))
+            for val in metadata_policy[claim][self.name]:
+                # the metadata claim value must be a list otherwise append doesn't work
+                if isinstance(metadata, list):
+                    pass
+                else:
+                    metadata[claim] = [metadata[claim]]
+                if val not in metadata[claim]:
+                    metadata[claim].append(val)
         else:
             metadata[claim] = metadata_policy[claim][self.name]
 
@@ -87,10 +98,7 @@ class SubsetOf(PolicyOperator):
                 else:
                     raise PolicyError(f"{metadata[claim]} not in allowed subset: {metadata_policy[claim]}")
 
-            if _val:
-                metadata[claim] = list(_val)
-            else:
-                raise PolicyError(f"{metadata[claim]} not subset of {metadata_policy[claim][self.name]}")
+            metadata[claim] = list(_val)
 
 
 class SupersetOf(PolicyOperator):
@@ -108,7 +116,7 @@ class Essential(PolicyOperator):
     default_next = ""
 
     def __call__(self, claim, metadata, metadata_policy):
-        if claim not in metadata:
+        if metadata.get(claim, None) is None:
             if metadata_policy[claim][self.name] == True:
                 raise PolicyError(f"Essential value missing for {claim}")
 

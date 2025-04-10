@@ -127,6 +127,7 @@ class TestClaimsFRP():
                                                           'homepage_uri', 'organization_name'}
         _keys = [k for k, v in _pref["openid_relying_party"].items() if v != []]
         assert set(_keys) == {'application_type',
+                              'client_registration_types',
                               'default_max_age',
                               'grant_types',
                               'id_token_signed_response_alg',

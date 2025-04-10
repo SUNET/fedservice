@@ -133,7 +133,7 @@ class TestComboCollect(object):
 
         _trust_mark = create_trust_mark(entity_id=self.tmi.entity_id,
                                         keyjar=self.tmi.get_attribute('keyjar'),
-                                        id=rndstr(),
+                                        trust_mark_id=rndstr(),
                                         sub=self.rp.entity_id,
                                         lifetime=3600,
                                         reference='https://refeds.org/sirtfi')

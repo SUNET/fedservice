@@ -73,7 +73,7 @@ class TrustMarkEntity(Unit):
         :return: Trust Mark
         """
         _now = utc_time_sans_frac()
-        _add = {'iat': _now, 'id': id, 'sub': sub}
+        _add = {'iat': _now, 'trust_mark_id': id, 'sub': sub}
         lifetime = self.tm_lifetime.get(id)
         if lifetime:
             _add['exp'] = _now + lifetime
@@ -177,7 +177,7 @@ class SelfSignedTrustMarkEntity(Unit):
         """
         _now = utc_time_sans_frac()
         sub = self.upstream_get('attribute', 'entity_id')
-        _add = {'iat': _now, 'id': id, 'sub': sub}
+        _add = {'iat': _now, 'trust_mark_id': id, 'sub': sub}
         lifetime = self.tm_lifetime
         if lifetime:
             _add['exp'] = _now + lifetime

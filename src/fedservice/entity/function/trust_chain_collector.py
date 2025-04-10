@@ -181,6 +181,13 @@ class TrustChainCollector(Function):
 
         return _ec['metadata']
 
+    def get_verified_self_signed_entity_configuration(self, entity_id: str) -> str:
+        signed_entity_config = self.get_entity_configuration(entity_id)
+        if signed_entity_config is None:
+            return ''
+
+        return verify_self_signed_signature(signed_entity_config)
+
     def get_federation_fetch_endpoint(self, intermediate: str) -> str:
         logger.debug(f'--get_federation_fetch_endpoint({intermediate})')
         # In cache ??

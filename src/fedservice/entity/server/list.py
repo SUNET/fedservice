@@ -42,7 +42,7 @@ class List(Endpoint):
                 trust_marks = conf.get('trust_marks')
                 matched = False
                 for trust_mark in trust_marks:
-                    if trust_mark['id'] == trust_mark_id:
+                    if trust_mark['trust_mark_id'] == trust_mark_id:
                         matched = True
 
             if matched:

@@ -152,6 +152,7 @@ class TestRpService(object):
                                        "iat", "authority_hints"}
         assert set(payload["metadata"]["openid_relying_party"].keys()) == {
             'application_type',
+            'client_registration_types',
             'default_max_age',
             'grant_types',
             'id_token_signed_response_alg',
@@ -224,6 +225,7 @@ class TestRpService(object):
 
         assert set(claims.keys()) == {'client_id',
                                       'client_id_issued_at',
+                                      'client_registration_types',
                                       'client_secret_expires_at',
                                       'client_secret',
                                       'default_max_age',

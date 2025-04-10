@@ -16,7 +16,10 @@ def main(entity_id: str,
          subordinates: Optional[list] = None,
          endpoints: Optional[list] = None,
          key_config: Optional[dict] = None,
-         services: Optional[list] = None):
+         services: Optional[list] = None,
+         trust_mark_issuers: Optional[dict] = None,
+         trust_mark_owners: Optional[dict] = None,
+         ):
     if not endpoints:
         endpoints = TA_ENDPOINTS
     if not key_config:
@@ -32,7 +35,9 @@ def main(entity_id: str,
         subordinate=subordinates,
         authority_hints=authority_hints,
         trust_anchors=trust_anchors,
-        services=services
+        services=services,
+        trust_mark_owners=trust_mark_owners,
+        trust_mark_issuers=trust_mark_issuers
     )
 
     return ta

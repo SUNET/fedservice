@@ -40,6 +40,8 @@ class FederationServiceContext(FederationContext):
                  keyjar: Optional[KeyJar] = None,
                  priority: Optional[List[str]] = None,
                  trust_marks: Optional[List[str]] = None,
+                 trust_mark_issuers: Optional[dict] = None,
+                 trust_mark_owners: Optional[dict] = None,
                  trusted_roots: Optional[dict] = None,
                  metadata: Optional[dict] = None,
                  ):
@@ -54,6 +56,8 @@ class FederationServiceContext(FederationContext):
                                    keyjar=keyjar,
                                    metadata=metadata,
                                    trust_marks=trust_marks,
+                                   trust_mark_issuers=trust_mark_issuers,
+                                   trust_mark_owners=trust_mark_owners,
                                    tr_priority=priority
                                    )
 
@@ -456,7 +460,7 @@ class FederationClient(FederationClientEntity):
         elif 400 <= reqresp.status_code < 500:
             logger.error("Error response ({}): {}".format(reqresp.status_code, reqresp.text))
             # expecting an error response
-            ctype =  get_content_type(reqresp)
+            ctype = get_content_type(reqresp)
             _deser_method = get_deserialization_method(ctype)
             if not _deser_method:
                 _deser_method = "json"

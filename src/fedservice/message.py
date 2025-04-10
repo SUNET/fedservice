@@ -2,6 +2,7 @@
 import logging
 
 from cryptojwt.exception import Expired
+from cryptojwt.jws.jws import factory
 from cryptojwt.jwt import utc_time_sans_frac
 from idpyoidc import message
 from idpyoidc.exception import MissingRequiredAttribute
@@ -93,29 +94,31 @@ def naming_constraints_deser(val, sformat="json"):
 
 SINGLE_OPTIONAL_NAMING_CONSTRAINTS = (Message, False, msg_ser, naming_constraints_deser, False)
 
-
-class FederationEntity(Message):
-    """Class representing Federation Entity metadata."""
+class InformationalMetadataExtensions(Message):
     c_param = {
-        "federation_fetch_endpoint": SINGLE_REQUIRED_STRING,
-        "federation_list_endpoint": SINGLE_OPTIONAL_STRING,
-        # "federation_registration_endpoint": SINGLE_OPTIONAL_STRING,  part of OP metadata
-        "federation_resolve_endpoint": SINGLE_OPTIONAL_STRING,
-        "federation_trust_mark_status_endpoint": SINGLE_OPTIONAL_STRING,
-        "federation_trust_mark_list_endpoint":SINGLE_OPTIONAL_STRING,
-        "federation_trust_mark_endpoint": SINGLE_OPTIONAL_STRING,
-        "federation_historical_keys_endpoint":SINGLE_OPTIONAL_STRING,
-        "endpoint_auth_signing_alg_values_supported": SINGLE_OPTIONAL_JSON,
-        "name": SINGLE_OPTIONAL_STRING,
+        "organization_name": SINGLE_OPTIONAL_STRING,
         "contacts": OPTIONAL_LIST_OF_STRINGS,
+        "logo_url": SINGLE_OPTIONAL_STRING,
         "policy_url": SINGLE_OPTIONAL_STRING,
         "homepage_uri": SINGLE_OPTIONAL_STRING,
-        # "federation_trust_marks": SINGLE_OPTIONAL_JSON,
-        "organization_name": SINGLE_OPTIONAL_STRING,
-        # If it's a Trust Anchor
-        "trust_mark_owners": SINGLE_OPTIONAL_DICT,
-        "trust_mark_issuers": SINGLE_OPTIONAL_DICT,
     }
+
+class FederationEntity(InformationalMetadataExtensions):
+    """Class representing Federation Entity metadata."""
+    c_param = InformationalMetadataExtensions.c_param.copy()
+    c_param.update({
+        "federation_fetch_endpoint": SINGLE_OPTIONAL_STRING,
+        "federation_list_endpoint": SINGLE_OPTIONAL_STRING,
+        "federation_resolve_endpoint": SINGLE_OPTIONAL_STRING,
+        "federation_trust_mark_status_endpoint": SINGLE_OPTIONAL_STRING,
+        "federation_trust_mark_list_endpoint": SINGLE_OPTIONAL_STRING,
+        "federation_trust_mark_endpoint": SINGLE_OPTIONAL_STRING,
+        "federation_historical_keys_endpoint": SINGLE_OPTIONAL_STRING,
+        "endpoint_auth_signing_alg_values_supported": SINGLE_OPTIONAL_JSON,
+        # If it's a Trust Anchor
+        # "trust_mark_owners": SINGLE_OPTIONAL_DICT,
+        # "trust_mark_issuers": SINGLE_OPTIONAL_DICT,
+    })
 
 
 def federation_entity_deser(val, sformat="json"):
@@ -254,6 +257,7 @@ class OPMetadata(ProviderConfigurationResponse):
         "jwks_uri": SINGLE_OPTIONAL_STRING,
         "signed_jwks_uri": SINGLE_OPTIONAL_STRING
     })
+
 
 class FedASConfigurationResponse(ASConfigurationResponse):
     c_param = ASConfigurationResponse.c_param.copy()
@@ -398,6 +402,52 @@ SINGLE_REQUIRED_CONSTRAINS = (Message, True, msg_ser, constrains_deser, False)
 SINGLE_OPTIONAL_CONSTRAINS = (Message, False, msg_ser, constrains_deser, False)
 
 
+class TrustMarks(Message):
+    c_param = {}
+
+    def verify(self, **kwargs):
+        for _id, spec in self.items():
+            _trust_mark = spec.get("trust_mark")
+            if _trust_mark:
+                _trust_mark_id = spec.get("trust_mark_id")
+                if _trust_mark_id:
+                    # Have to peek into the trust mark
+                    _jws = factory(_trust_mark)
+                    if not _jws:
+                        raise ValueError(f"Not a proper signed JWT: {_trust_mark}")
+                    _tm_id = _jws.jwt.payload().get("trust_mark_id")
+                    if _tm_id != _trust_mark_id:
+                        raise ValueError("The Trust Mark identifier MUST have the same value as the trust_mark_id "
+                                         "claim")
+                else:
+                    raise MissingRequiredAttribute("trust_mark_id")
+            else:
+                raise MissingRequiredAttribute("trust_mark")
+
+
+class TrustMarkIssuers(Message):
+    c_param = {}
+
+    def verify(self, **kwargs):
+        for owner_id, spec in self.items():
+            if not isinstance(spec, list):
+                raise ValueError("issuers MUST be a list")
+
+
+class TrustMarkOwners(Message):
+
+    def verify(self, **kwargs):
+        # Dictionary of Trust Mark Owner information
+        for owner_id, spec in self.items():
+            if "sub" in spec and "jwks" in spec:  # If there are other claims ignore them
+                continue
+            else:
+                if "sub" not in spec:
+                    raise MissingRequiredAttribute("sub")
+                elif "jwks" not in spec:
+                    raise MissingRequiredAttribute("jwks")
+
+
 class EntityStatement(JsonWebToken):
     """The Entity Statement"""
     c_param = JsonWebToken.c_param.copy()
@@ -412,10 +462,15 @@ class EntityStatement(JsonWebToken):
         'authority_hints': OPTIONAL_LIST_OF_STRINGS,
         'metadata': SINGLE_OPTIONAL_METADATA,
         'metadata_policy': SINGLE_OPTIONAL_METADATA_POLICY,
+        'metadata_policy_crit': OPTIONAL_LIST_OF_STRINGS,
         'constraints': SINGLE_OPTIONAL_CONSTRAINS,
         "crit": OPTIONAL_LIST_OF_STRINGS,
         "policy_language_crit": OPTIONAL_LIST_OF_STRINGS,
-        'trust_marks': OPTIONAL_LIST_OF_STRINGS,
+        "source_endpoint": SINGLE_OPTIONAL_STRING,
+        'trust_marks': SINGLE_OPTIONAL_JSON,
+        'trust_mark_owners': SINGLE_OPTIONAL_JSON,
+        'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
+        #
         'trust_anchor_id': SINGLE_OPTIONAL_STRING
     })
 
@@ -444,6 +499,16 @@ class EntityStatement(JsonWebToken):
             if _crit:
                 _metadata_policy.verify(policy_language_crit=_crit, **kwargs)
 
+        _trust_mark_issuers = self.get("trust_mark_issuers")
+        if _trust_mark_issuers:
+            _tmi = TrustMarkIssuers(**_trust_mark_issuers)
+            _tmi.verify()
+
+        _trust_mark_owners = self.get("trust_mark_owners")
+        if _trust_mark_owners:
+            _tmi = TrustMarkOwners(**_trust_mark_owners)
+            _tmi.verify()
+
 
 class TrustMark(JsonWebToken):
     c_param = JsonWebToken.c_param.copy()
@@ -451,7 +516,7 @@ class TrustMark(JsonWebToken):
         "sub": SINGLE_REQUIRED_STRING,
         'iss': SINGLE_REQUIRED_STRING,
         'iat': SINGLE_REQUIRED_INT,
-        "id": SINGLE_REQUIRED_STRING,
+        "trust_mark_id": SINGLE_REQUIRED_STRING,
         "logo_uri": SINGLE_OPTIONAL_STRING,
         "exp": SINGLE_OPTIONAL_INT,
         "ref": SINGLE_OPTIONAL_STRING,
@@ -549,7 +614,16 @@ class RegistrationRequest(message.oidc.RegistrationRequest):
         'client_registration_types': REQUIRED_LIST_OF_STRINGS,
         'organization_name': SINGLE_OPTIONAL_STRING,
         'signed_jwks_uri': SINGLE_OPTIONAL_STRING,
-        'jwks': SINGLE_OPTIONAL_JSON
+        'jwks': SINGLE_OPTIONAL_JSON,
+        "claims_parameter_supported": OPTIONAL_LIST_OF_STRINGS,
+        "response_types_supported": OPTIONAL_LIST_OF_STRINGS,
+        "response_modes_supported": OPTIONAL_LIST_OF_STRINGS,
+        "request_object_signing_alg_values_supported": OPTIONAL_LIST_OF_STRINGS,
+        "request_object_encryption_alg_values_supported": OPTIONAL_LIST_OF_STRINGS,
+        "request_object_encryption_enc_values_supported": OPTIONAL_LIST_OF_STRINGS,
+        "code_challenge_methods_supported": OPTIONAL_LIST_OF_STRINGS,
+        "scopes_supported": OPTIONAL_LIST_OF_STRINGS,
+        "claims_suppported": OPTIONAL_LIST_OF_STRINGS
     })
 
 
@@ -579,11 +653,13 @@ class HistoricalKeysResponse(Message):
         'jwks': SINGLE_REQUIRED_DICT
     }
 
+
 class TrustMarkRequest(Message):
     c_param = {
         "trust_mark_id": SINGLE_REQUIRED_STRING,
         "sub": SINGLE_REQUIRED_STRING
     }
+
 
 class WhoRequest(Message):
     c_param = {
@@ -591,6 +667,7 @@ class WhoRequest(Message):
         "credential_type": SINGLE_OPTIONAL_STRING,
         "trust_mark_id": SINGLE_OPTIONAL_STRING
     }
+
 
 class WhoResponse(Message):
     c_param = {

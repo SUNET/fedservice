@@ -73,9 +73,15 @@ class FederationEntity(Unit):
                 _kwargs.update(_args)
                 setattr(self, key, instantiate(val["class"], **_kwargs))
 
+        _args = {}
+        for claim in ["trust_mark_issuers", "trust_mark_owners"]:
+            _val = kwargs.get(claim)
+            if _val:
+                _args[claim] = _val
+
         self.context = FederationContext(entity_id=entity_id, upstream_get=self.unit_get,
                                          authority_hints=authority_hints, keyjar=self.keyjar,
-                                         preference=preference)
+                                         preference=preference, **_args)
 
         if client_authn_methods:
             self.context.client_authn_methods = client_auth_setup(client_authn_methods)
@@ -375,8 +381,7 @@ class FederationEntity(Unit):
             resp = self.do_request("trust_mark_status",
                                    request_args={
                                        'sub': verified_trust_mark['sub'],
-                                       'id': verified_trust_mark['id'],
-                                       'trust_mark_id': verified_trust_mark['id']
+                                       'trust_mark_id': verified_trust_mark['trust_mark_id']
                                    },
                                    fetch_endpoint=_tmi_trust_chain.metadata["federation_entity"][
                                        "federation_trust_mark_status_endpoint"]

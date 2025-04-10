@@ -89,15 +89,15 @@ class TrustMarkVerifier(Function):
         _federation_entity = get_federation_entity(self)
         _collector = _federation_entity.function.trust_chain_collector
         # Deal with the delegation
-        ta_fe_metadata = _collector.get_metadata(trust_anchor_id)['federation_entity']
+        _entity_configuration = _collector.get_verified_self_signed_entity_configuration(trust_anchor_id)
 
-        if trust_mark['id'] not in ta_fe_metadata['trust_mark_issuers']:
+        if trust_mark['trust_mark_id'] not in _entity_configuration['trust_mark_issuers']:
             return None
-        if trust_mark['id'] not in ta_fe_metadata['trust_mark_owners']:
+        if trust_mark['trust_mark_id'] not in _entity_configuration['trust_mark_owners']:
             return None
 
         _delegation = factory(trust_mark['delegation'])
-        tm_owner_info = ta_fe_metadata['trust_mark_owners'][trust_mark['id']]
+        tm_owner_info = _entity_configuration['trust_mark_owners'][trust_mark['trust_mark_id']]
         _key_jar = KeyJar()
         _key_jar = import_jwks(_key_jar, tm_owner_info['jwks'], tm_owner_info['sub'])
         keys = _key_jar.get_jwt_verify_keys(_delegation.jwt)

@@ -46,6 +46,15 @@ class EntityConfiguration(Endpoint):
         else:
             args = {}
 
+        _trust_mark_issuers = _fed_entity.context.trust_mark_issuers
+        if _trust_mark_issuers:
+            args["trust_mark_issuers"] = _trust_mark_issuers
+
+        _trust_mark_owners = _fed_entity.context.trust_mark_owners
+        if _trust_mark_owners:
+            args["trust_mark_owners"] = _trust_mark_owners
+
+
         _ec = create_entity_statement(iss=_entity_id,
                                       sub=_entity_id,
                                       key_jar=_fed_entity.get_attribute('keyjar'),

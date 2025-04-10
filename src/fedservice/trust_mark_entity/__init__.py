@@ -16,7 +16,7 @@ class FileDB(object):
                 fp.close()
 
     def add(self, tm_info: dict):
-        trust_mark_id = tm_info['id']
+        trust_mark_id = tm_info['trust_mark_id']
         # adds a line with info about a trust mark info to the end of a file
         with open(self.config[trust_mark_id], "a") as fp:
             fp.write(json.dumps(tm_info) + '\n')
@@ -97,10 +97,10 @@ class SimpleDB(object):
         self._db = {}
 
     def add(self, tm_info: dict):
-        if tm_info['id'] in self._db:
-            self._db[tm_info['id']].append({tm_info['sub']: tm_info})
+        if tm_info['trust_mark_id'] in self._db:
+            self._db[tm_info['trust_mark_id']].append({tm_info['sub']: tm_info})
         else:
-            self._db[tm_info['id']] = {tm_info["sub"]: tm_info}
+            self._db[tm_info['trust_mark_id']] = {tm_info["sub"]: tm_info}
 
     def list(self, trust_mark_id, sub: Optional[str] = ""):
         if sub:

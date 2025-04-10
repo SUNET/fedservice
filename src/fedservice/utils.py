@@ -118,7 +118,9 @@ def make_federation_entity(entity_id: str,
                            persistence: Optional[dict] = None,
                            trust_mark_entity: Optional[dict] = None,
                            client_authn_methods: Optional[list] = None,
-                           self_signed_trust_mark_entity: Optional[dict] = None
+                           self_signed_trust_mark_entity: Optional[dict] = None,
+                           trust_mark_issuers: Optional[dict] = None,
+                           trust_mark_owners: Optional[dict] = None
                            ):
     _config = build_entity_config(
         entity_id=entity_id,
@@ -170,6 +172,12 @@ def make_federation_entity(entity_id: str,
         _tme = instantiate(self_signed_trust_mark_entity['class'], upstream_get=fe.unit_get,
                            **_kwargs)
         fe.server.self_signed_trust_mark_entity = _tme
+
+    if trust_mark_issuers:
+        fe.context.trust_mark_issuers = trust_mark_issuers
+
+    if trust_mark_owners:
+        fe.context.trust_mark_owners = trust_mark_owners
 
     return fe
 

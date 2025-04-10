@@ -1,0 +1,1 @@
+-e git+https://github.com/IdentityPython/idpy-oidc.git@issuer_metadata#egg=idpyoidc

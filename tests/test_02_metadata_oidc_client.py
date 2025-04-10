@@ -35,6 +35,7 @@ class TestFedOIDCClient:
                                               'callback_uris',
                                               'client_id',
                                               'client_name',
+                                              'client_registration_types',
                                               'client_secret',
                                               'client_uri',
                                               'code_challenge_methods_supported',
@@ -117,6 +118,7 @@ class TestFedOIDCClient:
               'callback_uris',
               'client_id',
               'client_name',
+              'client_registration_types',
               'client_secret',
               'client_uri',
               'default_max_age',
@@ -139,6 +141,7 @@ class TestFedOIDCClient:
 
         # These are the claims that has default values. A default value may be an empty list.
         assert set(claims.prefer.keys()) == {'application_type',
+                                             'client_registration_types',
                                              'default_max_age',
                                              'encrypt_request_object_supported',
                                              'id_token_encryption_alg_values_supported',
@@ -233,6 +236,7 @@ class TestFedOIDCClient:
 
         # These are the claims that the client has default values for after comparing with what the AS supports
         assert set(claims.prefer.keys()) == {'application_type',
+                                             'client_registration_types',
                                              'default_max_age',
                                              'id_token_encryption_alg_values_supported',
                                              'id_token_encryption_enc_values_supported',
