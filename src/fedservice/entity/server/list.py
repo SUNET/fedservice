@@ -63,7 +63,7 @@ class List(Endpoint):
                         matched_entity_ids.add(entity_id)
                         continue
                 if "entity_type" in request:
-                    if request["entity_type"] in item["entity_type"]:
+                    if request["entity_type"] in item["entity_types"]:
                         matched_entity_ids.add(entity_id)
 
             # I don't expect to know about trust marks from the registration
