@@ -250,7 +250,7 @@ class TestExplicit(object):
         _payload = _jws.jwt.payload()
         assert _payload['iss'] == self.oauth_serv.entity_id
         assert _payload['sub'] == self.rp.entity_id
-        assert _payload['trust_anchor_id'] == self.ta.entity_id
+        assert _payload['trust_anchor'] == self.ta.entity_id
         assert _payload['aud'] == self.rp.entity_id
 
         ###########################################################################
