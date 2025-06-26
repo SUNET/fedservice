@@ -82,7 +82,7 @@ class Registration(registration.Registration):
 
         return resp
 
-    def _get_trust_anchor_id(self, entity_statement):
+    def _get_trust_anchor(self, entity_statement):
         return entity_statement.get('trust_anchor')
 
     def parse_federation_registration_response(self, resp, **kwargs):
@@ -102,7 +102,7 @@ class Registration(registration.Registration):
 
         # Do I trust the TA the OP chose ?
         _trust_anchor = payload['trust_anchor']
-        logger.debug(f"trust_anchor_id: {_trust_anchor}")
+        logger.debug(f"trust_anchor: {_trust_anchor}")
         if _trust_anchor not in _federation_entity.function.trust_chain_collector.trust_anchors:
             raise ValueError("Trust anchor I don't trust")
 
