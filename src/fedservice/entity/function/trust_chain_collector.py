@@ -48,7 +48,7 @@ def signing_algorithm(signed_jwt):
     return _jws.jwt.headers.get("alg", DEFAULT_SIGNING_ALGORITHM)
 
 
-def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW):
+def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW, **kwargs):
     """
 
     :param signed_jwt: The Entity Statement as a signed JWT
@@ -97,12 +97,16 @@ def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW):
     _jwt = JWT(key_jar=keyjar, sign_alg=alg)
     _val = _jwt.unpack(signed_jwt)
 
+    args = {}
     if iss == sub: # Entity Configuration
         _es = EntityConfiguration(**_val)
+        _tas = args.get("trust_anchors")
+        if _tas:
+            kwargs["trust_anchors"] = _tas
     else:
         _es = SubordinateStatement(**_val)
 
-    _es.verify(skew=skew)
+    _es.verify(skew=skew, **args)
 
     return _val
 
@@ -461,7 +465,8 @@ class TrustChainCollector(Function):
             if not signed_entity_config:
                 logger.warning(f"Could not find any entity configuration for {entity_id}")
                 return None
-            entity_config = verify_entity_statement(signed_entity_config, entity_id)
+            _trust_anchors = self.upstream_get("attribute", "trust_anchors")
+            entity_config = verify_entity_statement(signed_entity_config, entity_id, trust_anchors=_trust_anchors)
             # entity_config = verify_self_signed_signature(signed_entity_config)
             logger.debug(f'Verified self signed statement: {entity_config}')
             entity_config['_jws'] = signed_entity_config

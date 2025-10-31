@@ -578,6 +578,12 @@ class EntityConfiguration(EntityStatement):
             if self.get(claim):
                 raise ValueError("claim present that should only be in a Subordinate Statement")
 
+        _trust_anchor = self.get("trust_anchor")
+        if _trust_anchor:
+            _trust_anchors = kwargs.get("trust_anchors")
+            if _trust_anchors:
+                if _trust_anchor not in _trust_anchors:
+                    raise ValueError(f"The Server used a trust anchor I do not trust: {_trust_anchor}")
 
 class SubordinateStatement(EntityStatement):
     c_param = EntityStatement.c_param.copy()
