@@ -76,7 +76,7 @@ class Registration(registration.Registration):
             entity_statement = _context.create_entity_statement(
                 _federation_entity.upstream_get('attribute', 'entity_id'),
                 payload['iss'],
-                trust_anchor_id=trust_chain.anchor,
+                trust_anchor=trust_chain.anchor,
                 metadata={opponent_entity_type: _policy_metadata},
                 aud=payload['iss'],
                 authority_hints=_federation_entity.get_authority_hints()
