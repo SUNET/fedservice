@@ -11,7 +11,13 @@ from typing import Union
 from cryptojwt import JWT
 from cryptojwt import KeyJar
 from cryptojwt.jws.jws import factory
+from cryptojwt.jws.utils import alg2keytype
 from cryptojwt.jwt import utc_time_sans_frac
+
+from fedservice.defaults import DEFAULT_SKEW
+from fedservice.message import SubordinateStatement
+
+from fedservice.message import EntityConfiguration
 from idpyoidc.exception import MissingPage
 from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
@@ -33,6 +39,7 @@ def unverified_entity_statement(signed_jwt):
     _jws = factory(signed_jwt)
     if not _jws:
         raise ValueError(f"Not a proper signed JWT: {signed_jwt}")
+
     return _jws.jwt.payload()
 
 
@@ -40,6 +47,64 @@ def signing_algorithm(signed_jwt):
     _jws = factory(signed_jwt)
     return _jws.jwt.headers.get("alg", DEFAULT_SIGNING_ALGORITHM)
 
+
+def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW):
+    """
+
+    :param signed_jwt: The Entity Statement as a signed JWT
+    :param sub: The subject the Entity Statement should refer to
+    :param acceptable_sign_algs: Acceptable signing algorithms
+    :return:
+    """
+    _jws = factory(signed_jwt)
+    if not _jws:
+        raise ValueError(f"Not a proper signed JWT: {signed_jwt}")
+
+    typ = _jws.jwt.headers.get('typ')
+    if typ:
+        if typ != "entity-statement+jwt":
+            raise ValueError(f"Wrong Entity Statement type {typ}")
+    else:
+        raise ValueError("Entity Statement type not properly set")
+
+    payload = _jws.jwt.payload()
+
+    if payload["sub"] != sub:
+        raise ValueError("Wrong subject in the Entity Statement")
+
+    keyjar = KeyJar()
+    keyjar = import_jwks(keyjar, payload['jwks'], payload['iss'])
+
+    alg = _jws.jwt.headers.get('alg')
+    if alg:
+        if not keyjar.get_signing_key(alg2keytype(alg), sub):
+            return ValueError("Signing algorithm does not match any key in the JWKS")
+    else:
+        raise ValueError("Entity Statement: no signing algorithm set")
+
+    kid = _jws.jwt.headers.get('kid')
+    if kid:
+        if not keyjar.get_signing_key(alg2keytype(alg), sub, kid):
+            return ValueError("'kid' does not match any key in the JWKS")
+    else:
+        raise ValueError("Entity Statement: no 'kid' set")
+
+    # There MUST be an iss
+    iss = payload.get('iss')
+    if not iss:
+        raise ValueError("Missing 'iss'")
+
+    _jwt = JWT(key_jar=keyjar, sign_alg=alg)
+    _val = _jwt.unpack(signed_jwt)
+
+    if iss == sub: # Entity Configuration
+        _es = EntityConfiguration(**_val)
+    else:
+        _es = SubordinateStatement(**_val)
+
+    _es.verify(skew=skew)
+
+    return _val
 
 def verify_self_signed_signature(statement):
     """
@@ -396,7 +461,8 @@ class TrustChainCollector(Function):
             if not signed_entity_config:
                 logger.warning(f"Could not find any entity configuration for {entity_id}")
                 return None
-            entity_config = verify_self_signed_signature(signed_entity_config)
+            entity_config = verify_entity_statement(signed_entity_config, entity_id)
+            # entity_config = verify_self_signed_signature(signed_entity_config)
             logger.debug(f'Verified self signed statement: {entity_config}')
             entity_config['_jws'] = signed_entity_config
             # update cache

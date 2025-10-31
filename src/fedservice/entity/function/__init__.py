@@ -3,7 +3,6 @@ from typing import Callable
 from typing import List
 from typing import Optional
 
-from cryptojwt import as_unicode
 from cryptojwt.jws.jws import factory
 from cryptojwt.jwt import JWT
 from cryptojwt.key_jar import KeyJar
@@ -143,6 +142,7 @@ def apply_policies(unit, trust_chains):
         _policy_applier(trust_chain)
         res.append(trust_chain)
     return res
+
 
 class Function(ImpExp):
 

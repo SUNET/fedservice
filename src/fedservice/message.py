@@ -3,12 +3,15 @@ import contextlib
 import json
 import logging
 from urllib.parse import parse_qs
+from urllib.parse import urlparse
 
+from cryptojwt import KeyJar
 from cryptojwt.exception import Expired
 from cryptojwt.jws.jws import factory
 from cryptojwt.jwt import utc_time_sans_frac
 from idpyoidc import message
 from idpyoidc.exception import MissingRequiredAttribute
+from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
 from idpyoidc.message import msg_ser
 from idpyoidc.message import oauth2 as OAuth2Message
@@ -34,7 +37,6 @@ from idpyoidc.message.oidc import RegistrationResponse
 from idpyoidc.message.oidc import SINGLE_OPTIONAL_BOOLEAN
 from idpyoidc.message.oidc import SINGLE_OPTIONAL_DICT
 
-from fedservice import get_payload
 from fedservice.exception import UnknownCriticalExtension
 from fedservice.exception import WrongSubject
 
@@ -441,7 +443,8 @@ class Constraints(Message):
     """The types of constraints that can be applied to a trust chain."""
     c_param = {
         "max_path_length": SINGLE_OPTIONAL_INT,
-        "naming_constraints": SINGLE_OPTIONAL_NAMING_CONSTRAINTS
+        "naming_constraints": SINGLE_OPTIONAL_NAMING_CONSTRAINTS,
+        "allowed_entity_types": OPTIONAL_LIST_OF_STRINGS
     }
 
 
@@ -489,15 +492,17 @@ class TrustMarkIssuers(Message):
 class TrustMarkOwners(Message):
 
     def verify(self, **kwargs):
+        keyjar = KeyJar()
         # Dictionary of Trust Mark Owner information
         for owner_id, spec in self.items():
-            if "sub" in spec and "jwks" in spec:  # If there are other claims ignore them
-                continue
+            _sub = spec.get('sub')
+            if not _sub:
+                raise MissingRequiredAttribute("sub")
+            _jwks = spec.get('jwks')
+            if not _jwks:
+                raise MissingRequiredAttribute("jwks")
             else:
-                if "sub" not in spec:
-                    raise MissingRequiredAttribute("sub")
-                elif "jwks" not in spec:
-                    raise MissingRequiredAttribute("jwks")
+                keyjar = import_jwks(keyjar, _jwks, _sub)
 
 
 class EntityStatement(JsonWebToken):
@@ -509,11 +514,11 @@ class EntityStatement(JsonWebToken):
         'iat': SINGLE_REQUIRED_INT,
         'exp': SINGLE_REQUIRED_INT,
         'jwks': SINGLE_OPTIONAL_DICT,
-#        'aud': SINGLE_OPTIONAL_STRING,
-#        "jti": SINGLE_OPTIONAL_STRING,
+        #        'aud': SINGLE_OPTIONAL_STRING,
+        #        "jti": SINGLE_OPTIONAL_STRING,
         'metadata': SINGLE_OPTIONAL_METADATA,
         "crit": OPTIONAL_LIST_OF_STRINGS,
-#        "policy_language_crit": OPTIONAL_LIST_OF_STRINGS,
+        #        "policy_language_crit": OPTIONAL_LIST_OF_STRINGS,
     })
 
     def verify(self, **kwargs):
@@ -540,7 +545,7 @@ class EntityConfiguration(EntityStatement):
     c_param = EntityStatement.c_param.copy()
     c_param.update({
         'authority_hints': OPTIONAL_LIST_OF_STRINGS,
-        'trust_marks': OPTIONAL_LIST_OF_DICT,
+        'trust_marks': OPTIONAL_LIST_OF_STRINGS,
         'trust_mark_owners': SINGLE_OPTIONAL_JSON,
         'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
         #
@@ -564,20 +569,15 @@ class EntityConfiguration(EntityStatement):
         _trust_marks = self.get("trust_marks")
         if _trust_marks:
             for _tm in _trust_marks:
-                _trust_mark = None
-                if isinstance(_tm["trust_mark"], str):
-                    _payload = _payload_from_jws(_tm["trust_mark"])
-                    if _payload["trust_mark_id"] != _tm["trust_mark_id"]:
-                        raise ValueError("trust_mark_is values does not match")
-                    _trust_mark = TrustMark(**_payload)
-                elif isinstance(_tm["trust_mark"], dict):
-                    if _tm["trust_mark"]["trust_mark_id"] != _tm["trust_mark_id"]:
-                        raise ValueError("trust_mark_is values does not match")
-                    _trust_mark = TrustMark(**_tm["trust_mark"])
-                else:
-                    raise ValueError("Trust mark has a format I didn't expect")
-
+                _payload = _payload_from_jws(_tm)
+                _trust_mark = TrustMark(**_payload)
                 _trust_mark.verify()
+
+        # Make sure there is no Entity Configuration claims present
+        for claim in ['constraints', 'metadata_policy', 'metadata_policy_crit', 'source_endpoint']:
+            if self.get(claim):
+                raise ValueError("claim present that should only be in a Subordinate Statement")
+
 
 class SubordinateStatement(EntityStatement):
     c_param = EntityStatement.c_param.copy()
@@ -595,6 +595,23 @@ class SubordinateStatement(EntityStatement):
             _crit = self.get("policy_language_crit")
             if _crit:
                 _metadata_policy.verify(policy_language_crit=_crit, **kwargs)
+
+        # Make sure there is no Entity Configuration claims present
+        for claim in ['authority_hints', 'trust_marks', 'trust_mark_owners',
+                      'trust_mark_issuers', 'trust_anchor']:
+            if self.get(claim):
+                raise ValueError("claim present that should only be in Entity Configuration")
+
+        cons_claims = self.get('constraints')
+        if cons_claims:
+            _cons = Constraints(**cons_claims)
+            _cons.verify()
+
+        src_endp = self.get("source_endpoint")
+        if src_endp:
+            p = urlparse(src_endp)
+            if p.scheme not in ["http", "https"]:
+                raise ValueError("source_endpoint not a URL")
 
 
 class TrustMarkDelegation(Message):
