@@ -16,6 +16,7 @@ from idpyoidc.transform import CLIENT_URI_CLAIMS
 
 from fedservice.entity.function import apply_policies
 from fedservice.entity.function import get_verified_trust_chains
+from fedservice.entity.function.trust_chain_collector import verify_entity_statement
 from fedservice.entity.utils import get_federation_entity
 from fedservice.exception import NoTrustedChains
 
@@ -48,7 +49,7 @@ def create_entity_configuration(request_args: Optional[dict] = None, service: Op
     return _jws
 
 
-def parse_federation_registration_response(service, resp):
+def parse_federation_registration_response(service, resp, **kwargs):
     """
     Receives a dynamic client registration response,
 
@@ -59,15 +60,12 @@ def parse_federation_registration_response(service, resp):
     # Find the part of me that deals with the federation
     federation_entity = get_federation_entity(service)
 
-    # verify signature with OP's federation keys
-    _jwt = JWT(key_jar=federation_entity.keyjar)
-    payload = _jwt.unpack(resp)
+    _trust_anchors = list(federation_entity.trust_anchors.keys())
+    _sub = kwargs.get("sub") or federation_entity.entity_id
 
-    # Do I trust the TA the OP chose ?
-    _trust_anchor = payload.get("trust_anchor")
-    logger.debug(f"trust_anchor(_id): {_trust_anchor}")
-    if _trust_anchor not in federation_entity.function.trust_chain_collector.trust_anchors:
-        raise ValueError("OP chose Trust Anchor I don't trust")
+    entity_config = verify_entity_statement(resp, _sub, trust_anchors=_trust_anchors,
+                                            keyjar=federation_entity.upstream_get("attribute", "keyjar"),
+                                            msg_type='registration_response')
 
     # This is where I should decide to use the metadata verification service or do it
     # all myself
@@ -80,6 +78,7 @@ def parse_federation_registration_response(service, resp):
             return _verifier_response
     else:
         # This is the trust chain from myself to the TA
+        _trust_anchor = entity_config.get("trust_anchor", "")
         entity_id = service.upstream_get('attribute', 'entity_id')
         _trust_chains = get_verified_trust_chains(service, entity_id=entity_id, stop_at=_trust_anchor)
 
@@ -93,7 +92,7 @@ def parse_federation_registration_response(service, resp):
         else:
             _trust_chains = _tcs
 
-        _metadata = payload.get("metadata")
+        _metadata = entity_config.get("metadata")
         if _metadata:
             # replace the metadata provided by the client with the metadata received from the AS
             _trust_chains[0].verified_chain[-1]['metadata'] = _metadata
@@ -133,7 +132,7 @@ def shared_update_service_context(service, resp, **kwargs):
                             _context.keyjar.add_symmetric(_context.claims.get_usage("client_id"), _val)
         else:
             _context = item.get_context()
-            _md = service.response_cls(**_guise_metadata)
+            _md = service.metadata_cls[guise](**_guise_metadata)
             _md.verify()
             _md.weed()
             _context.map_preferred_to_registered(_md, service.uri_claims)
@@ -210,7 +209,7 @@ class Registration(registration.Registration):
         return metadata
 
     def parse_response(self, info, sformat="", state="", **kwargs):
-        resp = parse_federation_registration_response(self, info)
+        resp = parse_federation_registration_response(self, info, **kwargs)
 
         if not resp:
             logger.error('Missing or faulty response')

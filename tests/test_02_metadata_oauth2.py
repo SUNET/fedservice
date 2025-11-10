@@ -68,9 +68,10 @@ class TestFedOauth2Client:
               'issuer',
               'op_policy_uri',
               'op_tos_uri',
+              'pushed_authorization_request_endpoint',
               'registration_endpoint',
-              'request_authentication_methods_supported',
-              'request_authentication_signing_alg_values_supported',
+              'request_object_signing_alg_values_supported',
+              'require_pushed_authorization_requests',
               'response_modes_supported',
               'revocation_auth_methods_supported',
               'revocation_auth_signing_algs_supported',
@@ -80,6 +81,7 @@ class TestFedOauth2Client:
               'token_auth_methods_supported',
               'token_auth_signing_algs_supported',
               'token_endpoint',
+              'token_endpoint_auth_signing_alg_values_supported',
               'ui_locales_supported'}
 
         # parameters that are not mapped against what the AS's metadata says
@@ -101,7 +103,6 @@ class TestFedOauth2Client:
               'signed_jwks_uri',
               'software_id',
               'software_version',
-              'token_endpoint_auth_methods_supported',
               'tos_uri'}
 
         claims = Claims()

@@ -1,8 +1,8 @@
 import logging
-from ssl import SSLError
 import sys
 import time
 import traceback
+from ssl import SSLError
 from typing import Callable
 from typing import List
 from typing import Optional
@@ -13,23 +13,23 @@ from cryptojwt import KeyJar
 from cryptojwt.jws.jws import factory
 from cryptojwt.jws.utils import alg2keytype
 from cryptojwt.jwt import utc_time_sans_frac
-
-from fedservice.defaults import DEFAULT_SKEW
-from fedservice.message import SubordinateStatement
-
-from fedservice.message import EntityConfiguration
 from idpyoidc.exception import MissingPage
 from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
 from requests.exceptions import ConnectionError
 
 from fedservice.defaults import DEFAULT_SIGNING_ALGORITHM
-from fedservice.entity.function import Function
+from fedservice.defaults import DEFAULT_SKEW
 from fedservice.entity.function import collect_trust_chains
+from fedservice.entity.function import Function
 from fedservice.entity.function import verify_trust_chains
 from fedservice.entity.utils import get_federation_entity
 from fedservice.entity_statement.cache import ESCache
 from fedservice.exception import FailedConfigurationRetrieval
+from fedservice.message import EntityConfiguration
+from fedservice.message import ExplicitRegistrationResponse
+from fedservice.message import RegistrationResponse
+from fedservice.message import SubordinateStatement
 from fedservice.utils import statement_is_expired
 
 logger = logging.getLogger(__name__)
@@ -48,12 +48,19 @@ def signing_algorithm(signed_jwt):
     return _jws.jwt.headers.get("alg", DEFAULT_SIGNING_ALGORITHM)
 
 
-def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW, **kwargs):
+Class_map = {
+    "entity_configuration": EntityConfiguration,
+    "subordinate_statement": SubordinateStatement,
+    "registration_response": ExplicitRegistrationResponse
+}
+
+
+def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW, msg_type: Optional[str] = "", **kwargs):
     """
 
     :param signed_jwt: The Entity Statement as a signed JWT
     :param sub: The subject the Entity Statement should refer to
-    :param acceptable_sign_algs: Acceptable signing algorithms
+    :param typ: Type of Entity Statement (entity_configuration, subordinate_statement, registration_response)
     :return:
     """
     _jws = factory(signed_jwt)
@@ -72,43 +79,50 @@ def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW, **kwargs):
     if payload["sub"] != sub:
         raise ValueError("Wrong subject in the Entity Statement")
 
-    keyjar = KeyJar()
-    keyjar = import_jwks(keyjar, payload['jwks'], payload['iss'])
-
-    alg = _jws.jwt.headers.get('alg')
-    if alg:
-        if not keyjar.get_signing_key(alg2keytype(alg), sub):
-            return ValueError("Signing algorithm does not match any key in the JWKS")
+    jwt_args = {}
+    keyjar = kwargs.get("keyjar")
+    if keyjar:
+        pass
     else:
-        raise ValueError("Entity Statement: no signing algorithm set")
+        keyjar = KeyJar()
+        keyjar = import_jwks(keyjar, payload['jwks'], payload['iss'])
 
-    kid = _jws.jwt.headers.get('kid')
-    if kid:
-        if not keyjar.get_signing_key(alg2keytype(alg), sub, kid):
-            return ValueError("'kid' does not match any key in the JWKS")
-    else:
-        raise ValueError("Entity Statement: no 'kid' set")
+        alg = _jws.jwt.headers.get('alg')
+        if alg:
+            if not keyjar.get_signing_key(alg2keytype(alg), sub):
+                return ValueError("Signing algorithm does not match any key in the JWKS")
+        else:
+            raise ValueError("Entity Statement: no signing algorithm set")
+        jwt_args["sign_alg"] = alg
+
+        kid = _jws.jwt.headers.get('kid')
+        if kid:
+            if not keyjar.get_signing_key(alg2keytype(alg), sub, kid):
+                return ValueError("'kid' does not match any key in the JWKS")
+        else:
+            raise ValueError("Entity Statement: no 'kid' set")
 
     # There MUST be an iss
     iss = payload.get('iss')
     if not iss:
         raise ValueError("Missing 'iss'")
 
-    _jwt = JWT(key_jar=keyjar, sign_alg=alg)
+    _jwt = JWT(key_jar=keyjar, **jwt_args)
     _val = _jwt.unpack(signed_jwt)
 
     args = {}
-    if iss == sub: # Entity Configuration
-        _es = EntityConfiguration(**_val)
-        _tas = args.get("trust_anchors")
-        if _tas:
-            kwargs["trust_anchors"] = _tas
-    else:
-        _es = SubordinateStatement(**_val)
+    if msg_type:
+        _es = Class_map[msg_type](**_val)
+    else: # Best effort
+        if iss == sub:  # Entity Configuration
+            _es = EntityConfiguration(**_val)
+        else:
+            _es = SubordinateStatement(**_val)
 
     _es.verify(skew=skew, **args)
 
-    return _val
+    return _es
+
 
 def verify_self_signed_signature(statement):
     """
@@ -466,9 +480,10 @@ class TrustChainCollector(Function):
                 logger.warning(f"Could not find any entity configuration for {entity_id}")
                 return None
             _trust_anchors = self.upstream_get("attribute", "trust_anchors")
-            entity_config = verify_entity_statement(signed_entity_config, entity_id, trust_anchors=_trust_anchors)
+            _ec = verify_entity_statement(signed_entity_config, entity_id, trust_anchors=_trust_anchors)
+            entity_config = _ec.to_dict()
             # entity_config = verify_self_signed_signature(signed_entity_config)
-            logger.debug(f'Verified self signed statement: {entity_config}')
+            # logger.debug(f'Verified self signed statement: {entity_config.to_json()}')
             entity_config['_jws'] = signed_entity_config
             # update cache
             self.config_cache[entity_id] = entity_config

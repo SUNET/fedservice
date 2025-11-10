@@ -1,16 +1,14 @@
 import logging
 
-from idpyoidc.client.exception import OtherError
 from idpyoidc.client.oidc import authorization
-from idpyoidc.exception import UnSupported
-from idpyoidc.util import conf_get
 
 from fedservice.appclient.oauth2.authorization import automatic_registration
 from fedservice.appclient.oauth2.authorization import create_request
 from fedservice.appclient.oauth2.authorization import use_authorization_endpoint
-from fedservice.appclient.oauth2.authorization import use_pushed_authorization_endpoint
+from fedservice.appclient.oauth2.authorization import use_pushed_authorization
 
 logger = logging.getLogger(__name__)
+
 
 class Authorization(authorization.Authorization):
 
@@ -20,5 +18,4 @@ class Authorization(authorization.Authorization):
         self.post_construct.append(create_request)
 
         self._use_authorization_endpoint = use_authorization_endpoint
-        self._use_pushed_authorization_endpoint = use_pushed_authorization_endpoint
-
+        self._use_pushed_authorization = use_pushed_authorization

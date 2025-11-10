@@ -15,6 +15,7 @@ from idpyoidc.server.util import execute
 from idpyoidc.util import instantiate
 from requests import request
 
+from fedservice import get_payload
 from fedservice import message
 from fedservice.entity.context import FederationContext
 from fedservice.entity.function import apply_policies
@@ -387,13 +388,14 @@ class FederationEntity(Unit):
 
     def verify_trust_mark(self, trust_mark: str, check_with_issuer: Optional[bool] = True):
         _trust_mark_payload = get_payload(trust_mark)
+        # verify that the trust mark issuer should be trusted
         _tmi_trust_chains = self.get_trust_chains(_trust_mark_payload['iss'])
         if not _tmi_trust_chains:
             return None
 
         _tmi_trust_chain = _tmi_trust_chains[0]
 
-        # Verifies the signature of the Trust Mark
+        # Verifies the Trust Mark
         verified_trust_mark = self.function.trust_mark_verifier(
             trust_mark=trust_mark, trust_anchor=_tmi_trust_chain.anchor)
 

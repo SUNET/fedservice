@@ -213,7 +213,7 @@ class TestAutomatic(object):
         assert len(self.oas["oauth_authorization_server"].get_context().cdb.keys()) == 0
 
         ####################################################
-        # [1] Let the RP gather some provider info discovery
+        # [1] Let the RP gather some provider info
 
         # Point the RP to the OP
         self.oc["oauth_client"].get_context().issuer = self.oas.entity_id
@@ -241,8 +241,7 @@ class TestAutomatic(object):
         # create the authorization request
 
         _auth_service = self.oc["oauth_client"].get_service("authorization")
-        authn_request = _auth_service.construct(request_args={"response_type": "code",
-                                                              "state": rndstr()})
+        authn_request = _auth_service.construct(request_args={"response_type": "code", "state": rndstr()})
 
         # ------------------------------
         # <<<<<< On the AS's side >>>>>>>

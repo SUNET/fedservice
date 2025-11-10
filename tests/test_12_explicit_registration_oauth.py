@@ -147,6 +147,8 @@ class TestRpService(object):
         jws = self.registration_service.construct(request_args=req_args)
         assert jws
 
+        sub = _rp_fe.context.entity_id
+
         # construct the information needed to send the request
         _info = self.registration_service.get_request_parameters(
             request_body_type="jose", method="POST")
@@ -180,7 +182,8 @@ class TestRpService(object):
                          status=200)
 
             response = self.registration_service.parse_response(resp["response_msg"],
-                                                                request=_info["body"])
+                                                                request=_info["body"],
+                                                                sub=sub)
 
         metadata = response["metadata"]
         # The response doesn't touch the federation_entity metadata, therefor it's not included

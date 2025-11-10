@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def create_trust_mark(keyjar, entity_id, **kwargs):
     packer = JWT(key_jar=keyjar, iss=entity_id)
-    return packer.pack(payload=kwargs)
+    return packer.pack(payload=kwargs, jws_headers={"typ": "trust-mark+jwt"})
 
 
 class TrustMarkEntity(Unit):
@@ -92,7 +92,7 @@ class TrustMarkEntity(Unit):
 
         _federation_entity = get_federation_entity(self)
         packer = JWT(key_jar=_federation_entity.keyjar, iss=_federation_entity.entity_id)
-        return packer.pack(payload=content)
+        return packer.pack(payload=content, jws_headers={"typ": "trust-mark+jwt"})
 
     def dump_trust_marks(self):
         return self.issued.dumps()

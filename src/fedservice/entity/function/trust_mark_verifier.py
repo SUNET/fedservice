@@ -2,6 +2,7 @@ import logging
 from typing import Callable
 from typing import Optional
 
+from cryptojwt import as_unicode
 from cryptojwt import KeyJar
 from cryptojwt.exception import Expired
 from cryptojwt.jws.jws import factory
@@ -81,7 +82,13 @@ class TrustMarkVerifier(Function):
         :returns: TrustClaim message instance if OK otherwise None
         """
 
-        payload = get_payload(trust_mark)
+        _jws = as_unicode(trust_mark)
+        _jwt = factory(_jws)
+        _msg_type = _jwt.jwt.headers.get("typ")
+        if not _msg_type or _msg_type != "trust-mark+jwt":
+            raise ValueError("Wrong message type")
+
+        payload = _jwt.jwt.payload()
         _trust_mark = message.TrustMark(**payload)
         # Verify that everything that should be there, are there
         try:

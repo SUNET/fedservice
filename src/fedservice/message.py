@@ -111,8 +111,14 @@ class AuthorizationServerMetadata(Message):
         # below Federation additions
         'client_registration_types_supported': OPTIONAL_LIST_OF_STRINGS,
         'federation_registration_endpoint': SINGLE_OPTIONAL_STRING,
-        'request_authentication_methods_supported': OPTIONAL_LIST_OF_STRINGS,
-        'request_authentication_signing_alg_values_supported': OPTIONAL_LIST_OF_STRINGS,
+        # 'request_authentication_methods_supported': OPTIONAL_LIST_OF_STRINGS,
+        # 'request_authentication_signing_alg_values_supported': OPTIONAL_LIST_OF_STRINGS,
+        # PAR additions
+        'pushed_authorization_request_endpoint': SINGLE_OPTIONAL_STRING,
+        'require_pushed_authorization_requests': SINGLE_OPTIONAL_BOOLEAN,
+        'request_object_signing_alg_values_supported': OPTIONAL_LIST_OF_STRINGS,
+        'token_endpoint_auth_signing_alg_values_supported': OPTIONAL_LIST_OF_STRINGS,
+        'token_endpoint_auth_methods_supported': OPTIONAL_LIST_OF_STRINGS
     }
 
 
@@ -548,8 +554,6 @@ class EntityConfiguration(EntityStatement):
         'trust_marks': OPTIONAL_LIST_OF_STRINGS,
         'trust_mark_owners': SINGLE_OPTIONAL_JSON,
         'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
-        #
-        'trust_anchor': SINGLE_OPTIONAL_STRING
     })
 
     def verify(self, **kwargs):
@@ -578,12 +582,24 @@ class EntityConfiguration(EntityStatement):
             if self.get(claim):
                 raise ValueError("claim present that should only be in a Subordinate Statement")
 
+
+class ExplicitRegistrationResponse(EntityConfiguration):
+    c_param = EntityConfiguration.c_param.copy()
+    c_param.update({
+        'trust_anchor': SINGLE_OPTIONAL_STRING
+    })
+
+    def verify(self, **kwargs):
+        super(ExplicitRegistrationResponse, self).verify(**kwargs)
+
+        # This is when this message is a registration response
         _trust_anchor = self.get("trust_anchor")
         if _trust_anchor:
             _trust_anchors = kwargs.get("trust_anchors")
             if _trust_anchors:
                 if _trust_anchor not in _trust_anchors:
                     raise ValueError(f"The Server used a trust anchor I do not trust: {_trust_anchor}")
+
 
 class SubordinateStatement(EntityStatement):
     c_param = EntityStatement.c_param.copy()
@@ -741,8 +757,6 @@ class ProviderConfigurationResponse(message.oidc.ProviderConfigurationResponse):
     c_param.update({
         'client_registration_types_supported': REQUIRED_LIST_OF_STRINGS,
         'federation_registration_endpoint': SINGLE_OPTIONAL_STRING,
-        'request_authentication_methods_supported': SINGLE_OPTIONAL_JSON,
-        'request_authentication_signing_alg_values_supported': OPTIONAL_LIST_OF_STRINGS,
         'organization_name': SINGLE_OPTIONAL_STRING,
         'signed_jwks_uri': SINGLE_OPTIONAL_STRING,
         'jwks': SINGLE_OPTIONAL_JSON

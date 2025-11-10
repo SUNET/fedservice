@@ -15,19 +15,16 @@ def use_authorization_endpoint(entity, context, post_args, ams, entity_type):
         # Turn off pushed auth
         context.add_on['pushed_authorization']['apply'] = False
 
-    if "request_object" in ams['authorization_endpoint']:
-        post_args['request_param'] = "request"
-        post_args['recv'] = context.get_metadata_claim("authorization_endpoint", [entity_type])
-        post_args["with_jti"] = True
-        post_args["lifetime"] = entity.conf.get("request_object_expires_in", 300)
-        post_args['issuer'] = entity.upstream_get('attribute', 'entity_id')
-    else:
-        raise OtherError("Using request object in authentication not supported by OP")
+    post_args['request_param'] = "request"
+    post_args['recv'] = context.get_metadata_claim("authorization_endpoint", [entity_type])
+    post_args["with_jti"] = True
+    post_args["lifetime"] = entity.conf.get("request_object_expires_in", 300)
+    post_args['issuer'] = entity.upstream_get('attribute', 'entity_id')
 
     return post_args
 
 
-def use_pushed_authorization_endpoint(entity, context, post_args, ams, entity_type):
+def use_pushed_authorization(entity, context, post_args, ams, entity_type):
     if 'pushed_authorization' not in context.add_on:
         raise UnSupported('Pushed Authorization not supported')
     else:  # Make it happen
@@ -52,17 +49,21 @@ def automatic_registration(request_args, service, post_args=None, **kwargs):
     else:
         raise KeyError(f"Unknown client_type: {_client_type}")
 
-    _auth_meth_supported = _context.get_metadata_claim('request_authentication_methods_supported', [_entity_type])
+    _registration_type_supported = _context.get_metadata_claim('client_registration_types_supported', [_entity_type])
 
-    # what if request_param is already set ??
-    # What if request_param in not in client_auth ??
-    if _auth_meth_supported:
-        for endpoint in _request_endpoints:
-            if endpoint in _auth_meth_supported:
-                _func = getattr(service, f'_use_{endpoint}')
-                post_args = _func(service, _context, post_args, _auth_meth_supported, _entity_type)
-                break
-    else:  # The OP does not support any authn methods
+    _func = None
+    if _registration_type_supported:
+        if 'automatic' in _registration_type_supported:
+            if "authorization_endpoint" in _request_endpoints:
+                _func = getattr(service, '_use_authorization_endpoint')
+            elif "pushed_authorization_request_endpoint" in _request_endpoints:
+                _func = getattr(service, '_use_pushed_authorization')
+            else:
+                raise("Can not du automatic registration")
+
+            post_args = _func(service, _context, post_args, _registration_type_supported, _entity_type)
+
+    if not _func:  # The OP does not support automatic registration
         # am I already registered ?
         if not _context.registration_response:  # Not registered
             raise OtherError("Can not send an authorization request without being registered"
@@ -96,5 +97,5 @@ class Authorization(authorization.Authorization):
         self.post_construct.append(create_request)
 
         self._use_authorization_endpoint = use_authorization_endpoint
-        self._use_pushed_authorization_endpoint = use_pushed_authorization_endpoint
+        self._use_pushed_authorization = use_pushed_authorization
 

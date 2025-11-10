@@ -7,7 +7,6 @@ from idpyoidc.client.exception import ResponseError
 from idpyoidc.client.oidc import registration
 from idpyoidc.message import Message
 from idpyoidc.message.oidc import RegistrationRequest
-from idpyoidc.message.oidc import RegistrationResponse
 from idpyoidc.transform import RP_URI_CLAIMS
 
 from fedservice.appclient.oauth2.registration import create_entity_configuration as oauth2_create_entity_configuration
@@ -16,13 +15,22 @@ from fedservice.entity.function import apply_policies
 from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.utils import get_federation_entity
 from fedservice.exception import NoTrustedChains
+from fedservice.message import ExplicitRegistrationResponse
+from fedservice.message import FedASConfigurationResponse
+from fedservice.message import OauthClientMetadata
+from fedservice.message import OIDCRPMetadata
+from fedservice.message import OPMetadata
 
 logger = logging.getLogger(__name__)
 
 
 class Registration(registration.Registration):
     msg_type = RegistrationRequest
-    response_cls = RegistrationResponse
+    response_cls = ExplicitRegistrationResponse
+    metadata_cls = {'openid_relying_party': OIDCRPMetadata,
+                    'oauth_client': OauthClientMetadata,
+                    'oauth_authorization_server': FedASConfigurationResponse,
+                    'openid_provider': OPMetadata}
     endpoint_name = 'federation_registration_endpoint'
     request_body_type = 'jwt'
     response_body_type = 'jwt'
@@ -50,7 +58,7 @@ class Registration(registration.Registration):
     def update_service_context(self, resp: Union[Message, dict], **kwargs):
         shared_update_service_context(service=self, resp=resp, **kwargs)
 
-    def create_entity_configuration(self, request_args: Optional[dict] = None, **kwargs):
+    def create_entity_statement(self, request_args: Optional[dict] = None, **kwargs):
         """
         Create a self-signed entity statement
 
@@ -69,8 +77,7 @@ class Registration(registration.Registration):
         if "key_jar" not in kwargs:
             kwargs["key_jar"] = _federation_entity.keyjar
 
-        _jws = _context.create_entity_configuration(iss=_federation_entity.entity_id,
-                                                    **kwargs)
+        _jws = _context.create_entity_configuration(iss=_federation_entity.entity_id, **kwargs)
         return _jws
 
     def parse_response(self, info, sformat="", state="", **kwargs):
@@ -93,7 +100,7 @@ class Registration(registration.Registration):
         :return: A set of metadata claims
         """
 
-        # Find the part of me that deals with the federation
+        # Find the part of the system that deals with the federation
         _federation_entity = get_federation_entity(self)
 
         # verify signature with OP's federation keys
