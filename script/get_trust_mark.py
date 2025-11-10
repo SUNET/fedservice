@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('-k', "--insecure", action='store_true')
     parser.add_argument('-f', "--format", action='store_true')
     parser.add_argument('-t', "--trust_anchors")
-    parser.add_argument('-i', "--trust_mark_id")
+    parser.add_argument('-i', "--trust_mark_type")
     parser.add_argument('-s', "--subject")
     parser.add_argument(dest="entity_id")
     args = parser.parse_args()
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     # federation_entity.client.context.issuer = args.entity_id
     _response = federation_entity.client.do_request("trust_mark",
                                                     request_args={
-                                                        "trust_mark_id": args.trust_mark_id,
+                                                        "trust_mark_type": args.trust_mark_type,
                                                         "sub": args.subject
                                                     },
                                                     endpoint=endpoint)

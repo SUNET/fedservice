@@ -57,7 +57,7 @@ class TrustMarkStatus(FederationService):
             tm_payload = _jws.jwt.payload()
             fetch_endpoint = tm_payload['iss']
         else:
-            _q_args = {k: v for k, v in request_args.items() if k in ['sub', 'trust_mark_id', 'iat']}
+            _q_args = {k: v for k, v in request_args.items() if k in ['sub', 'trust_mark_type', 'iat']}
             if not fetch_endpoint:
                 fetch_endpoint = kwargs.get("endpoint")
                 if not fetch_endpoint:

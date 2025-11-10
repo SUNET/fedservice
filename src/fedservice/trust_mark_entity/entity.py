@@ -76,7 +76,7 @@ class TrustMarkEntity(Unit):
         :return: Trust Mark
         """
         _now = utc_time_sans_frac()
-        _add = {'iat': _now, 'trust_mark_id': id, 'sub': sub}
+        _add = {'iat': _now, 'trust_mark_type': id, 'sub': sub}
         lifetime = self.tm_lifetime.get(id)
         if lifetime:
             _add['exp'] = _now + lifetime
@@ -121,15 +121,15 @@ class TrustMarkEntity(Unit):
             kwargs['sub'] = _entity_id
         return packer.pack(payload=kwargs)
 
-    def find(self, trust_mark_id, sub: str, iat: Optional[int] = 0) -> bool:
-        return self.issued.find(trust_mark_id=trust_mark_id, sub=sub, iat=iat)
+    def find(self, trust_mark_type, sub: str, iat: Optional[int] = 0) -> bool:
+        return self.issued.find(trust_mark_type=trust_mark_type, sub=sub, iat=iat)
 
-    def list(self, trust_mark_id: str, sub: Optional[str] = "") -> list:
+    def list(self, trust_mark_type: str, sub: Optional[str] = "") -> list:
         if sub:
-            if self.find(trust_mark_id, sub):
+            if self.find(trust_mark_type, sub):
                 return [sub]
         else:
-            return self.issued.list(trust_mark_id)
+            return self.issued.list(trust_mark_type)
 
     def get_metadata(self):
         logger.debug(f"{self.name}:get_metadata")
@@ -159,7 +159,7 @@ class SelfSignedTrustMarkEntity(Unit):
     def __init__(self,
                  entity_id: str = "",
                  upstream_get: Optional[Callable] = None,
-                 trust_mark_ids: Optional[list] = None,
+                 trust_mark_types: Optional[list] = None,
                  trust_mark_specification: Optional[dict] = None,
                  **kwargs
                  ):
@@ -167,7 +167,7 @@ class SelfSignedTrustMarkEntity(Unit):
         Unit.__init__(self, upstream_get=upstream_get)
 
         self.entity_id = entity_id or upstream_get("attribute", "entity_id")
-        self.trust_mark_ids = trust_mark_ids or []
+        self.trust_mark_types = trust_mark_types or []
         self.trust_mark_specification = trust_mark_specification or {}
         self.issued = []
         self.tm_lifetime = 86400*30
@@ -182,7 +182,7 @@ class SelfSignedTrustMarkEntity(Unit):
         """
         _now = utc_time_sans_frac()
         sub = self.upstream_get('attribute', 'entity_id')
-        _add = {'iat': _now, 'trust_mark_id': id, 'sub': sub}
+        _add = {'iat': _now, 'trust_mark_type': id, 'sub': sub}
         lifetime = self.tm_lifetime
         if lifetime:
             _add['exp'] = _now + lifetime

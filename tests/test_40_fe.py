@@ -25,7 +25,7 @@ CHILD_ID = "https://op.example.com"
 ISSUER = "https://example.org/adm1"
 
 TMI_ID = "https://tmi.example.org"
-SIRTIFI_TRUST_MARK_ID = "https://refeds.org/sirtfi"
+SIRTIFI_TRUST_MARK_TYPE = "https://refeds.org/sirtfi"
 
 
 class TestFederationEntity(object):

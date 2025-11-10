@@ -8,6 +8,9 @@ from idpyoidc.message import Message
 from idpyoidc.message import oidc
 from idpyoidc.server.endpoint import Endpoint
 
+from fedservice.defaults import DEFAULT_SIGNING_ALGORITHM
+from fedservice.entity.utils import get_federation_entity
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,15 +39,23 @@ class TrustMarkStatus(Endpoint):
                         **kwargs) -> dict:
         _trust_mark_issuer = self.upstream_get("unit")
 
+        _federation_entity = get_federation_entity(self)
+
         if 'trust_mark' in request:
             _mark = _trust_mark_issuer.unpack_trust_mark(request['trust_mark'])
-            if _trust_mark_issuer.find(_mark['trust_mark_id'], _mark['sub']):
-                return {'response_args': {'active': True}}
+            if _trust_mark_issuer.find(_mark['trust_mark_type'], _mark['sub']):
+                msg = {'status': "active"}
+                packer = JWT(key_jar=_federation_entity.keyjar,
+                             iss=_federation_entity.entity_id,
+                             lifetime=300,
+                             sign_alg=DEFAULT_SIGNING_ALGORITHM)
+
+                return packer.pack(payload=msg, jws_headers={'typ': "trust-mark-status-response+jwt"})
         else:
             if 'sub' in request:
                 _id = ""
-                if 'trust_mark_id' in request:
-                    _id = request['trust_mark_id']
+                if 'trust_mark_type' in request:
+                    _id = request['trust_mark_type']
 
                 if _id:
                     if _trust_mark_issuer.find(_id, request['sub']):

@@ -51,7 +51,7 @@ class TrustMarkList(FederationService):
         if not method:
             method = self.http_method
 
-        _q_args = {k: v for k, v in request_args.items() if k in ['trust_mark_id']}
+        _q_args = {k: v for k, v in request_args.items() if k in ['trust_mark_type']}
         if not fetch_endpoint:
             fetch_endpoint = kwargs.get("endpoint")
             if not fetch_endpoint:

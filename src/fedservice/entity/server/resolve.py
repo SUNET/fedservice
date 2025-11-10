@@ -55,7 +55,7 @@ class Resolve(Endpoint):
                                                                              trust_anchor=_trust_anchor)
             if _verified_mark:
                 verified_trust_marks.append({
-                    "trust_mark_id": _verified_mark["trust_mark_id"],
+                    "trust_mark_type": _verified_mark["trust_mark_type"],
                     "trust_mark": _trust_mark
                 })
 

@@ -27,7 +27,7 @@ def main() -> int:
     )
     p.add_argument("-d", "--dir_name", required=True, help="Directory containing conf.json")
     p.add_argument("-e", "--entity_id", required=True, help="Subject entity_id the Trust Mark applies to")
-    p.add_argument("-m", "--trust_mark_id", required=True, help="Trust Mark type identifier (URI)")
+    p.add_argument("-m", "--trust_mark_type", required=True, help="Trust Mark type identifier (URI)")
     p.add_argument("--base-dir", help="Working directory to resolve relative paths in conf.json. "
                                       "Defaults to the directory that contains conf.json.")
     p.add_argument("-o", "--out", help="Write JWT to this file instead of stdout")
@@ -43,7 +43,7 @@ def main() -> int:
 
         # Trust Mark Issuer interface (handle both layouts)
         tmi = getattr(fe, "trust_mark_entity", None) or getattr(fe, "server").trust_mark_entity
-        jwt_compact = tmi.create_trust_mark(args.trust_mark_id, args.entity_id)
+        jwt_compact = tmi.create_trust_mark(args.trust_mark_type, args.entity_id)
 
     if args.out:
         Path(args.out).write_text(jwt_compact + "\n", encoding="utf-8")

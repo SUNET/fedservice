@@ -153,7 +153,7 @@ def test_trust_mark_delegation():
     _data = json.loads(open(file, "r").read())
 
     _msg = TrustMark().from_dict(_data)
-    assert set(_msg.keys()) == {'iat', 'trust_mark_id', 'delegation', 'exp', 'sub', 'iss'}
+    assert set(_msg.keys()) == {'iat', 'trust_mark_type', 'delegation', 'exp', 'sub', 'iss'}
 
     # Set expiration time to some time in the future
     _now = utc_time_sans_frac()

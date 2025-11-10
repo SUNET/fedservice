@@ -18,8 +18,8 @@ from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
 from requests.exceptions import ConnectionError
 
+from fedservice import DEFAULT_SKEW
 from fedservice.defaults import DEFAULT_SIGNING_ALGORITHM
-from fedservice.defaults import DEFAULT_SKEW
 from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import Function
 from fedservice.entity.function import verify_trust_chains
@@ -28,7 +28,6 @@ from fedservice.entity_statement.cache import ESCache
 from fedservice.exception import FailedConfigurationRetrieval
 from fedservice.message import EntityConfiguration
 from fedservice.message import ExplicitRegistrationResponse
-from fedservice.message import RegistrationResponse
 from fedservice.message import SubordinateStatement
 from fedservice.utils import statement_is_expired
 
@@ -113,7 +112,7 @@ def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW, msg_type: Option
     args = {}
     if msg_type:
         _es = Class_map[msg_type](**_val)
-    else: # Best effort
+    else:  # Best effort
         if iss == sub:  # Entity Configuration
             _es = EntityConfiguration(**_val)
         else:

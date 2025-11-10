@@ -269,13 +269,13 @@ Typical usage::
      > trust_mark.4010
 
 
-usage: create_trust_mark.py [-h] [-d DIR_NAME] [-e ENTITY_ID] [-m TRUST_MARK_ID] ::
+usage: create_trust_mark.py [-h] [-d DIR_NAME] [-e ENTITY_ID] [-m TRUST_MARK_TYPE] ::
 
     options:
       -h, --help            show this help message and exit
       -d DIR_NAME, --dir_name DIR_NAME The directory of the trust mark issuer
       -e ENTITY_ID, --entity_id ENTITY_ID The target of the Trust Mark
-      -m TRUST_MARK_ID, --trust_mark_id TRUST_MARK_ID
+      -m TRUST_MARK_TYPE, --trust_mark_typeTRUST_MARK_TYPE
 
 The trust mark issuer doesn't have to be running for this to work.
 Once you have the trust mark drop it in the relying_party_explicit/::

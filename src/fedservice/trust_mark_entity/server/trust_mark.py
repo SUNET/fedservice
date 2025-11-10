@@ -42,7 +42,7 @@ class TrustMark(Endpoint):
 
         _trust_mark_issuer = self.upstream_get("unit")
 
-        _id = request.get("trust_mark_id")
+        _id = request.get("trust_mark_type")
         _sub = request.get("sub")  # Required parameter
 
         _jws = _trust_mark_issuer.create_trust_mark(_id, _sub)

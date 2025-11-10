@@ -13,7 +13,7 @@ RP_ID = "https://rp.example.org"
 IM_ID = "https://intermediate.example.org"
 TMI_ID = "https://tmi.example.org"
 
-SIRTIFI_TRUST_MARK_ID = "https://refeds.org/sirtfi"
+SIRTIFI_TRUST_MARK_TYPE = "https://refeds.org/sirtfi"
 
 TA_ENDPOINTS = ["list", "fetch", "entity_configuration"]
 
@@ -29,7 +29,7 @@ FEDERATION_CONFIG = {
             },
             "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
             "trust_mark_issuers": {
-                SIRTIFI_TRUST_MARK_ID: [TMI_ID],
+                SIRTIFI_TRUST_MARK_TYPE: [TMI_ID],
             },
         }
     },
@@ -62,12 +62,12 @@ FEDERATION_CONFIG = {
                 "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
                 "kwargs": {
                     "trust_mark_specification": {
-                        SIRTIFI_TRUST_MARK_ID: {"lifetime": 2592000},
+                        SIRTIFI_TRUST_MARK_TYPE: {"lifetime": 2592000},
                     },
                     "trust_mark_db": {
                         "class": "fedservice.trust_mark_entity.FileDB",
                         "kwargs": {
-                            SIRTIFI_TRUST_MARK_ID: "sirtfi",
+                            SIRTIFI_TRUST_MARK_TYPE: "sirtfi",
                         }
                     },
                     "endpoint": {
@@ -121,7 +121,7 @@ class TestComboCollect(object):
         self.rp = federation[RP_ID]
         self.tmi = federation[TMI_ID]
 
-        trust_mark = self.tmi.server.trust_mark_entity.create_trust_mark(SIRTIFI_TRUST_MARK_ID, RP_ID)
+        trust_mark = self.tmi.server.trust_mark_entity.create_trust_mark(SIRTIFI_TRUST_MARK_TYPE, RP_ID)
         self.rp["federation_entity"].context.trust_marks = [trust_mark]
 
     def test_setup(self):
@@ -173,4 +173,4 @@ class TestComboCollect(object):
         assert _trust_chains[0].metadata == payload['metadata']
 
         assert len(payload["trust_marks"]) == 1
-        assert payload["trust_marks"][0]["trust_mark_id"] == SIRTIFI_TRUST_MARK_ID
+        assert payload["trust_marks"][0]["trust_mark_type"] == SIRTIFI_TRUST_MARK_TYPE

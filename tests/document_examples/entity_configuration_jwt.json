@@ -1,0 +1,30 @@
+{
+  "iss": "https://feide.no",
+  "sub": "https://ntnu.no",
+  "iat": 1516239022,
+  "exp": 1516298022,
+  "jwks": {
+    "keys": [
+      {
+        "kty": "RSA",
+        "alg": "RS256",
+        "use": "sig",
+        "kid": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
+        "n": "pnXBOusEANuug6ewezb9J_...",
+        "e": "AQAB"
+      }
+    ]
+  },
+  "metadata": {
+    "openid_provider": {
+      "issuer": "https://ntnu.no",
+      "organization_name": "NTNU"
+    },
+    "oauth_client": {
+      "organization_name": "NTNU"
+    }
+  },
+  "authority_hints": ["https://example.com/trust_anchor"],
+  "crit": ["jti"],
+  "jti": "7l2lncFdY6SlhNia"
+}

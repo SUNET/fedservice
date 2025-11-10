@@ -404,7 +404,7 @@ class FederationEntity(Unit):
             resp = self.do_request("trust_mark_status",
                                    request_args={
                                        'sub': verified_trust_mark['sub'],
-                                       'trust_mark_id': verified_trust_mark['trust_mark_id']
+                                       'trust_mark_type': verified_trust_mark['trust_mark_type']
                                    },
                                    fetch_endpoint=_tmi_trust_chain.metadata["federation_entity"][
                                        "federation_trust_mark_status_endpoint"]

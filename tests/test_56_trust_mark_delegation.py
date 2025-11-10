@@ -7,6 +7,7 @@ from cryptojwt import JWT
 from cryptojwt.jws.jws import factory
 from cryptojwt.key_jar import build_keyjar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
+from idpyoidc.message.oauth2 import ResponseMessage
 
 from fedservice.message import TrustMarkRequest
 from tests import create_trust_chain_messages
@@ -15,8 +16,8 @@ from tests.build_federation import build_federation
 TRUST_MARK_OWNERS_KEYS = build_keyjar(DEFAULT_KEY_DEFS)
 TM_OWNERS_ID = "https://tm_owner.example.org"
 
-SIRTIFI_TRUST_MARK_ID = "https://refeds.org/sirtfi"
-MUSHROOM_TRUST_MARK_ID = "https://mushrooms.federation.example.com/arrosto/agreements"
+SIRTIFI_TRUST_MARK_TYPE = "https://refeds.org/sirtfi"
+MUSHROOM_TRUST_MARK_TYPE = "https://mushrooms.federation.example.com/arrosto/agreements"
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -35,16 +36,16 @@ FEDERATION_CONFIG = {
                 "contacts": "operations@ta.example.org",
             },
             "trust_mark_owners": {
-                SIRTIFI_TRUST_MARK_ID: {'jwks': TRUST_MARK_OWNERS_KEYS.export_jwks(),
+                SIRTIFI_TRUST_MARK_TYPE: {'jwks': TRUST_MARK_OWNERS_KEYS.export_jwks(),
                                         'sub': TM_OWNERS_ID},
-                MUSHROOM_TRUST_MARK_ID: {
+                MUSHROOM_TRUST_MARK_TYPE: {
                     'jwks': TRUST_MARK_OWNERS_KEYS.export_jwks(),
                     'sub': TM_OWNERS_ID
                 }
             },
             "trust_mark_issuers": {
-                SIRTIFI_TRUST_MARK_ID: [TMI_ID],
-                MUSHROOM_TRUST_MARK_ID: []
+                SIRTIFI_TRUST_MARK_TYPE: [TMI_ID],
+                MUSHROOM_TRUST_MARK_TYPE: []
             },
             "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
@@ -58,14 +59,14 @@ FEDERATION_CONFIG = {
                 "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
                 "kwargs": {
                     "trust_mark_specification": {
-                        SIRTIFI_TRUST_MARK_ID: {"lifetime": 2592000},
-                        MUSHROOM_TRUST_MARK_ID: {"lifetime": 2592000}
+                        SIRTIFI_TRUST_MARK_TYPE: {"lifetime": 2592000},
+                        MUSHROOM_TRUST_MARK_TYPE: {"lifetime": 2592000}
                     },
                     "trust_mark_db": {
                         "class": "fedservice.trust_mark_entity.FileDB",
                         "kwargs": {
-                            SIRTIFI_TRUST_MARK_ID: "sirtfi",
-                            MUSHROOM_TRUST_MARK_ID: "mushroom"
+                            SIRTIFI_TRUST_MARK_TYPE: "sirtfi",
+                            MUSHROOM_TRUST_MARK_TYPE: "mushroom"
                         }
                     },
                     "endpoint": {
@@ -117,14 +118,16 @@ def tm_receiver():
 @pytest.fixture()
 def trust_mark_delegation(tm_receiver):
     _jwt = JWT(TRUST_MARK_OWNERS_KEYS, iss=TM_OWNERS_ID, sign_alg='RS256')
-    return _jwt.pack({'sub': TMI_ID, "trust_mark_id": SIRTIFI_TRUST_MARK_ID},
+    return _jwt.pack({'sub': TMI_ID, "trust_mark_type": SIRTIFI_TRUST_MARK_TYPE},
                      jws_headers={"typ": "trust-mark-delegation+jwt"})
+
 
 @pytest.fixture()
 def mushroom_trust_mark_delegation(tm_receiver):
     _jwt = JWT(TRUST_MARK_OWNERS_KEYS, iss=TM_OWNERS_ID, sign_alg='RS256')
-    return _jwt.pack({'sub': TMI_ID, "trust_mark_id": MUSHROOM_TRUST_MARK_ID},
+    return _jwt.pack({'sub': TMI_ID, "trust_mark_type": MUSHROOM_TRUST_MARK_TYPE},
                      jws_headers={"typ": "trust-mark-delegation+jwt"})
+
 
 class TestTrustMarkDelegation():
 
@@ -137,15 +140,15 @@ class TestTrustMarkDelegation():
 
     @pytest.fixture()
     def create_trust_mark(self, trust_mark_delegation, tm_receiver):
-        self.tmi.server.trust_mark_entity.trust_mark_specification[SIRTIFI_TRUST_MARK_ID] = {
+        self.tmi.server.trust_mark_entity.trust_mark_specification[SIRTIFI_TRUST_MARK_TYPE] = {
             "delegation": trust_mark_delegation}
-        return self.tmi.server.trust_mark_entity.create_trust_mark(SIRTIFI_TRUST_MARK_ID, tm_receiver)
+        return self.tmi.server.trust_mark_entity.create_trust_mark(SIRTIFI_TRUST_MARK_TYPE, tm_receiver)
 
     @pytest.fixture()
     def create_mushroom_trust_mark(self, mushroom_trust_mark_delegation, tm_receiver):
-        self.tmi.server.trust_mark_entity.trust_mark_specification[MUSHROOM_TRUST_MARK_ID] = {
+        self.tmi.server.trust_mark_entity.trust_mark_specification[MUSHROOM_TRUST_MARK_TYPE] = {
             "delegation": mushroom_trust_mark_delegation}
-        return self.tmi.server.trust_mark_entity.create_trust_mark(MUSHROOM_TRUST_MARK_ID, tm_receiver)
+        return self.tmi.server.trust_mark_entity.create_trust_mark(MUSHROOM_TRUST_MARK_TYPE, tm_receiver)
 
     def test_delegated_trust_mark(self, create_trust_mark):
         _trust_mark = create_trust_mark
@@ -183,8 +186,7 @@ class TestTrustMarkDelegation():
         service = self.fe.get_service('trust_mark_status')
         req = service.get_request_parameters(
             request_args={
-                'sub': verified_trust_mark['sub'],
-                'trust_mark_id': verified_trust_mark['trust_mark_id']
+                'trust_mark': _trust_mark,
             },
             fetch_endpoint=tm_issuer_metadata["federation_entity"][
                 'federation_trust_mark_status_endpoint']
@@ -193,9 +195,9 @@ class TestTrustMarkDelegation():
         tmr = TrustMarkRequest().from_urlencoded(p.query)
 
         # The response from the Trust Mark issuer
-        resp = self.tmi.server.endpoint['trust_mark_status'].process_request(
-            tmr.to_dict())
-        assert resp == {'response_args': {'active': True}}
+        resp = self.tmi.server.endpoint['trust_mark_status'].process_request(tmr.to_dict())
+        # It's actually a signed JWT
+        assert isinstance(resp, str)
 
     def test_verify_mushroom_trust_mark(self, create_mushroom_trust_mark):
         _trust_mark = create_mushroom_trust_mark
@@ -216,8 +218,8 @@ class TestTrustMarkDelegation():
 
     @pytest.fixture()
     def create_mushroom_trust_mark_sans_delegation(self, mushroom_trust_mark_delegation, tm_receiver):
-        self.tmi.server.trust_mark_entity.trust_mark_specification[MUSHROOM_TRUST_MARK_ID] = {}
-        return self.tmi.server.trust_mark_entity.create_trust_mark(MUSHROOM_TRUST_MARK_ID, tm_receiver)
+        self.tmi.server.trust_mark_entity.trust_mark_specification[MUSHROOM_TRUST_MARK_TYPE] = {}
+        return self.tmi.server.trust_mark_entity.create_trust_mark(MUSHROOM_TRUST_MARK_TYPE, tm_receiver)
 
     def test_verify_mushroom_trust_mark_not_delegated(self, create_mushroom_trust_mark_sans_delegation):
         _trust_mark = create_mushroom_trust_mark_sans_delegation
@@ -227,7 +229,7 @@ class TestTrustMarkDelegation():
 
         where_and_what = create_trust_chain_messages(self.tmi, self.ta)
         # Will not be looking for a trust chain
-        del where_and_what['https://tmi.example.org/.well-known/openid-federation']
+        # del where_and_what['https://tmi.example.org/.well-known/openid-federation']
         del where_and_what['https://ta.example.org/fetch']
         with responses.RequestsMock() as rsps:
             for _url, _jwks in where_and_what.items():
@@ -237,4 +239,4 @@ class TestTrustMarkDelegation():
             verified_trust_mark = self.fe.function.trust_mark_verifier(
                 trust_mark=_trust_mark, trust_anchor=self.ta.entity_id)
 
-        assert verified_trust_mark == None
+        assert verified_trust_mark is None

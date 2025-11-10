@@ -37,6 +37,7 @@ from idpyoidc.message.oidc import RegistrationResponse
 from idpyoidc.message.oidc import SINGLE_OPTIONAL_BOOLEAN
 from idpyoidc.message.oidc import SINGLE_OPTIONAL_DICT
 
+from fedservice import DEFAULT_SKEW
 from fedservice.exception import UnknownCriticalExtension
 from fedservice.exception import WrongSubject
 
@@ -470,18 +471,18 @@ class TrustMarks(Message):
         for _id, spec in self.items():
             _trust_mark = spec.get("trust_mark")
             if _trust_mark:
-                _trust_mark_id = spec.get("trust_mark_id")
-                if _trust_mark_id:
+                _trust_mark_type = spec.get("trust_mark_type")
+                if _trust_mark_type:
                     # Have to peek into the trust mark
                     _jws = factory(_trust_mark)
                     if not _jws:
                         raise ValueError(f"Not a proper signed JWT: {_trust_mark}")
-                    _tm_id = _jws.jwt.payload().get("trust_mark_id")
-                    if _tm_id != _trust_mark_id:
-                        raise ValueError("The Trust Mark identifier MUST have the same value as the trust_mark_id "
+                    _tm_id = _jws.jwt.payload().get("trust_mark_type")
+                    if _tm_id != _trust_mark_type:
+                        raise ValueError("The Trust Mark identifier MUST have the same value as the trust_mark_type "
                                          "claim")
                 else:
-                    raise MissingRequiredAttribute("trust_mark_id")
+                    raise MissingRequiredAttribute("trust_mark_type")
             else:
                 raise MissingRequiredAttribute("trust_mark")
 
@@ -640,7 +641,7 @@ class TrustMarkDelegation(Message):
     c_param = {
         "iss": SINGLE_REQUIRED_STRING,
         "sub": SINGLE_REQUIRED_STRING,
-        "trust_mark_id": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_REQUIRED_STRING,
         "iat": SINGLE_REQUIRED_INT,
         "exp": SINGLE_OPTIONAL_INT,
         "ref": SINGLE_OPTIONAL_STRING
@@ -649,10 +650,18 @@ class TrustMarkDelegation(Message):
     def verify(self, **kwargs):
         super(TrustMarkDelegation, self).verify(**kwargs)
 
+        clk_skew = kwargs.get("skew", DEFAULT_SKEW)
+        _now = utc_time_sans_frac() - clk_skew
+
         exp = self.get("exp", 0)
         if exp:
-            _now = utc_time_sans_frac()
             if _now > exp:  # have passed the time of expiration
+                raise Expired()
+
+        iat = self.get("iat", 0)
+        if iat:
+            _now = utc_time_sans_frac()
+            if _now < iat:  # Before the time it was issued !!
                 raise Expired()
 
 
@@ -662,7 +671,7 @@ class TrustMark(JsonWebToken):
         "sub": SINGLE_REQUIRED_STRING,
         'iss': SINGLE_REQUIRED_STRING,
         'iat': SINGLE_REQUIRED_INT,
-        "trust_mark_id": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_REQUIRED_STRING,
         "logo_uri": SINGLE_OPTIONAL_STRING,
         "exp": SINGLE_OPTIONAL_INT,
         "ref": SINGLE_OPTIONAL_STRING,
@@ -683,32 +692,24 @@ class TrustMark(JsonWebToken):
             if _now > exp:  # have passed the time of expiration
                 raise Expired()
 
-        _delegation_jwt = self.get("delegation")
-        if _delegation_jwt:
-            # Not verifying the signature
-            _delegation = TrustMarkDelegation(**_payload_from_jws(_delegation_jwt))
-            _delegation.verify()
-            if self.get("iss") != _delegation["sub"]:
-                raise ValueError("Not the issuer the delegation applies to")
-            if self.get("trust_mark_id") != _delegation["trust_mark_id"]:
-                raise ValueError("Not the trust mark id the delegation applies to")
-            self["__delegation"] = _delegation
+        # _delegation_jwt = self.get("delegation")
+        # if _delegation_jwt:
+        #     # Not verifying the signature
+        #     _delegation = TrustMarkDelegation(**_payload_from_jws(_delegation_jwt))
+        #     # _delegation.verify()
+        #     if self.get("iss") != _delegation["sub"]:
+        #         raise ValueError("Not the issuer the delegation applies to")
+        #     if self.get("trust_mark_type") != _delegation["trust_mark_type"]:
+        #         raise ValueError("Not the trust mark id the delegation applies to")
+        #     self["__delegation"] = _delegation
 
         return True
 
 
 class TrustMarkStatusRequest(Message):
     c_param = {
-        "sub": SINGLE_OPTIONAL_STRING,
-        "trust_mark_id": SINGLE_OPTIONAL_STRING,
-        "iat": SINGLE_OPTIONAL_INT,
-        "trust_mark": SINGLE_OPTIONAL_STRING
+        "trust_mark": SINGLE_REQUIRED_STRING
     }
-
-    def verify(self, **kwargs):
-        if 'trust_mark' not in self:
-            if 'sub' not in self or 'trust_mark_id' not in self:
-                raise AttributeError('Must have both "sub" and "trust_mark_id" or "trust_mark"')
 
 
 def trust_mark_deser(val, sformat="json"):
@@ -741,7 +742,7 @@ class ListRequest(Message):
     c_param = {
         "entity_type": SINGLE_OPTIONAL_STRING,
         "trust_marked": SINGLE_OPTIONAL_BOOLEAN,
-        "trust_mark_id": SINGLE_OPTIONAL_STRING,
+        "trust_mark_type": SINGLE_OPTIONAL_STRING,
         "intermediate": SINGLE_OPTIONAL_BOOLEAN
     }
 
@@ -811,7 +812,7 @@ class HistoricalKeysResponse(Message):
 
 class TrustMarkRequest(Message):
     c_param = {
-        "trust_mark_id": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_REQUIRED_STRING,
         "sub": SINGLE_REQUIRED_STRING
     }
 
@@ -820,7 +821,7 @@ class WhoRequest(Message):
     c_param = {
         "entity_type": SINGLE_OPTIONAL_STRING,
         "credential_type": SINGLE_OPTIONAL_STRING,
-        "trust_mark_id": SINGLE_OPTIONAL_STRING
+        "trust_mark_type": SINGLE_OPTIONAL_STRING
     }
 
 

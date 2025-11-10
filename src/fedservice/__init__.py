@@ -37,3 +37,5 @@ def get_payload(self_signed_statement):
     _jws = as_unicode(self_signed_statement)
     _jwt = factory(_jws)
     return _jwt.jwt.payload()
+
+DEFAULT_SKEW = 10

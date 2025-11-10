@@ -1,0 +1,20 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "kid": "SUdtUndEWVY2cUFDeDV5NVlBWDhvOXJodVl2am1mNGNtR0pmd",
+      "n": "y_Zc8rByfeRIC9fFZrDZ2MGH2ZnxLrc0ZNNwkNet5rwCPYeRF3Sv5nihZA9NHkDTEX97dN8hG6ACfeSo6JB2P7heJtmzM8oOBZbmQ90nEA_JCHszkejHaOtDDfxPH6bQLrMlItF4JSUKua301uLB7C8nzTxmtF3eAhGCKn8LotEseccxsmzApKRNWhfKDLpKPe9i9PZQhhJaurwDkMwbWTAeZbqCScU1o09piuK1JDf2PaDFevioHncZcQO74Obe4nN3oNPNAxrMClkZ9s9GMEd5vMqOD4huXlRpHwm9V3oJ3LRutOTxqQLVyPucu7eHA7her4FOFAiUk-5SieXL9Q",
+      "e": "AQAB"
+    },
+    {
+      "kty": "EC",
+      "kid": "MFYycG1raTI4SkZvVDBIMF9CNGw3VEZYUmxQLVN2T21nSWlkd3",
+      "crv": "P-256",
+      "x": "qAOdPQROkHfZY1daGofOmSNQWpYK8c9G2m2Rbkpbd4c",
+      "y": "G_7fF-T8n2vONKM15Mzj4KR_shvHBxKGjMosF6FdoPY"
+    }
+  ],
+  "iss": "https://example.org/op",
+  "sub": "https://example.org/op",
+  "iat": 1618410883
+}

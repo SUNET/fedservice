@@ -1,0 +1,24 @@
+{
+  "iss": "https://rp.example.it/spid/",
+  "sub": "https://rp.example.it/spid/",
+  "iat": 1516239022,
+  "exp": 1516298022,
+  "trust_marks": [
+    {
+      "trust_mark_type": "https://www.spid.gov.it/certification/rp",
+      "trust_mark": "eyJ0eXAiOiJ0cnVzdC1tYXJrK2p3dCIsImFsZyI6IlJTMjU2Iiwia2lkIjoia29zR20yd3VaaDlER21OeEF0a3VPNDBwUGpwTDMtakNmMU4tcVBPLVllVSJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2lkLmdvdi5pdCIsInN1YiI6Imh0dHBzOi8vcnAuZXhhbXBsZS5pdC9zcGlkIiwiaWF0IjoxNTc5NjIxMTYwLCJ0cnVzdF9tYXJrX2lkIjoiaHR0cHM6Ly93d3cuc3BpZC5nb3YuaXQvY2VydGlmaWNhdGlvbi9ycCIsImxvZ29fdXJpIjoiaHR0cHM6Ly93d3cuYWdpZC5nb3YuaXQvdGhlbWVzL2N1c3RvbS9hZ2lkL2xvZ28uc3ZnIiwicmVmIjoiaHR0cHM6Ly9kb2NzLml0YWxpYS5pdC9kb2NzL3NwaWQtY2llLW9pZGMtZG9jcy9pdC92ZXJzaW9uZS1jb3JyZW50ZS8ifQ.L_pSh1InEiFAcs3E-1HBM7fNZYwF5ru3UGA_8yc80dGS3sszfA_sbj4AoW_zAJWQBdZpjxnHBBmybYXFrfZBcqxcedsrvUYrmbt1nPYxbUE54fRRoZK-sJmVqh1GzSan5nOmkxuAtMinU8k_-aWnPWj83sYe2AzT2mMgkXiz8zhda3jZm8hoxZ4jR6B0YAvbMlq2pPWO5OWKdZhiFRMSprwh0GYluQkK0j1aLNMGXD3keMJd2zEoWX9D7w2fXShAA48W3cNhuXyBVnCoum1K4IWK3s_fx4nIkp6W-V4jCBOpxp7Yo8LZ30o_xpEOzGTIECGWVR86azOAlwVC8XSiAA"
+    }
+  ],
+  "metadata": {
+    "openid_relying_party": {
+      "application_type": "web",
+      "client_registration_types": [
+        "automatic"
+      ],
+      "client_name": "https://rp.example.it/spid/",
+      "contacts": [
+        "ops@rp.example.it"
+      ]
+    }
+  }
+}

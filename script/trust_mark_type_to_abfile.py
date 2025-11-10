@@ -10,7 +10,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Update TA trust_mark_issuers AbstractFileSystem store")
     parser.add_argument("-s", "--source", required=True, help="Path to JSON file or '-' for stdin")
     parser.add_argument("-t", "--target", required=True, help="TA store dir (e.g. trust_anchor/trust_mark_issuers)")
-    parser.add_argument("--remove", action="store_true", help="Remove issuer from listed trust_mark_ids instead of adding")
+    parser.add_argument("--remove", action="store_true", help="Remove issuer from listed trust_mark_types instead of adding")
     parser.add_argument("--drop-empty", action="store_true",
                    help="If a removal would leave a Trust Mark type with an empty issuer list, "
                         "delete that key instead of writing an empty list")

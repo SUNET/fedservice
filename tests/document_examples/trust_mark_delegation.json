@@ -1,0 +1,8 @@
+{
+  "delegation": "eyJ0eXAiOiJ0cnVzdC1tYXJrLWRlbGVnYXRpb24rand0IiwiYWxnIjoiUlMyNTYiLCJraWQiOiJrb3NHbTJ3dVpoOURHbU54QXRrdU80MHBQanBMMy1qQ2YxTi1xUE8tWWVVIn0.eyJzdWIiOiJodHRwczovL3RtaS5leGFtcGxlLm9yZyIsInRydXN0X21hcmtfaWQiOiJodHRwczovL3JlZmVkcy5vcmcvc2lydGZpIiwiaXNzIjoiaHR0cHM6Ly90bV9vd25lci5leGFtcGxlLm9yZyIsImlhdCI6MTcyNTE3NjMwMn0.ao0rWGpVjEgpNyFxsKawps8q71eYnp78TzRdY4P52CT8QX6etXt-2L2Z1Vw5A6jx2mhjpPwWi_sOxfiOSA5TugJfN0Gbwj7teTzM0IMciuasCWgnLrKyLZjS147ZE50I9e9P8Ot8UQwhmXcLiuwsbDxSdqM4pVp75lfWnmzPH0L2pDZG5COFgIgSOAlK3TVMBOR8fziF-VmWNPzAfB0lSc-hjH-7q66GyT43o3Exnm6DsoLxyB8bxG99BQltLxURDT90CzM6szGcF3OG64Rbe0I4lT_LAOfvhlrRbT56eK4sJNCsbVbGnDBfFmyfB_HIeBMGP0L7T5JPMOUU9bjIlA",
+  "iat": 1725176302,
+  "trust_mark_type": "https://refeds.org/sirtfi",
+  "sub": "https://entity.example.org",
+  "exp": 1727768302,
+  "iss": "https://tmi.example.org"
+}

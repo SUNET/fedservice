@@ -90,6 +90,6 @@ if __name__ == '__main__':
                         res = ent(trust_mark["trust_mark"],
                                   trust_anchor_entity_configuration["iss"])
                         if res:
-                            if res["trust_mark_id"] != trust_mark["trust_mark_id"]:
-                                print("*** Mismatch in trust_mark_id ***")
+                            if res["trust_mark_type"] != trust_mark["trust_mark_type"]:
+                                print("*** Mismatch in trust_mark_type***")
                             print(res)

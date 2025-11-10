@@ -47,7 +47,7 @@ class List(FederationService):
             endpoint = get_verified_endpoint(self, entity_id, self.endpoint_name)
 
         qpart = {}
-        for arg in ["entity_type", "trust_marked", "trust_mark_id", "intermediate"]:
+        for arg in ["entity_type", "trust_marked", "trust_mark_type", "intermediate"]:
             val = kwargs.get(arg)
             if val:
                 qpart[arg] = val
