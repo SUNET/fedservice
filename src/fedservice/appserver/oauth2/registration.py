@@ -27,6 +27,7 @@ from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.function.trust_chain_collector import verify_self_signed_signature
 from fedservice.entity.utils import get_federation_entity
 from fedservice.entity_statement.create import create_entity_statement
+from fedservice.entity_statement.create import create_explicit_registration_response
 from fedservice.exception import NoTrustedChains
 from fedservice.message import OauthClientInformationResponse
 
@@ -85,14 +86,14 @@ class Registration(Endpoint):
             _response_metadata = req.to_dict()
             _response_metadata.update(response_info['response_args'])
 
-            entity_statement = create_entity_statement(
+            entity_statement = create_explicit_registration_response(
                 iss=_federation_entity.upstream_get('attribute', 'entity_id'),
-                sub=payload['iss'],
                 key_jar=_federation_entity.upstream_get("attribute", "keyjar"),
+                sub=payload['iss'],
+                include_jwks=False,
                 trust_anchor=trust_chain.anchor,
                 metadata={opponent_entity_type: _response_metadata},
-                aud=payload['iss'],
-                include_jwks=False
+                aud=payload['iss']
             )
             response_info["response_msg"] = entity_statement
             del response_info["response_args"]

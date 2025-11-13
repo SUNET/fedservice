@@ -126,6 +126,13 @@ def verify_trust_chain(unit, chain: List[str]):
     logger.debug("verify_trust_chain")
     return _verifier(chain)
 
+def verify_trust_chain_return_chain(unit, chain: List[str]):
+    #
+    _verifier = get_federation_entity(unit).function.verifier
+
+    logger.debug("verify_trust_chain")
+    return _verifier(chain)
+
 
 def apply_policies(unit, trust_chains):
     """

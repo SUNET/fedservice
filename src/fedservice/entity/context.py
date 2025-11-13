@@ -12,6 +12,7 @@ from idpyoidc.transform import preferred_to_registered
 
 from fedservice.entity.claims import FederationEntityClaims
 from fedservice.entity_statement.create import create_entity_configuration
+from fedservice.entity_statement.create import create_explicit_registration_request
 
 
 def entity_type(metadata):
@@ -108,8 +109,14 @@ class FederationContext(ImpExp):
     def setup_client_authn_methods(self):
         self.client_authn_methods = client_auth_setup(self.config.get("client_authn_methods"))
 
-    def create_entity_configuration(self, iss, key_jar=None, metadata=None, metadata_policy=None,
-                                    authority_hints=None, lifetime=0, jwks=None, **kwargs):
+    def _collect_claims(self, iss, key_jar=None, metadata=None, metadata_policy=None,
+                        authority_hints=None, lifetime=0, jwks=None, **kwargs):
+
+        if metadata:
+            kwargs["metadata"] = metadata
+        if iss:
+            kwargs['iss'] = iss
+
         if jwks:
             kwargs["jwks"] = jwks
         else:
@@ -117,12 +124,15 @@ class FederationContext(ImpExp):
                 kwargs["jwks"] = {'keys': kwargs["keys"]}
                 del kwargs["keys"]
 
-        key_jar = key_jar or self.upstream_get("attribute", "keyjar")
+        kwargs['key_jar'] = key_jar or self.upstream_get("attribute", "keyjar")
 
-        if not authority_hints:
-            authority_hints = self.authority_hints
         if not lifetime:
-            lifetime = self.default_lifetime
+            kwargs['lifetime'] = self.default_lifetime
+
+        if authority_hints:
+            kwargs['authority_hints'] = authority_hints
+        else:
+            kwargs['authority_hints'] = self.authority_hints
 
         _trust_marks = kwargs.get("trust_marks")
         if not _trust_marks:
@@ -145,8 +155,20 @@ class FederationContext(ImpExp):
         if metadata_policy:
             kwargs["metadata_policy"] = metadata_policy
 
-        return create_entity_configuration(iss, key_jar=key_jar, metadata=metadata,
-                                           authority_hints=authority_hints, lifetime=lifetime, **kwargs)
+        return kwargs
+
+    def create_entity_configuration(self, iss, key_jar=None, lifetime=0, jwks=None, **kwargs):
+        kwargs = self._collect_claims(iss, key_jar=key_jar, lifetime=lifetime, jwks=jwks, **kwargs)
+
+        return create_entity_configuration(**kwargs)
+
+    def create_explicit_registration_request(self, iss, key_jar=None, lifetime=0, jwks=None, **kwargs):
+        kwargs = self._collect_claims(iss, key_jar=key_jar, lifetime=lifetime, jwks=jwks, **kwargs)
+
+        if "sub" not in kwargs:
+            kwargs['sub'] = iss
+
+        return create_explicit_registration_request(**kwargs)
 
     def map_preferred_to_registered(self, registration_response: Optional[dict] = None):
         self.claims.use = preferred_to_registered(

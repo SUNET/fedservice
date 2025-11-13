@@ -2,7 +2,6 @@ import logging
 from typing import Optional
 from typing import Union
 
-from cryptojwt import JWT
 from idpyoidc.client.exception import ResponseError
 from idpyoidc.client.oauth2 import registration
 from idpyoidc.client.rp_handler import RPHandler
@@ -38,6 +37,36 @@ def create_entity_configuration(request_args: Optional[dict] = None, service: Op
         kwargs["trust_marks"] = _context.get_trust_marks()
 
     _jws = _context.create_entity_configuration(
+        iss=_entity_id,
+        # sub=_entity_id,
+        metadata=metadata,
+        key_jar=_federation_keyjar,
+        authority_hints=_authority_hints,
+        **kwargs)
+    # store for later reference
+    federation_entity.entity_configuration = _jws
+    return _jws
+
+
+def create_explicit_registration_request(request_args: Optional[dict] = None, service: Optional[Service] = None,
+                                         **kwargs):
+    _combo = topmost_unit(service)
+    metadata = _combo.get_metadata(client=kwargs.get("client"))
+    federation_entity = get_federation_entity(service)
+
+    _federation_keyjar = federation_entity.get_attribute("keyjar")
+    _authority_hints = federation_entity.get_authority_hints()
+    _context = federation_entity.get_context()
+    _entity_id = federation_entity.upstream_get('attribute', 'entity_id')
+
+    kwargs = {}
+    if _context.trust_marks:
+        kwargs["trust_marks"] = _context.get_trust_marks()
+
+    for claim in ["peer_trust_chain", "aud", "trust_chain"]:
+        kwargs[claim] = request_args.get(claim)
+
+    _jws = _context.create_explicit_registration_request(
         iss=_entity_id,
         # sub=_entity_id,
         metadata=metadata,
@@ -165,7 +194,7 @@ class Registration(registration.Registration):
     def __init__(self, upstream_get, conf=None, client_authn_factory=None, **kwargs):
         registration.Registration.__init__(self, upstream_get, conf=conf)
         #
-        self.post_construct.append(create_entity_configuration)
+        self.post_construct.append(create_explicit_registration_request)
 
     def update_service_context(self, resp: Union[Message, dict], **kwargs):
         shared_update_service_context(service=self, resp=resp, **kwargs)

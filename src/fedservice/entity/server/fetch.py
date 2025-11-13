@@ -74,7 +74,7 @@ class Fetch(Endpoint):
             _response.update(_policy)
 
         _es = create_subordinate_statement(iss=_issuer,
-                                           sub=_sub,
                                            key_jar=_keyjar,
+                                           sub=_sub,
                                            **_response)
         return {"response_msg": _es}

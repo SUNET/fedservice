@@ -602,6 +602,14 @@ class ExplicitRegistrationResponse(EntityConfiguration):
                     raise ValueError(f"The Server used a trust anchor I do not trust: {_trust_anchor}")
 
 
+class ExplicitRegistrationRequest(EntityConfiguration):
+    c_param = EntityConfiguration.c_param.copy()
+    c_param.update({
+        'peer_trust_chain': OPTIONAL_LIST_OF_STRINGS,
+        'trust_chain': OPTIONAL_LIST_OF_STRINGS,
+    })
+
+
 class SubordinateStatement(EntityStatement):
     c_param = EntityStatement.c_param.copy()
     c_param.update({

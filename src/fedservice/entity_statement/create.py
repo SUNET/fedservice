@@ -4,13 +4,19 @@ from typing import Optional
 
 from cryptojwt.jwt import JWT
 
+from fedservice.message import EntityConfiguration
+from fedservice.message import ExplicitRegistrationRequest
+from fedservice.message import ExplicitRegistrationResponse
+from fedservice.message import SubordinateStatement
+
 logger = logging.getLogger(__name__)
 
 
-def create_entity_statement(iss, sub, key_jar, lifetime=86400, include_jwks=True,
+def create_entity_statement(cls, iss, key_jar, sub=None, lifetime=86400, include_jwks=True,
                             signing_alg: Optional[str] = "RS256", **kwargs):
     """
 
+    :param cls: Type of Entity Statement
     :param iss: The issuer of the signed JSON Web Token
     :param sub: The subject which the metadata describes
     :param key_jar: A KeyJar instance
@@ -21,10 +27,18 @@ def create_entity_statement(iss, sub, key_jar, lifetime=86400, include_jwks=True
     :return: A signed JSON Web Token
     """
 
-    msg = {'sub': sub}
+    msg = {}
+    if cls in [SubordinateStatement]:  # sub and iss not the same
+        msg = {'iss': iss, 'sub': sub}
+    elif cls in [ExplicitRegistrationResponse, ExplicitRegistrationRequest]:
+        msg = {'iss': iss, 'sub': sub}
+    elif cls in [EntityConfiguration]:
+        msg = {'iss': iss, 'sub': sub}
 
     if kwargs:
-        msg.update(kwargs)
+        for claim in cls.c_param.keys():
+            if claim in kwargs:
+                msg[claim] = kwargs[claim]
 
     if include_jwks:
         if "jwks" in kwargs:
@@ -67,11 +81,11 @@ def create_entity_configuration(iss, key_jar, metadata=None,
     if kwargs:
         msg.update(kwargs)
 
-    return create_entity_statement(iss, iss, key_jar, lifetime=lifetime, include_jwks=include_jwks,
-                                   signing_alg=signing_alg, **msg)
+    return create_entity_statement(EntityConfiguration, iss, key_jar, sub=iss, lifetime=lifetime,
+                                   include_jwks=include_jwks, signing_alg=signing_alg, **msg)
 
 
-def create_subordinate_statement(iss, sub, key_jar, lifetime=86400, include_jwks=True, constraints=None,
+def create_subordinate_statement(iss, key_jar, sub=None, lifetime=86400, include_jwks=True, constraints=None,
                                  signing_alg: Optional[str] = "RS256", **kwargs):
     """
 
@@ -92,5 +106,26 @@ def create_subordinate_statement(iss, sub, key_jar, lifetime=86400, include_jwks
     if kwargs:
         msg.update(kwargs)
 
-    return create_entity_statement(iss, sub, key_jar, lifetime=lifetime, include_jwks=include_jwks,
-                                   signing_alg=signing_alg, **msg)
+    return create_entity_statement(SubordinateStatement, iss, key_jar, sub=sub, lifetime=lifetime,
+                                   include_jwks=include_jwks, signing_alg=signing_alg, **msg)
+
+
+def create_explicit_registration_request(iss, key_jar, sub, lifetime=86400, include_jwks=True, constraints=None,
+                                         signing_alg: Optional[str] = "RS256", **kwargs):
+    msg = {}
+
+    if kwargs:
+        msg.update(kwargs)
+
+    return create_entity_statement(ExplicitRegistrationRequest, iss, key_jar, sub=sub, lifetime=lifetime,
+                                   include_jwks=include_jwks, signing_alg=signing_alg, **msg)
+
+
+def create_explicit_registration_response(iss, key_jar, sub=None, lifetime=86400, include_jwks=True,
+                                          signing_alg: Optional[str] = "RS256", **kwargs):
+    msg = {}
+    if kwargs:
+        msg.update(kwargs)
+
+    return create_entity_statement(ExplicitRegistrationResponse, iss, key_jar, sub=sub, lifetime=lifetime,
+                                   include_jwks=include_jwks, signing_alg=signing_alg, **msg)
