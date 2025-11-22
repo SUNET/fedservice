@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from urllib.parse import urlparse
 
+from cryptojwt.jws.jws import factory
 from cryptojwt.jws.utils import alg2keytype
 from cryptojwt.jwt import utc_time_sans_frac
 from cryptojwt.utils import as_bytes
@@ -24,6 +25,7 @@ from fedservice import save_trust_chains
 from fedservice.appserver import import_client_keys
 from fedservice.entity.function import apply_policies
 from fedservice.entity.function import get_verified_trust_chains
+from fedservice.entity.function import verify_trust_chain
 from fedservice.entity.function.trust_chain_collector import verify_self_signed_signature
 from fedservice.entity.utils import get_federation_entity
 from fedservice.entity_statement.create import create_entity_statement
@@ -35,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class Registration(Endpoint):
+    application_protocol = "oauth2"
     msg_type = oauth2.OauthClientMetadata
     response_cls = OauthClientInformationResponse
     request_format = 'jose'
@@ -63,20 +66,43 @@ class Registration(Endpoint):
         :return:
         """
         payload = verify_self_signed_signature(request)
-        opponent_entity_type = set(payload['metadata'].keys()).difference({'federation_entity',
+
+        if self.application_protocol == "oauth2":
+            opponent_entity_type = 'oauth_client'
+        elif self.application_protocol == "oidc":
+            opponent_entity_type = 'openid_relying_party'
+        else:
+            opponent_entity_type = set(payload['metadata'].keys()).difference({'federation_entity',
                                                                            'trust_mark_issuer'}).pop()
         _federation_entity = get_federation_entity(self)
 
+        _jws = factory(request)
         # Collect trust chains for client
-        _trust_chains = get_verified_trust_chains(self, entity_id=payload['sub'])
-        if not _trust_chains:
-            raise NoTrustedChains(f"No trust chains for {payload['sub']}")
+        _trust_chain_anchor = ""
+        if "peer_trust_chain" in _jws.jwt.headers:
+            if 'trust_chain' in _jws.jwt.headers:
+                trust_chain = {}
+                for typ in ['peer_trust_chain', 'trust_chain']:
+                    _chain = _jws.jwt.headers.get(typ)
+                    _chain.reverse()
+                    trust_chain[typ] = verify_trust_chain(_federation_entity, _chain)[0]
 
-        save_trust_chains(self.upstream_get("context"), _trust_chains)
+                if trust_chain['trust_chain'].anchor != trust_chain['peer_trust_chain'].anchor:
+                    raise ValueError("Not the same Trust Anchor in the two Trust Chains")
 
-        _trust_chains = apply_policies(_federation_entity, _trust_chains)
-        trust_chain = _federation_entity.pick_trust_chain(_trust_chains)
-        _federation_entity.trust_chain_anchor = trust_chain.anchor
+                _trust_chain_anchor = trust_chain['trust_chain'].anchor
+        else:
+            _trust_chains = get_verified_trust_chains(self, entity_id=payload['sub'])
+            if not _trust_chains:
+                raise NoTrustedChains(f"No trust chains for {payload['sub']}")
+
+            save_trust_chains(self.upstream_get("context"), _trust_chains)
+
+            _trust_chains = apply_policies(_federation_entity, _trust_chains)
+            trust_chain = _federation_entity.pick_trust_chain(_trust_chains)
+            _trust_chain_anchor = trust_chain.anchor
+
+        _federation_entity.trust_chain_anchor = _trust_chain_anchor
 
         # Perform non-federation registration
         req = oauth2.OauthClientMetadata(**payload['metadata'][opponent_entity_type])
@@ -91,7 +117,7 @@ class Registration(Endpoint):
                 key_jar=_federation_entity.upstream_get("attribute", "keyjar"),
                 sub=payload['iss'],
                 include_jwks=False,
-                trust_anchor=trust_chain.anchor,
+                trust_anchor=_trust_chain_anchor,
                 metadata={opponent_entity_type: _response_metadata},
                 aud=payload['iss']
             )

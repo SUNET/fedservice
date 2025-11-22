@@ -97,7 +97,8 @@ class TestRpService(object):
 
         # construct the client registration request
         req_args = {"entity_id": self.rp["federation_entity"].entity_id}
-        jws = self.registration_service.construct(request_args=req_args)
+        jws = self.registration_service.construct(request_args=req_args,
+                                                  behaviour_args={'trust_chain': False})
         assert jws
 
         _sc = self.registration_service.upstream_get("context")
@@ -118,7 +119,7 @@ class TestRpService(object):
         _jwt = factory(_jws)
         payload = _jwt.jwt.payload()
         assert set(payload.keys()) == {"sub", "iss", "metadata", "jwks", "exp",
-                                       "iat", "authority_hints"}
+                                       "iat", "authority_hints", 'aud'}
         assert set(payload["metadata"]["oauth_client"].keys()) == {
             'redirect_uris', 'jwks', 'response_types', 'token_endpoint_auth_method'}
 

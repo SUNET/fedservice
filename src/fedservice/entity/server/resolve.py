@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from typing import Union
 
+from fedservice.message import ResolveResponse
 from idpyoidc.message import Message
 from idpyoidc.message import oidc
 from idpyoidc.server.endpoint import Endpoint
@@ -10,7 +11,7 @@ from fedservice.entity.function import apply_policies
 from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import verify_trust_chains
 from fedservice.entity.utils import get_federation_entity
-from fedservice.entity_statement.create import create_entity_configuration
+from fedservice.entity_statement.create import create_entity_statement
 
 logger = logging.getLogger(__name__)
 
@@ -67,12 +68,14 @@ class Resolve(Endpoint):
         else:
             args = {}
 
-        _jws = create_entity_configuration(_federation_entity.entity_id,
-                                           # sub=request["sub"],
-                                           key_jar=_federation_entity.get_attribute('keyjar'),
-                                           metadata=metadata,
-                                           trust_chain=trust_chain,
-                                           **args)
+        _jws = create_entity_statement(
+            ResolveResponse,
+            iss=_federation_entity.entity_id,
+            sub=request["sub"],
+            key_jar=_federation_entity.get_attribute('keyjar'),
+            metadata=metadata,
+            trust_chain=trust_chain,
+            **args)
         return {'response_args': _jws}
 
     def response_info(

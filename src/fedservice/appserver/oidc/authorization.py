@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class Authorization(authorization.Authorization):
+    application_protocol = "oidc"
     msg_type = oidc.AuthorizationRequest
     response_cls = oidc.AuthorizationResponse
     error_msg = oidc.ResponseMessage

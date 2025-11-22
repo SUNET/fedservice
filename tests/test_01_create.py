@@ -1,15 +1,16 @@
 import json
 
+import pytest
 from cryptojwt import KeyJar
 from cryptojwt.jwk.jwk import key_from_jwk_dict
 from cryptojwt.jws.jws import factory
 from cryptojwt.key_jar import build_keyjar
-import pytest
-
-from fedservice.entity.function.trust_chain_collector import verify_self_signed_signature
 from idpyoidc.key_import import import_jwks_as_json
 
+from fedservice.entity.function.trust_chain_collector import verify_self_signed_signature
 from fedservice.entity_statement.create import create_entity_statement
+from fedservice.message import EntityConfiguration
+from fedservice.message import SubordinateStatement
 from tests import test_vector
 
 KEYSPEC = [
@@ -19,6 +20,7 @@ KEYSPEC = [
 
 RECEIVER = 'https://example.org/op'
 ISSUER_ID = "https://example.org"
+
 
 @pytest.mark.parametrize(
     "alg",
@@ -62,9 +64,8 @@ def test_create_self_signed(alg):
     sign_key_jar.add_keys("", [_key])
     authority = ["https://ntnu.no"]
 
-    _jwt = create_entity_statement(iss, sub, sign_key_jar, metadata=metadata,
-                                   authority_hints=authority,
-                                   signing_alg=alg)
+    _jwt = create_entity_statement(EntityConfiguration, iss, sign_key_jar, sub, metadata=metadata,
+                                   authority_hints=authority, signing_alg=alg)
 
     assert _jwt
 
@@ -117,10 +118,7 @@ def test_signed_someone_else_metadata():
                                       iss_key_jar.export_jwks_as_json(issuer_id=iss),
                                       iss)
 
-    authority = {"https://core.example.com": ["https://federation.example.org"]}
-
-    _jwt = create_entity_statement(iss, sub, iss_key_jar, metadata=metadata,
-                                   authority_hints=authority)
+    _jwt = create_entity_statement(SubordinateStatement, iss, iss_key_jar, sub, metadata=metadata)
 
     assert _jwt
 
@@ -131,5 +129,4 @@ def test_signed_someone_else_metadata():
     assert res
     assert res['iss'] == iss
     assert res['sub'] == sub
-    assert set(res.keys()) == {'metadata', 'iss', 'exp', 'sub', 'iat',
-                               'authority_hints', 'jwks'}
+    assert set(res.keys()) == {'metadata', 'iss', 'exp', 'sub', 'iat', 'jwks'}

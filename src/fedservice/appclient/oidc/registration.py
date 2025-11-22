@@ -36,6 +36,7 @@ class Registration(registration.Registration):
     response_body_type = 'jwt'
     content_type = "application/entity-statement+jwt"
     name = 'registration'
+    application_protocol = "oidc"
 
     _supports = {
         "client_registration_types": ["automatic", "explicit"]

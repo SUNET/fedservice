@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class Authorization(authorization.Authorization):
+    application_protocol = "oauth2"
     msg_type = oauth2.AuthorizationRequest
     response_cls = oauth2.AuthorizationResponse
     error_msg = oauth2.ResponseMessage

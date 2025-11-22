@@ -102,7 +102,8 @@ class TrustMarkEntity(Unit):
 
     def unpack_trust_mark(self, token, entity_id: Optional[str] = ""):
         keyjar = self.upstream_get('attribute', 'keyjar')
-        _jwt = JWT(key_jar=keyjar, msg_cls=TrustMark, allowed_sign_algs=["RS256"])
+        _jwt = JWT(key_jar=keyjar, allowed_sign_algs=["RS256"])
+        _jwt.msg_cls=TrustMark
         _tm = _jwt.unpack(token)
 
         if entity_id:

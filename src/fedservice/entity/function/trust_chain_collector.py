@@ -11,17 +11,17 @@ from typing import Union
 from cryptojwt import JWT
 from cryptojwt import KeyJar
 from cryptojwt.jws.jws import factory
-from cryptojwt.jws.utils import alg2keytype
 from cryptojwt.jwt import utc_time_sans_frac
 from idpyoidc.exception import MissingPage
 from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
 from requests.exceptions import ConnectionError
 
-from fedservice import DEFAULT_SKEW
 from fedservice.defaults import DEFAULT_SIGNING_ALGORITHM
-from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import Function
+from fedservice.entity.function import get_endpoint
+from fedservice.entity.function import tree2chains
+from fedservice.entity.function import verify_entity_statement
 from fedservice.entity.function import verify_trust_chains
 from fedservice.entity.utils import get_federation_entity
 from fedservice.entity_statement.cache import ESCache
@@ -47,81 +47,6 @@ def signing_algorithm(signed_jwt):
     return _jws.jwt.headers.get("alg", DEFAULT_SIGNING_ALGORITHM)
 
 
-Class_map = {
-    "entity_configuration": EntityConfiguration,
-    "subordinate_statement": SubordinateStatement,
-    "registration_response": ExplicitRegistrationResponse
-}
-
-
-def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW, msg_type: Optional[str] = "", **kwargs):
-    """
-
-    :param signed_jwt: The Entity Statement as a signed JWT
-    :param sub: The subject the Entity Statement should refer to
-    :param typ: Type of Entity Statement (entity_configuration, subordinate_statement, registration_response)
-    :return:
-    """
-    _jws = factory(signed_jwt)
-    if not _jws:
-        raise ValueError(f"Not a proper signed JWT: {signed_jwt}")
-
-    typ = _jws.jwt.headers.get('typ')
-    if typ:
-        if typ != "entity-statement+jwt":
-            raise ValueError(f"Wrong Entity Statement type {typ}")
-    else:
-        raise ValueError("Entity Statement type not properly set")
-
-    payload = _jws.jwt.payload()
-
-    if payload["sub"] != sub:
-        raise ValueError("Wrong subject in the Entity Statement")
-
-    jwt_args = {}
-    keyjar = kwargs.get("keyjar")
-    if keyjar:
-        pass
-    else:
-        keyjar = KeyJar()
-        keyjar = import_jwks(keyjar, payload['jwks'], payload['iss'])
-
-        alg = _jws.jwt.headers.get('alg')
-        if alg:
-            if not keyjar.get_signing_key(alg2keytype(alg), sub):
-                return ValueError("Signing algorithm does not match any key in the JWKS")
-        else:
-            raise ValueError("Entity Statement: no signing algorithm set")
-        jwt_args["sign_alg"] = alg
-
-        kid = _jws.jwt.headers.get('kid')
-        if kid:
-            if not keyjar.get_signing_key(alg2keytype(alg), sub, kid):
-                return ValueError("'kid' does not match any key in the JWKS")
-        else:
-            raise ValueError("Entity Statement: no 'kid' set")
-
-    # There MUST be an iss
-    iss = payload.get('iss')
-    if not iss:
-        raise ValueError("Missing 'iss'")
-
-    _jwt = JWT(key_jar=keyjar, **jwt_args)
-    _val = _jwt.unpack(signed_jwt)
-
-    args = {}
-    if msg_type:
-        _es = Class_map[msg_type](**_val)
-    else:  # Best effort
-        if iss == sub:  # Entity Configuration
-            _es = EntityConfiguration(**_val)
-        else:
-            _es = SubordinateStatement(**_val)
-
-    _es.verify(skew=skew, **args)
-
-    return _es
-
 
 def verify_self_signed_signature(statement):
     """
@@ -140,11 +65,6 @@ def verify_self_signed_signature(statement):
     _jwt = JWT(key_jar=keyjar, sign_alg=signing_algorithm(statement))
     _val = _jwt.unpack(statement)
     return _val
-
-
-def get_endpoint(endpoint_type, config):
-    _fe = config['metadata']['federation_entity']
-    return _fe.get(f"federation_{endpoint_type}_endpoint")
 
 
 def cache_key(authority, entity):
@@ -217,7 +137,7 @@ class TrustChainCollector(Function):
                 logger.info(f"Error description: {response.text}")
             raise FailedConfigurationRetrieval()
 
-    def get_entity_configuration(self, entity_id):
+    def read_entity_configuration(self, entity_id):
         """
         Get configuration information about an entity from itself.
         The configuration information is in the format of an Entity Statement
@@ -258,28 +178,53 @@ class TrustChainCollector(Function):
 
         return self_signed_config
 
-    def get_metadata(self, entity_id):
-        _ec = None
-        if entity_id in self.config_cache:
-            _ec = self.config_cache[entity_id]
-            if statement_is_expired(_ec):
-                _ec = None
-
-        if _ec is None:
-            _collection = self.upstream_get('unit')
-            _federation_entity = _collection.upstream_get('unit')
-            _chains, _ = collect_trust_chains(_federation_entity, entity_id)
-            _trust_chains = verify_trust_chains(_federation_entity, _chains)
-            _ec = self.config_cache[entity_id]
-
-        return _ec['metadata']
-
     def get_verified_self_signed_entity_configuration(self, entity_id: str) -> str:
-        signed_entity_config = self.get_entity_configuration(entity_id)
+        signed_entity_config = self.read_entity_configuration(entity_id)
         if signed_entity_config is None:
             return ''
 
         return verify_self_signed_signature(signed_entity_config)
+
+    def _get_cached_entity_configuration(self, entity_id):
+        entity_config = self.config_cache.get(entity_id, None)
+        if entity_config and not self.too_old(entity_config):
+            signed_entity_config = entity_config.get("_jws")
+            if not signed_entity_config:
+                signed_entity_config = getattr(entity_config, "_jws")
+
+            return entity_config, signed_entity_config
+        else:
+            return None, None
+
+    def _cache_entity_configuration(self, entity_id, entity_configuration):
+        self.config_cache[entity_id] = entity_configuration
+
+    def get_entity_configuration(self, entity_id) -> (dict, str):
+        """
+        Get the Entity Configuration, either from the cache or from the web page.
+
+        :param entity_id: An Entity Identifier
+        :return:
+        """
+        # Use the cache
+        entity_config, signed_entity_config = self._get_cached_entity_configuration(entity_id)
+
+        if not signed_entity_config:
+            # Read leaf Entity Configuration from the URL
+            signed_entity_config = self.read_entity_configuration(entity_id)
+            if not signed_entity_config:
+                logger.warning(f"Could not find any entity configuration for {entity_id}")
+                return None
+            _trust_anchors = self.upstream_get("attribute", "trust_anchors")
+            _ec = verify_entity_statement(signed_entity_config, entity_id, trust_anchors=_trust_anchors)
+            entity_config = _ec.to_dict()
+            # entity_config = verify_self_signed_signature(signed_entity_config)
+            # logger.debug(f'Verified self signed statement: {entity_config.to_json()}')
+            entity_config['_jws'] = signed_entity_config
+            # update cache
+            self._cache_entity_configuration(entity_id, entity_config)
+
+        return entity_config, signed_entity_config
 
     def get_federation_fetch_endpoint(self, intermediate: str) -> str:
         logger.debug(f'--get_federation_fetch_endpoint({intermediate})')
@@ -293,7 +238,7 @@ class TrustChainCollector(Function):
             fed_fetch_endpoint = None
 
         if not fed_fetch_endpoint:
-            signed_entity_config = self.get_entity_configuration(intermediate)
+            signed_entity_config = self.read_entity_configuration(intermediate)
             if signed_entity_config is None:
                 return ''
 
@@ -306,9 +251,9 @@ class TrustChainCollector(Function):
 
         return fed_fetch_endpoint
 
-    def get_entity_statement(self, fetch_endpoint, issuer, subject):
+    def read_subordinate_statement(self, fetch_endpoint, issuer, subject):
         """
-        Get Entity Statement by one entity about another or about itself
+        Get Subordinate Statement by one entity about another or about itself
 
         :param fetch_endpoint: The federation fetch endpoint
         :param issuer: Who should issue the entity statement
@@ -318,9 +263,6 @@ class TrustChainCollector(Function):
         _serv = self._get_service('entity_statement')
         _res = _serv.get_request_parameters(subject=subject, fetch_endpoint=fetch_endpoint)
 
-        # if self.use_ssc:
-        #     signed_entity_statement = self.do_ssc_seq(_url, issuer)
-        # else:
         try:
             return self.get_document(_res['url'])
         except FailedConfigurationRetrieval:
@@ -328,10 +270,107 @@ class TrustChainCollector(Function):
             logger.error(f"Request: {_res}")
             raise
 
+    def _get_cached_statement(self, entity: str, authority: str):
+        _cache_key = cache_key(authority, entity)
+        entity_statement = self.entity_statement_cache[_cache_key]
+
+        if entity_statement is not None:
+            logger.debug("Have cached statement")
+            # Verify that the cached statement is not too old
+            _now = utc_time_sans_frac()
+            _time_key = time_key(authority, entity)
+            _exp = self.entity_statement_cache[_time_key]
+            if _now > (_exp - self.allowed_delta):
+                logger.debug("Cached entity statement timed out")
+                # remove cached statement
+                del self.entity_statement_cache[_cache_key]
+                del self.entity_statement_cache[_time_key]
+                entity_statement = None
+
+        return entity_statement
+
+    def _cache_entity_statement(self, entity: str, authority: str, entity_statement, fetch_endpoint):
+        _cache_key = cache_key(authority, entity)
+        statement = unverified_entity_statement(entity_statement)
+        self.entity_statement_cache[_cache_key] = entity_statement
+        self.entity_statement_cache[time_key(authority, entity)] = statement["exp"]
+        logger.debug(
+            f"Unverified entity statement from {fetch_endpoint} about {entity}: "
+            f"{statement}")
+
+    def get_subordinate_statement(self, entity: str, authority: str) -> Optional[str]:
+        """
+        Gets the subordinate statement either from the cache or from a web endpoint
+        :param entity: The Entity Identifier for the subject
+        :param authority: The Entity Identifier for the authority
+        :return: A subordinate statement
+        """
+        # Try to get the entity statement from the cache
+        subordinate_statement = self._get_cached_statement(entity, authority)
+
+        if subordinate_statement is None:
+            logger.debug(f"Have not seen '{authority}' before")
+            # The entity configuration for authority is collected at this point
+            # It's stored in config_cache
+            fed_fetch_endpoint = self.get_federation_fetch_endpoint(authority)
+            if not fed_fetch_endpoint:
+                return None
+            logger.debug(f"Federation fetch endpoint: '{fed_fetch_endpoint}' for '{authority}'")
+            subordinate_statement = self.read_subordinate_statement(fed_fetch_endpoint, authority, entity)
+            # entity_statement is a signed JWT
+            self._cache_entity_statement(entity, authority, subordinate_statement, fed_fetch_endpoint)
+
+        return subordinate_statement
+
+    def collect_branch(self, entity, authority, superiors=None, max_superiors=10, stop_at=""):
+        """
+        Collect an entity statement about an entity submitted by another entity, the authority.
+        This consist of first finding the fed_fetch_endpoint URL for the authority and then
+        asking the authority for its view of the entity.
+
+        :param authority: An authority from the authority_hints
+        :param stop_at: When this entity ID is reached stop processing
+        :param entity: The ID of the entity
+        :param superiors: A list of authorities that this process has seen. This to capture
+            loops. Also used to control the allowed depth.
+        :param max_superiors: The maximum number of superiors allowed.
+        :return:
+        """
+
+        logger.debug(f'Get view of "{entity}" from "{authority}"')
+
+        if superiors is None:
+            _superiors = []
+        else:
+            _superiors = superiors[:]
+
+
+        subordinate_statement = self.get_subordinate_statement(entity, authority)
+
+        # Should I stop when I reach the first trust anchor ?
+        if entity == authority and entity in self.trust_anchors:
+            return None
+
+        _superiors.append(authority)
+        if len(_superiors) > max_superiors:
+            logger.warning("Reached max superiors. The path here was {}".format(_superiors))
+            return None
+
+
+        if subordinate_statement:
+            _entity_configuration = self.config_cache[authority]
+            return subordinate_statement, self.collect_tree(authority,
+                                                       _entity_configuration,
+                                                       stop_at=stop_at,
+                                                       superiors=_superiors,
+                                                       max_superiors=max_superiors)
+        else:
+            return None
+
     def collect_tree(self,
                      entity_id: str,
                      entity_configuration: Union[dict, Message],
-                     seen: Optional[list] = None,
+                     superiors: Optional[list] = None,
                      max_superiors: Optional[int] = 1,
                      stop_at: Optional[str] = "") -> Optional[dict]:
         """
@@ -339,15 +378,15 @@ class TrustChainCollector(Function):
 
         :param entity_id: The entity ID
         :param entity_configuration: Entity Configuration as a dictionary
-        :param seen: A list of authorities that this process has seen. This to capture
+        :param superiors: A list of authorities that this process has seen. This to capture
             loops. Also used to control the allowed depth.
         :param max_superiors: The maximum number of superiors.
         :param stop_at: The ID of the trust anchor at which the trust chain should stop.
         :return: Dictionary of superiors
         """
         superior = {}
-        if seen is None:
-            seen = []
+        if superiors is None:
+            superiors = []
 
         logger.debug(f'Collect superiors to: {entity_id}')
         logger.debug(f'Collect based on: {entity_configuration}')
@@ -361,11 +400,11 @@ class TrustChainCollector(Function):
         logger.debug(f"Authority_hints: {entity_configuration['authority_hints']}")
         for authority in entity_configuration['authority_hints']:
             logger.info(f"authority: {authority}")
-            if authority in seen:  # loop ?!
+            if authority in superiors:  # loop ?!
                 logger.warning(f"Loop detected at {authority}")
                 continue
             try:
-                superior[authority] = self.collect_branch(entity_id, authority, seen,
+                superior[authority] = self.collect_branch(entity_id, authority, superiors,
                                                           max_superiors, stop_at=stop_at)
             except Exception as err:
                 message = traceback.format_exception(*sys.exc_info())
@@ -374,83 +413,30 @@ class TrustChainCollector(Function):
 
         return superior
 
-    def _get_entity_statement(self, entity: str, authority: str) -> Optional[str]:
-        # Try to get the entity statement from the cache
-        _cache_key = cache_key(authority, entity)
-        entity_statement = self.entity_statement_cache[_cache_key]
+    def get_metadata(self, entity_id):
+        _ec = None
+        if entity_id in self.config_cache:
+            _ec = self.config_cache[entity_id]
+            if statement_is_expired(_ec):
+                _ec = None
 
-        if entity_statement is not None:
-            logger.debug("Have cached statement")
-            # Verify that the cached statement is not too old
-            _now = utc_time_sans_frac()
-            _time_key = time_key(authority, entity)
-            _exp = self.entity_statement_cache[_time_key]
-            if _now > (_exp - self.allowed_delta):
-                logger.debug("Cached entity statement timed out")
-                del self.entity_statement_cache[_cache_key]
-                del self.entity_statement_cache[_time_key]
-                entity_statement = None
+        if _ec is None:
+            try:
+                _collector_response = self.__call__(entity_id)
+            except Exception as err:
+                logger.error(f"Trust chain collection failed {err}")
+                raise (err)
 
-        if entity_statement is None:
-            logger.debug(f"Have not seen '{authority}' before")
-            # The entity configuration for authority is collected at this point
-            # It's stored in config_cache
-            fed_fetch_endpoint = self.get_federation_fetch_endpoint(authority)
-            if not fed_fetch_endpoint:
+            if _collector_response:
+                tree, signed_entity_configuration = _collector_response
+                chains = tree2chains(tree)
+            else:
                 return None
-            logger.debug(f"Federation fetch endpoint: '{fed_fetch_endpoint}' for '{authority}'")
-            entity_statement = self.get_entity_statement(fed_fetch_endpoint, authority, entity)
-            # entity_statement is a signed JWT
-            statement = unverified_entity_statement(entity_statement)
-            logger.debug(
-                f"Unverified entity statement from {fed_fetch_endpoint} about {entity}: "
-                f"{statement}")
-            self.entity_statement_cache[_cache_key] = entity_statement
-            self.entity_statement_cache[time_key(authority, entity)] = statement["exp"]
 
-        return entity_statement
+            _trust_chains = verify_trust_chains(self, chains)
+            _ec = self.config_cache[entity_id]
 
-    def collect_branch(self, entity, authority, seen=None, max_superiors=10, stop_at=""):
-        """
-        Collect an entity statement about an entity submitted by another entity, the authority.
-        This consist of first finding the fed_fetch_endpoint URL for the authority and then
-        asking the authority for its view of the entity.
-
-        :param authority: An authority from the authority_hints
-        :param stop_at: When this entity ID is reached stop processing
-        :param entity: The ID of the entity
-        :param seen: A list of authorities that this process has seen. This to capture
-            loops. Also used to control the allowed depth.
-        :param max_superiors: The maximum number of superiors allowed.
-        :return:
-        """
-
-        logger.debug(f'Get view of "{entity}" from "{authority}"')
-        # Should I stop when I reach the first trust anchor ?
-        if entity == authority and entity in self.trust_anchors:
-            return None
-
-        if seen is None:
-            _seen = []
-        else:
-            _seen = seen[:]
-
-        _seen.append(authority)
-        # if len(_seen) > max_superiors:
-        #     logger.warning("Reached max superiors. The path here was {}".format(_seen))
-        #     return None
-
-        entity_statement = self._get_entity_statement(entity, authority)
-
-        if entity_statement:
-            _entity_configuration = self.config_cache[authority]
-            return entity_statement, self.collect_tree(authority,
-                                                       _entity_configuration,
-                                                       stop_at=stop_at,
-                                                       seen=_seen,
-                                                       max_superiors=max_superiors)
-        else:
-            return None
+        return _ec['metadata']
 
     def too_old(self, statement):
         now = time.time()
@@ -462,32 +448,12 @@ class TrustChainCollector(Function):
     def __call__(self,
                  entity_id: str,
                  max_superiors: Optional[int] = 10,
-                 seen: Optional[List[str]] = None,
+                 superiors: Optional[List[str]] = None,
                  stop_at: Optional[str] = ''):
-        entity_config = self.config_cache.get(entity_id, None)
-        if entity_config and not self.too_old(entity_config):
-            signed_entity_config = entity_config.get("_jws")
-            if not signed_entity_config:
-                signed_entity_config = getattr(entity_config, "_jws")
-        else:
-            signed_entity_config = None
 
-        if not signed_entity_config:
-            # get leaf Entity Configuration
-            signed_entity_config = self.get_entity_configuration(entity_id)
-            if not signed_entity_config:
-                logger.warning(f"Could not find any entity configuration for {entity_id}")
-                return None
-            _trust_anchors = self.upstream_get("attribute", "trust_anchors")
-            _ec = verify_entity_statement(signed_entity_config, entity_id, trust_anchors=_trust_anchors)
-            entity_config = _ec.to_dict()
-            # entity_config = verify_self_signed_signature(signed_entity_config)
-            # logger.debug(f'Verified self signed statement: {entity_config.to_json()}')
-            entity_config['_jws'] = signed_entity_config
-            # update cache
-            self.config_cache[entity_id] = entity_config
+        entity_config, signed_entity_config = self.get_entity_configuration(entity_id)
 
-        return self.collect_tree(entity_id, entity_config, seen=seen, max_superiors=max_superiors,
+        return self.collect_tree(entity_id, entity_config, superiors=superiors, max_superiors=max_superiors,
                                  stop_at=stop_at), signed_entity_config
 
     def add_trust_anchor(self, entity_id, jwks):
@@ -502,9 +468,18 @@ class TrustChainCollector(Function):
         self.trust_anchors[entity_id] = jwks
 
     def get_chain(self, iss_path, trust_anchor, with_ta_ec: Optional[bool] = False):
+        """
+        Provided that all the subordinate statements and the initial entity configuration
+        are cached this will give you a complete trust chain.
+
+        :param iss_path:
+        :param trust_anchor:
+        :param with_ta_ec:
+        :return:
+        """
         # Entity configuration for the leaf
         res = [self.config_cache[iss_path[0]]['_jws']]
-        # Entity statements up the chain
+        # Subordinate statements up the chain
         for i in range(len(iss_path) - 1):
             res.append(self.entity_statement_cache[cache_key(iss_path[i + 1], iss_path[i])])
         # Possibly add Trust Anchor entity configuration

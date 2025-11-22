@@ -197,7 +197,6 @@ class TestServer():
         entity_statement.verify()
         assert entity_statement['iss'] == self.ta.entity_id
         assert entity_statement['sub'] == self.intermediate.entity_id
-        assert entity_statement['authority_hints'] == [self.ta.entity_id]
 
     def test_list(self):
         _endpoint = self.ta.get_endpoint('list')

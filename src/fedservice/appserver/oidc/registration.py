@@ -1,5 +1,7 @@
 import logging
 
+from fedservice.entity_statement.create import create_entity_statement
+from fedservice.message import ExplicitRegistrationResponse
 from idpyoidc.message.oidc import RegistrationRequest
 from idpyoidc.server.oidc import registration
 
@@ -20,6 +22,7 @@ class Registration(registration.Registration):
     _status = {
         "client_registration_types_supported": ["automatic", "explicit"]
     }
+    application_protocol = "oidc"
 
     def __init__(self, upstream_get, **kwargs):
         registration.Registration.__init__(self, upstream_get, **kwargs)
@@ -37,10 +40,15 @@ class Registration(registration.Registration):
         """
         payload = verify_self_signed_signature(request)
         _entity_types = set(payload['metadata'].keys())
-        if len(_entity_types) == 1:
-            opponent_entity_type = _entity_types.pop()
+        if self.application_protocol == "oidc":
+            opponent_entity_type = 'openid_relying_party'
+        elif self.application_protocol == "oauth2":
+            opponent_entity_type = ' oauth_client'
         else:
-            opponent_entity_type = _entity_types.difference({'federation_entity'}).pop()
+            if len(_entity_types) == 1:
+                opponent_entity_type = _entity_types.pop()
+            else:
+                opponent_entity_type = _entity_types.difference({'federation_entity'}).pop()
 
         _federation_entity = get_federation_entity(self)
 
@@ -64,9 +72,9 @@ class Registration(registration.Registration):
             _response_metadata = req.to_dict()
             _response_metadata.update(response_info['response_args'])
 
-            entity_configuration = _context.create_entity_configuration(
+            entity_configuration = _context.create_explicit_registration_response(
                 _federation_entity.upstream_get('attribute', 'entity_id'),
-                # payload['iss'],
+                sub=payload['iss'],
                 trust_anchor=trust_chain.anchor,
                 metadata={opponent_entity_type: _response_metadata},
                 aud=payload['iss'],

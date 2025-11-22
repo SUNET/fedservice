@@ -109,9 +109,9 @@ class TestComboCollect(object):
     def setup(self):
         #     Federation tree
         #
-        #    TA/RESOLVER
-        #        |
-        #        IM
+        #      TA/RESOLVER
+        #        |     |
+        #        IM   TMI
         #        |
         #        RP
 
@@ -142,6 +142,8 @@ class TestComboCollect(object):
             collect_trust_chains(resolver, self.rp.entity_id)
 
         extra = create_trust_chain_messages(self.tmi, self.ta)
+        # remove the TA Entity Configuration
+        del extra['https://ta.example.org/.well-known/openid-federation']
         resolver_query = {'sub': self.rp.entity_id,
                           'anchor': self.ta.entity_id}
 

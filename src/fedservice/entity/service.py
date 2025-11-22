@@ -8,6 +8,8 @@ from fedservice.entity.utils import get_federation_entity
 
 
 class FederationService(Service):
+    application_protocol = ""
+
     def gather_verify_arguments(
             self,
             response: Optional[Union[dict, Message]] = None,

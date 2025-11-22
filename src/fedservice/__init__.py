@@ -33,9 +33,17 @@ def get_trust_chain(federation_context, entity_id: str, trust_anchor: Optional[s
         return trust_info
 
 
+def with_common_trust_anchor(federation_context, leaf: str, peer: str):
+    for ta, trust_chain in federation_context.trust_chain[leaf].items():
+        if ta in federation_context.trust_chain[peer]:
+            return trust_chain, federation_context.trust_chain[peer][ta]
+    return None, None
+
+
 def get_payload(self_signed_statement):
     _jws = as_unicode(self_signed_statement)
     _jwt = factory(_jws)
     return _jwt.jwt.payload()
+
 
 DEFAULT_SKEW = 10

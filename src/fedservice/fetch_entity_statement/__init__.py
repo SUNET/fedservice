@@ -2,6 +2,7 @@ from urllib.parse import unquote_plus
 
 from cryptojwt import KeyJar
 
+from fedservice.entity_statement.create import create_entity_configuration
 from fedservice.entity_statement.create import create_subordinate_statement
 
 
@@ -30,9 +31,13 @@ class FetchEntityStatement:
         _info = self.gather_info(sub)
         _info.update(kwargs)
         _info['jwks'] = self.keyjar.export_jwks(issuer_id=self.make_entity_id(sub))
+        _iss = self.make_entity_id(self.iss)
         if sub.startswith("https"):
-            return create_subordinate_statement(self.make_entity_id(self.iss), unquote_plus(sub),
-                                                self.keyjar, **_info)
+            _sub = unquote_plus(sub)
+        else:
+            _sub = self.make_entity_id(sub)
 
-        return create_subordinate_statement(self.make_entity_id(self.iss), self.make_entity_id(sub),
-                                            self.keyjar, **_info)
+        if _iss != _sub:
+            return create_subordinate_statement(_iss, self.keyjar, _sub, **_info)
+        else:
+            return create_entity_configuration(_iss, self.keyjar, **_info)

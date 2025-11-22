@@ -8,8 +8,8 @@ from fedservice.entity.utils import get_federation_entity
 
 def get_verified_trust_anchor_statement(federation_entity, entity_id: str):
     _collector = federation_entity.function.trust_chain_collector
-    _ec = _collector.get_entity_configuration(entity_id)
-    _jwt = factory(_ec)
+    entity_config, signed_entity_config = _collector.get_entity_configuration(entity_id)
+    _jwt = factory(signed_entity_config)
     keys = federation_entity.keyjar.get_jwt_verify_keys(_jwt.jwt)
     res = _jwt.verify_compact(keys=keys)
     return res

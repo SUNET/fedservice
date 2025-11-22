@@ -13,6 +13,7 @@ from idpyoidc.message.oauth2 import ResponseMessage
 from idpyoidc.node import topmost_unit
 from idpyoidc.transform import CLIENT_URI_CLAIMS
 
+from fedservice import with_common_trust_anchor
 from fedservice.entity.function import apply_policies
 from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.function.trust_chain_collector import verify_entity_statement
@@ -48,8 +49,17 @@ def create_entity_configuration(request_args: Optional[dict] = None, service: Op
     return _jws
 
 
-def create_explicit_registration_request(request_args: Optional[dict] = None, service: Optional[Service] = None,
+def create_explicit_registration_request(request_args: Optional[dict] = None,
+                                         service: Optional[Service] = None,
                                          **kwargs):
+    """
+
+    :param request_args:
+    :param service:
+    :param kwargs:
+    :return:
+    """
+
     _combo = topmost_unit(service)
     metadata = _combo.get_metadata(client=kwargs.get("client"))
     federation_entity = get_federation_entity(service)
@@ -59,20 +69,40 @@ def create_explicit_registration_request(request_args: Optional[dict] = None, se
     _context = federation_entity.get_context()
     _entity_id = federation_entity.upstream_get('attribute', 'entity_id')
 
-    kwargs = {}
-    if _context.trust_marks:
-        kwargs["trust_marks"] = _context.get_trust_marks()
+    _trust_chain = kwargs.get("trust_chain", None)
 
-    for claim in ["peer_trust_chain", "aud", "trust_chain"]:
-        kwargs[claim] = request_args.get(claim)
+    _args = {}
+    if _context.trust_marks:
+        _args["trust_marks"] = _context.get_trust_marks()
+
+    for claim in ["aud"]:
+        _args[claim] = request_args.get(claim)
+
+    if _trust_chain:
+        # peer = _args["aud"]
+        # leaf = federation_entity.entity_id
+        # trust_chain, peer_trust_chain = with_common_trust_anchor(_context, leaf, peer)
+        # if trust_chain is None:
+        #     raise ValueError("Could not find two trust chains with the same TA")
+        jws_header_param = {
+            "peer_trust_chain": kwargs.get('peer_trust_chain'),
+            "trust_chain": _trust_chain
+        }
+    else:
+        jws_header_param = {}
+
+    if service.application_protocol == "oauth2":
+        service.endpoint = _combo["oauth_client"].context.server_metadata["oauth_authorization_server"][
+            'federation_registration_endpoint']
 
     _jws = _context.create_explicit_registration_request(
         iss=_entity_id,
-        # sub=_entity_id,
         metadata=metadata,
         key_jar=_federation_keyjar,
         authority_hints=_authority_hints,
-        **kwargs)
+        jws_header_param=jws_header_param,
+        **_args)
+
     # store for later reference
     federation_entity.entity_configuration = _jws
     return _jws
@@ -184,6 +214,7 @@ class Registration(registration.Registration):
     response_body_type = 'jwt'
     content_type = "application/entity-statement+jwt"
     name = 'registration'
+    application_protocol = "oauth2"
 
     _supports = {
         "client_registration_types": ["automatic", "explicit"]
