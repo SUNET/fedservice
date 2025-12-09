@@ -61,7 +61,7 @@ class TestExplicit(object):
                 "contacts": "operations@ta.example.com"
             },
             key_config={"key_defs": DEFAULT_KEY_DEFS},
-            endpoints=TA_ENDPOINTS
+            endpoint=TA_ENDPOINTS
         )
 
         ANCHOR = {TA_ID: self.ta.keyjar.export_jwks()}
@@ -77,7 +77,7 @@ class TestExplicit(object):
             },
             key_config={"key_defs": DEFAULT_KEY_DEFS},
             authority_hints=[TA_ID],
-            endpoints=["entity_configuration", "fetch", "list"],
+            endpoint=["entity_configuration", "fetch", "list"],
             trust_anchors=ANCHOR
         )
         self.ta.server.subordinate[IM_ID] = {
@@ -113,7 +113,7 @@ class TestExplicit(object):
             key_config={"key_defs": DEFAULT_KEY_DEFS},
             services=_services,
             functions=_functions,
-            endpoints=["entity_configuration", "metadata_verification"],
+            endpoint=["entity_configuration", "metadata_verification"],
             trust_anchors=ANCHOR,
             entity_type={
                 "openid_relying_party": {
@@ -165,7 +165,7 @@ class TestExplicit(object):
             },
             authority_hints=[TA_ID],
             key_config={"key_defs": DEFAULT_KEY_DEFS},
-            endpoints=["entity_configuration", "metadata_verification"],
+            endpoint=["entity_configuration", "metadata_verification"],
             trust_anchors=ANCHOR,
             entity_type={
                 "openid_provider": {

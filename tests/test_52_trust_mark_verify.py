@@ -1,12 +1,7 @@
-from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
-from idpyoidc.util import rndstr
 import pytest
 import responses
 
-from fedservice.defaults import LEAF_ENDPOINTS
 from fedservice.trust_mark_entity.entity import create_trust_mark
-from fedservice.utils import make_federation_combo
-from fedservice.utils import make_federation_entity
 from tests import create_trust_chain_messages
 from tests.build_federation import build_federation
 
@@ -21,88 +16,85 @@ TM_ID = "https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf"
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [IM_ID, TRUST_MARK_ISSUER_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [IM_ID, TRUST_MARK_ISSUER_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
             "trust_mark_issuers": {
                 "https://refeds.org/sirtfi": [TRUST_MARK_ISSUER_ID]
             }
         }
     },
     IM_ID: {
-        "entity_type": "intermediate",
-        "trust_anchors": [TA_ID],
-        "subordinates": [RP_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
+            "subordinates": [RP_ID],
             "authority_hints": [TA_ID],
         }
     },
     TRUST_MARK_ISSUER_ID: {
-        "entity_type": "trust_mark_issuer",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
-        },
-        "trust_mark_entity": {
-            "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
-            "kwargs": {
-                "trust_mark_specification": {
-                    "https://refeds.org/sirtfi": {
-                        "lifetime": 2592000
-                    }
-                },
-                "trust_mark_db": {
-                    "class": "fedservice.trust_mark_entity.FileDB",
-                    "kwargs": {
-                        "https://refeds.org/sirtfi": "sirtfi",
-                    }
-                },
-                "endpoint": {
-                    "trust_mark": {
-                        "path": "trust_mark",
-                        "class": "fedservice.trust_mark_entity.server.trust_mark.TrustMark",
-                        "kwargs": {
-                            "client_authn_method": [
-                                "private_key_jwt"
-                            ],
-                            "auth_signing_alg_values": [
-                                "ES256"
-                            ]
+            "trust_mark_entity": {
+                "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
+                "kwargs": {
+                    "trust_mark_specification": {
+                        "https://refeds.org/sirtfi": {
+                            "lifetime": 2592000
                         }
                     },
-                    "trust_mark_list": {
-                        "path": "trust_mark_list",
-                        "class": "fedservice.trust_mark_entity.server.trust_mark_list"
-                                 ".TrustMarkList",
-                        "kwargs": {}
+                    "trust_mark_db": {
+                        "class": "fedservice.trust_mark_entity.FileDB",
+                        "kwargs": {
+                            "https://refeds.org/sirtfi": "sirtfi",
+                        }
                     },
-                    "trust_mark_status": {
-                        "path": "trust_mark_status",
-                        "class": "fedservice.trust_mark_entity.server.trust_mark_status"
-                                 ".TrustMarkStatus",
-                        "kwargs": {}
+                    "endpoint": {
+                        "trust_mark": {
+                            "path": "trust_mark",
+                            "class": "fedservice.trust_mark_entity.server.trust_mark.TrustMark",
+                            "kwargs": {
+                                "client_authn_method": [
+                                    "private_key_jwt"
+                                ],
+                                "auth_signing_alg_values": [
+                                    "ES256"
+                                ]
+                            }
+                        },
+                        "trust_mark_list": {
+                            "path": "trust_mark_list",
+                            "class": "fedservice.trust_mark_entity.server.trust_mark_list"
+                                     ".TrustMarkList",
+                            "kwargs": {}
+                        },
+                        "trust_mark_status": {
+                            "path": "trust_mark_status",
+                            "class": "fedservice.trust_mark_entity.server.trust_mark_status"
+                                     ".TrustMarkStatus",
+                            "kwargs": {}
+                        }
                     }
                 }
             }
         }
     },
     RP_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [IM_ID],
             "preference": {
                 "organization_name": "The example federation RP operator",
                 "homepage_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com"
             }
-        }
+        },
+        "openid_relying_party": {},
     }
 }
 

@@ -41,7 +41,7 @@ class TestFederationEntity(object):
             },
             key_config={"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
             authority_hints=['https://ntnu.no'],
-            endpoints=["entity_configuration", "fetch", "list", "resolve"],
+            endpoint=["entity_configuration", "fetch", "list", "resolve"],
             trust_mark_entity={
                 "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
                 "kwargs": {
@@ -119,7 +119,7 @@ class TestFederationEntity(object):
         assert set(payload.keys()) == {'exp', 'jwks', 'sub', 'iat', 'metadata', 'iss', 'authority_hints'}
         assert payload["iss"] == payload["sub"]
         assert set(payload['metadata'].keys()) == {'federation_entity'}
-        # Full set of endpoints
+        # Full set of endpoint
         assert set(payload['metadata']['federation_entity'].keys()) == {'contacts',
                                                                         'federation_fetch_endpoint',
                                                                         'federation_list_endpoint',

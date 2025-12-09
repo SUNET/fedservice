@@ -7,7 +7,6 @@ from cryptojwt import JWT
 from cryptojwt.jws.jws import factory
 from cryptojwt.key_jar import build_keyjar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
-from idpyoidc.message.oauth2 import ResponseMessage
 
 from fedservice.message import TrustMarkRequest
 from tests import create_trust_chain_messages
@@ -27,9 +26,8 @@ FE_ID = "https://fe.example.org"
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [TMI_ID, FE_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [TMI_ID, FE_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
@@ -37,7 +35,7 @@ FEDERATION_CONFIG = {
             },
             "trust_mark_owners": {
                 SIRTIFI_TRUST_MARK_TYPE: {'jwks': TRUST_MARK_OWNERS_KEYS.export_jwks(),
-                                        'sub': TM_OWNERS_ID},
+                                          'sub': TM_OWNERS_ID},
                 MUSHROOM_TRUST_MARK_TYPE: {
                     'jwks': TRUST_MARK_OWNERS_KEYS.export_jwks(),
                     'sub': TM_OWNERS_ID
@@ -47,13 +45,12 @@ FEDERATION_CONFIG = {
                 SIRTIFI_TRUST_MARK_TYPE: [TMI_ID],
                 MUSHROOM_TRUST_MARK_TYPE: []
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
     },
     TMI_ID: {
-        "entity_type": "trust_mark_issuer",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
             "trust_mark_entity": {
                 "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
@@ -100,9 +97,8 @@ FEDERATION_CONFIG = {
         }
     },
     FE_ID: {
-        "entity_type": "federation_entity",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
             "services": ['entity_configuration', 'entity_statement', 'trust_mark_status']
         }

@@ -1,17 +1,10 @@
 import pytest
 import responses
 from cryptojwt.jws.jws import factory
-from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
-from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
 
-from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
-from fedservice.defaults import LEAF_ENDPOINTS
 from fedservice.entity.function import apply_policies
 from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import verify_trust_chains
-from fedservice.appclient import ClientEntity
-from fedservice.utils import make_federation_combo
-from fedservice.utils import make_federation_entity
 from tests import create_trust_chain_messages
 from tests.build_federation import build_federation
 
@@ -22,50 +15,48 @@ RP_ID = "https://rp.example.org"
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [IM_ID, LEAF_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [IM_ID, LEAF_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
     },
     IM_ID: {
-        "entity_type": "intermediate",
-        "trust_anchors": [TA_ID],
-        "subordinates": [RP_ID, LEAF_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
+            "subordinates": [RP_ID, LEAF_ID],
             "authority_hints": [TA_ID],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve']
         }
     },
     LEAF_ID: {
-        "entity_type": "federation_entity",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [IM_ID]
         }
     },
     RP_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [IM_ID],
-            "entity_type_config": {
-                "preference": {
-                    "grant_types": ['authorization_code', 'refresh_token']
-                }
-            },
             "preference": {
                 "organization_name": "The example federation RP operator",
                 "homepage_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com",
             }
+        },
+        "openid_relying_party": {
+            "preference": {
+                "grant_types": ['authorization_code', 'refresh_token']
+            }
         }
     }
 }
+
 
 class TestConstraints(object):
 

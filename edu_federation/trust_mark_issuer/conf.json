@@ -54,7 +54,7 @@
       "public_path": "trust_mark_issuer/static/fed_keys.json",
       "read_only": false
     },
-    "endpoints": [
+    "endpoint": [
       "entity_configuration"
     ],
     "authority_hints": {

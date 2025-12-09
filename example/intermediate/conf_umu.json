@@ -57,7 +57,7 @@
     "authority_hints": "file:intermediate/umu_authority_hints.json",
     "trust_anchors": "file:intermediate/umu_trust_anchors.json",
     "subordinate": "file:intermediate/umu_subordinates.json",
-    "endpoints": [
+    "endpoint": [
       "fetch",
       "list",
       "entity_configuration"

@@ -200,9 +200,10 @@ def shared_update_service_context(service, resp, **kwargs):
             if _client_id:
                 _context.client_id = _client_id
 
-            _client_secret = _context.claims.get_usage("client_secret")
-            _context.keyjar.add_symmetric("", _client_secret)
-            _context.keyjar.add_symmetric(_client_id, _client_secret)
+            # _client_secret = _context.claims.get_usage("client_secret")
+            # if _client_secret:
+            #     _context.keyjar.add_symmetric("", _client_secret)
+            #     _context.keyjar.add_symmetric(_client_id, _client_secret)
 
 
 class Registration(registration.Registration):

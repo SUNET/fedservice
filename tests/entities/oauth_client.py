@@ -11,13 +11,13 @@ def main(entity_id: str,
          authority_hints: Optional[List[str]] = None,
          trust_anchors: Optional[dict] = None,
          preference: Optional[dict] = None,
-         endpoints: Optional[list] = None,
+         endpoint: Optional[list] = None,
          services: Optional[dict] = None,
          key_config: Optional[dict] = None,
          federation_services: Optional[list] = None,
          entity_type_config: Optional[dict] = None):
-    if not endpoints:
-        endpoints = ["entity_configuration"],
+    if not endpoint:
+        endpoint = ["entity_configuration"],
     if not key_config:
         key_config = {"key_defs": DEFAULT_KEY_DEFS}
     if preference is None:
@@ -44,7 +44,7 @@ def main(entity_id: str,
         entity_id,
         preference=preference,
         authority_hints=authority_hints,
-        endpoints=endpoints,
+        endpoint=endpoint,
         trust_anchors=trust_anchors,
         services=federation_services,
         httpc_params={

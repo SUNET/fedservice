@@ -13,30 +13,30 @@ OP_ID = "https://op.example.org"
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [RP_ID, OP_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [RP_ID, OP_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
-        }
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
+
+        },
     },
     OP_ID: {
-        "entity_type": "openid_provider",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
-        }
+        },
+        "openid_provider": {},
     },
     RP_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID]
-        }
+        },
+        "openid_relying_party": {},
     }
 }
 

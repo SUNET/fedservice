@@ -107,7 +107,7 @@ class TestExplicit(object):
             },
             authority_hints=[IM_ID],
             key_config={"key_defs": DEFAULT_KEY_DEFS},
-            endpoints=LEAF_ENDPOINTS,
+            endpoint=LEAF_ENDPOINTS,
             trust_anchors=ANCHOR,
             entity_type={
                 "oauth_client": {
@@ -160,7 +160,7 @@ class TestExplicit(object):
             authority_hints=[TA_ID],
             key_config={"key_defs": DEFAULT_KEY_DEFS},
             trust_anchors=ANCHOR,
-            endpoints=LEAF_ENDPOINTS,
+            endpoint=LEAF_ENDPOINTS,
             entity_type={
                 "oauth_authorization_server": {
                     'class': ServerEntity,

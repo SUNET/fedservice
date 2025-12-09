@@ -3,11 +3,8 @@ import os
 import pytest
 import responses
 from cryptojwt.jws.jws import factory
-from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
-from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
 from idpyoidc.message.oidc import AuthorizationRequest
 
-from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
 from fedservice.entity.function import get_verified_trust_chains
 from . import create_trust_chain_messages
 from .build_federation import build_federation
@@ -15,100 +12,17 @@ from .build_federation import build_federation
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.join(BASE_PATH, "base_data")
 
-TA_ID = "https://ta.example.org"
-RP_ID = "https://rp.example.org"
-OP_ID = "https://op.example.org"
-
-FE_FUNCTIONS = {
-    "trust_chain_collector": {
-        "class": "fedservice.entity.function.trust_chain_collector.TrustChainCollector",
-        "kwargs": {}
-    },
-    "verifier": {
-        "class": "fedservice.entity.function.verifier.TrustChainVerifier",
-        "kwargs": {}
-    },
-    "policy": {
-        "class": "fedservice.entity.function.policy.TrustChainPolicy",
-        "kwargs": {}
-    },
-    "trust_mark_verifier": {
-        "class": "fedservice.entity.function.trust_mark_verifier.TrustMarkVerifier",
-        "kwargs": {}
-    }
-}
-
-OIDC_SERVICE = DEFAULT_OIDC_SERVICES.copy()
-OIDC_SERVICE.update(DEFAULT_OIDC_FED_SERVICES)
-
-FEDERATION_CONFIG = {
-    TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [RP_ID, OP_ID],
-        "kwargs": {
-            "preference": {
-                "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.org",
-                "contacts": "operations@ta.example.org",
-                "scopes_supported": ["openid", "profile"],
-                "response_types_supported": ['id_token', 'code', 'code id_token']
-            },
-            "endpoints": ["entity_configuration", "list", "fetch", "resolve"],
-        }
-    },
-    RP_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
-            "federation_services": ["oidc_registration", "entity_configuration",
-                                    "entity_statement"],
-            "authority_hints": [TA_ID],
-            "services": OIDC_SERVICE,
-            "entity_type_config": {
-                "client_id": RP_ID,
-                "client_secret": "a longesh password",
-                "keys": {"key_defs": DEFAULT_KEY_DEFS},
-                "preference": {
-                    "grant_types": ["authorization_code", "implicit", "refresh_token"],
-                    "id_token_signed_response_alg": "ES256",
-                    "token_endpoint_auth_method": "client_secret_basic",
-                    "token_endpoint_auth_signing_alg": "ES256",
-                    "scopes_supported": ["openid", "profile"],
-                    "client_registration_types": ["explicit"]
-                },
-            }
-        }
-    },
-    OP_ID: {
-        "entity_type": "openid_provider",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
-            "authority_hints": [TA_ID],
-            "endpoints": [{
-                "oidc_authz": {
-                    "path": "authz",
-                    'class': 'fedservice.appserver.oidc.authorization.Authorization',
-                    "kwargs": {}
-                }}, {
-                "oidc_registration": {
-                    "path": "registration",
-                    'class': 'fedservice.appserver.oidc.registration.Registration',
-                    "kwargs": {}
-                }},
-                "entity_configuration"]
-        }
-    }
-}
+from .federation_example import TA_OP_RP
 
 
 class TestRpService(object):
 
     @pytest.fixture(autouse=True)
     def fed_setup(self):
-        federation = build_federation(FEDERATION_CONFIG)
-        self.ta = federation[TA_ID]
-        self.rp = federation[RP_ID]
-        self.op = federation[OP_ID]
+        federation = build_federation(TA_OP_RP.FEDERATION_CONFIG)
+        self.ta = federation[TA_OP_RP.TA_ID]
+        self.rp = federation[TA_OP_RP.RP_ID]
+        self.op = federation[TA_OP_RP.OP_ID]
 
         _context = self.rp["openid_relying_party"].context
         _context.issuer = self.op.entity_id
@@ -119,7 +33,7 @@ class TestRpService(object):
 
         self.entity_config_service = self.rp["federation_entity"].get_service(
             "entity_configuration")
-        self.entity_config_service.upstream_get("context").issuer = OP_ID
+        self.entity_config_service.upstream_get("context").issuer = TA_OP_RP.OP_ID
         self.registration_service = self.rp["federation_entity"].get_service("registration")
 
     def test_create_reqistration_request(self):
@@ -257,10 +171,10 @@ class TestRpService(object):
         response["metadata"]["openid_relying_party"]["scope"] = "openid profile"
 
         self.registration_service.update_service_context(response)
-        # There is a client secret
+        # There is a no client secret
         assert self.rp["openid_relying_party"].context.claims.get_usage("client_secret")
         _keys = self.rp["openid_relying_party"].context.keyjar.get_signing_key(key_type="oct")
-        assert len(_keys) == 2
+        assert len(_keys) == 1
 
         assert self.rp["openid_relying_party"].context.claims.get_usage("scope") == ["openid", "profile"]
 

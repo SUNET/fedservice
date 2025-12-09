@@ -1,53 +1,53 @@
 # AbstractFileSystem
 import json
 import os
-import shutil
 
-from idpyoidc.util import QPKey
 import pytest
+from idpyoidc.util import QPKey
 
 from tests import rm_dir_files
 from tests.build_federation import build_federation
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
+
+
 def full_path(local_file):
     return os.path.join(BASE_PATH, local_file)
+
 
 TA_ID = "https://trust_anchor.example.com"
 RP_ID = "https://rp.example.com"
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": {
-            'class': 'idpyoidc.storage.abfile.AbstractFileSystem',
-            'kwargs': {
-                'fdir': full_path('subordinate')
-            }
-        },
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": {
+                'class': 'idpyoidc.storage.abfile.AbstractFileSystem',
+                'kwargs': {
+                    'fdir': full_path('subordinate')
+                }
+            },
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
     },
     RP_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
             "preference": {
                 "organization_name": "The example federation RP operator",
                 "homepage_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com"
             }
-        }
+        },
+        "openid_relying_party": {},
     }
 }
-
 
 class TestSubordinatePersistenceFileSystem(object):
 

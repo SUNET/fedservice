@@ -179,6 +179,7 @@ class FederationEntity(InformationalMetadataExtensions):
         "federation_trust_mark_status_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
         "federation_trust_mark_list_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
         "federation_historical_keys_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        'signed_jwks_uri': SINGLE_OPTIONAL_STRING,
     })
 
 
@@ -273,7 +274,9 @@ OPTIONAL_OAUTH_PROTECTED_RESOURCE_METADATA = (
 class OIDCRPMetadata(RegistrationRequest):
     c_param = RegistrationRequest.c_param.copy()
     c_param.update({
-        "client_registration_types": REQUIRED_LIST_OF_STRINGS
+        "client_registration_types": REQUIRED_LIST_OF_STRINGS,
+        "organization_name": SINGLE_OPTIONAL_STRING,
+        "signed_jwks_uri": SINGLE_OPTIONAL_STRING,
     })
 
 

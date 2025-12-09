@@ -2,9 +2,6 @@ from typing import Callable
 from typing import Optional
 from typing import Union
 
-from fedservice.entity.function import get_verified_trust_chains
-
-from fedservice.entity.utils import get_federation_entity
 from idpyoidc.client.configure import Configuration
 from idpyoidc.exception import MissingAttribute
 from idpyoidc.message import Message
@@ -12,7 +9,9 @@ from idpyoidc.message import oauth2
 from idpyoidc.message.oauth2 import ResponseMessage
 
 from fedservice import message
+from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.service import FederationService
+from fedservice.entity.utils import get_federation_entity
 from fedservice.message import TrustMarkRequest
 
 
@@ -58,7 +57,7 @@ class TrustMark(FederationService):
 
     def get_endpoint(self):
         federation_entity = get_federation_entity(self)
-        trust_chains=federation_entity.get_trust_chains(federation_entity.client.context.issuer)
+        trust_chains = federation_entity.get_trust_chains(federation_entity.client.context.issuer)
         if trust_chains:
             pass
         else:
@@ -69,4 +68,3 @@ class TrustMark(FederationService):
                 return ""
 
         return trust_chains[0].metadata["federation_entity"]["federation_trust_mark_endpoint"]
-

@@ -16,9 +16,13 @@ ENTITY_TYPE2METADATA_CLASS = {
 
 DEFAULT_OIDC_FED_SERVICES = {
     'oidc_authorization': {
-        'class': 'fedservice.appclient.oidc.authorization.Authorization'},
+        'class': 'fedservice.appclient.oidc.authorization.Authorization',
+        'path': 'authorization',
+        'kwargs': {}
+    },
     'oidc_registration': {
-        'class': 'fedservice.appclient.oidc.registration.Registration'},
+        'class': 'fedservice.appclient.oidc.registration.Registration'
+    },
 }
 
 DEFAULT_OAUTH2_FED_SERVICES = {
@@ -76,6 +80,10 @@ SERVICES = {
     },
     "who": {
         "class": 'fedservice.entity.client.who.Who',
+        "kwargs": {}
+    },
+    "signed_jwks": {
+        "class": 'fedservice.entity.client.signed_jwks.SignedJWKS',
         "kwargs": {}
     },
 }
@@ -166,7 +174,13 @@ FEDERATION_ENDPOINTS = {
         "path": "who",
         "class": "fedservice.entity.server.who.Who",
         "kwargs": {}
+    },
+    "signed_jwks": {
+        'path': 'signed_jwks_uri',
+        'class': 'fedservice.entity.server.signed_jwks.SignedJWKS',
+        'kwargs': {}
     }
+
 }
 
 
@@ -225,4 +239,3 @@ DEFAULT_FEDERATION_ENTITY_FUNCTIONS = federation_functions("trust_chain_collecto
 DEFAULT_SIGNING_ALGORITHM = "RS256"
 
 DEFAULT_REGISTRATION_TYPE = "automatic"
-

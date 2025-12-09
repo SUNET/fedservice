@@ -21,7 +21,7 @@ def main(entity_id: str,
          authority_hints: Optional[List[str]] = None,
          trust_anchors: Optional[dict] = None,
          preference: Optional[dict] = None,
-         endpoints: Optional[list] = None,
+         endpoint: Optional[list] = None,
          entity_type_config: Optional[dict] = None):
     if preference is None:
         preference = {
@@ -116,7 +116,7 @@ def main(entity_id: str,
         entity_id,
         preference=preference,
         authority_hints=authority_hints,
-        endpoints=endpoints,
+        endpoint=endpoint,
         trust_anchors=trust_anchors,
         httpc_params={
             "verify": False,

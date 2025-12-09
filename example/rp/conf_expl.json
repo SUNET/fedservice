@@ -61,7 +61,7 @@
     },
     "authority_hints": "file:rp/rpe_authority_hints.json",
     "trust_anchors": "file:rp/rpe_trust_anchors.json",
-    "endpoints": [
+    "endpoint": [
       "fetch",
       "entity_configuration"
     ],

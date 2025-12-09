@@ -56,7 +56,7 @@
     },
     "authority_hints": "file:op/op_authority_hints.json",
     "trust_anchors": "file:op/op_trust_anchors.json",
-    "endpoints": [
+    "endpoint": [
       "entity_configuration"
     ]
   },

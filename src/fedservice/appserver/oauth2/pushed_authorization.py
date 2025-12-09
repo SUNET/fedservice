@@ -1,6 +1,8 @@
 import logging
 from typing import List
 
+from fedservice.message import OIDCRPMetadata
+
 from fedservice.appserver import import_client_keys
 from fedservice.entity.function import get_verified_trust_chains
 from idpyoidc.message import oauth2
@@ -59,19 +61,29 @@ class PushedAuthorization(Authorization):
         _fe = topmost_unit(self)['federation_entity']
         _fe.trust_chain_anchor = trust_chain.anchor
 
-        _metadata = trust_chain.metadata['oauth_client']
+        root = topmost_unit(self)
+        if 'openid_provider' in root:
+            server = root['openid_provider']
+            _metadata = trust_chain.metadata['openid_relying_party']
+            _msg = OIDCRPMetadata
+        elif 'oauth_authorization_server' in root:
+            server = root['oauth_authorization_server']
+            _metadata = trust_chain.metadata['oauth_client']
+            _msg = OauthClientMetadata
+        else:
+            logger.error('Wrong entity_type to run pushed authorization')
+            return None
 
         # If there is a signed_jwks_uri, jwks_uri or jwks in the metadata import the keys
         import_client_keys(_metadata, self.upstream_get('attribute', 'keyjar'), entity_id)
 
-        req = OauthClientMetadata(**_metadata)
+        req = _msg(**_metadata)
         req['client_id'] = entity_id
         kwargs = {}
         if self.new_client_id:
             kwargs['new_id'] = self.new_client_id
 
-        op = topmost_unit(self)['oauth_authorization_server']
-        _registration = op.get_endpoint("registration")
+        _registration = server.get_endpoint("registration")
         response_info = _registration.non_fed_process_request(req=req, **kwargs)
 
         try:

@@ -45,7 +45,7 @@ FEDERATION_CONFIG = {
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ["entity_configuration", "list", "fetch", "resolve"],
+            "endpoint": ["entity_configuration", "list", "fetch", "resolve"],
         }
     },
     OC_ID: {
@@ -81,7 +81,7 @@ FEDERATION_CONFIG = {
         "trust_anchors": [TA_ID],
         "key_conf": {"key_defs": DEFAULT_KEY_DEFS},
         "services": AS_SERVICES,
-        "endpoints": AS_ENDPOINTS,
+        "endpoint": AS_ENDPOINTS,
         "kwargs": {
             "authority_hints": [TA_ID],
             "entity_type_config": {
@@ -193,7 +193,7 @@ class TestAutomatic(object):
         #              TA
         #          +---|---+
         #          |       |
-        #          IM     AS
+        #          IM     OAS
         #          |
         #          OC
 
@@ -208,14 +208,23 @@ class TestAutomatic(object):
         self.entity_config_service.upstream_get("context").issuer = AS_ID
         self.registration_service = self.oc["federation_entity"].get_service("registration")
 
-    def create_trust_chains(self):
-        # Collect information about the OP
+    def test_automatic_registration_new_client_id(self):
+        # No clients registered with the OP at the beginning
+        assert len(self.oas["oauth_authorization_server"].get_context().cdb.keys()) == 0
+
+        ####################################################
+        # [1] Let the RP gather some provider info
+
+        # Point the RP to the OP
+        self.oc["oauth_client"].get_context().issuer = self.oas.entity_id
+
+        # Create the URLs and messages that will be involved in this process
         _msgs = create_trust_chain_messages(self.oas, self.ta)
 
-        # # add the jwks_uri
-        # _jwks_uri = self.oas["oauth_authorization_server"].get_context().get_preference("jwks_uri")
-        # if _jwks_uri:
-        #     _msgs[_jwks_uri] = self.oas["oauth_authorization_server"].keyjar.export_jwks_as_json()
+        # add the jwks_uri
+        _jwks_uri = self.oas["oauth_authorization_server"].get_context().get_preference("jwks_uri")
+        if _jwks_uri:
+            _msgs[_jwks_uri] = self.oas["oauth_authorization_server"].keyjar.export_jwks_as_json()
 
         with responses.RequestsMock() as rsps:
             for _url, _jwks in _msgs.items():
@@ -229,50 +238,10 @@ class TestAutomatic(object):
         self.oc["oauth_client"].context.server_metadata = _trust_chains[0].metadata
         self.oc["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
 
-        peer_trust_chain = _trust_chains[0].chain[:]
-        peer_trust_chain.reverse()
-
-        _msgs = create_trust_chain_messages(self.oc, self.im, self.ta)
-
-        # This has been seen already
-        del _msgs['https://ta.example.org/.well-known/openid-federation']
-
-        with responses.RequestsMock() as rsps:
-            for _url, _jwks in _msgs.items():
-                rsps.add("GET", _url, body=_jwks,
-                         adding_headers={"Content-Type": "application/entity-statement+jwt"},
-                         status=200)
-
-            _trust_chains = get_verified_trust_chains(self.oc,
-                                                      self.oc["federation_entity"].entity_id)
-
-        trust_chain = _trust_chains[0].chain[:]
-        trust_chain.reverse()
-
-        return trust_chain, peer_trust_chain
-
-    def test_automatic_registration_new_client_id(self):
-        # No clients registered with the OP at the beginning
-        assert len(self.oas["oauth_authorization_server"].get_context().cdb.keys()) == 0
-
-        ####################################################
-        # [1] Let the RP gather some provider info
-
-        # Point the RP to the OP
-        self.oc["oauth_client"].get_context().issuer = self.oas.entity_id
-
-        trust_chain, peer_trust_chain = self.create_trust_chains()
-
-        req_args = {"response_type": "code", "state": rndstr(),
-                    "entity_id": self.oc["federation_entity"].entity_id,
-                    "peer_trust_chain": peer_trust_chain,
-                    'trust_chain': trust_chain,
-                    'aud': self.oas.entity_id}
-
         # create the authorization request
 
         _auth_service = self.oc["oauth_client"].get_service("authorization")
-        authn_request = _auth_service.construct(request_args=req_args)
+        authn_request = _auth_service.construct(request_args={"response_type": "code", "state": rndstr()})
 
         # ------------------------------
         # <<<<<< On the AS's side >>>>>>>
@@ -282,12 +251,6 @@ class TestAutomatic(object):
         _jwks_uri = self.oc["oauth_client"].get_context().get_preference("jwks_uri")
         if _jwks_uri:
             _msgs[_jwks_uri] = self.oc["oauth_client"].keyjar.export_jwks_as_json()
-        # This has been seen already
-        del _msgs['https://client.example.org/.well-known/openid-federation']
-        del _msgs['https://im.example.org/.well-known/openid-federation']
-        del _msgs['https://im.example.org/fetch']
-        del _msgs['https://ta.example.org/.well-known/openid-federation']
-        del _msgs['https://ta.example.org/fetch']
 
         with responses.RequestsMock() as rsps:
             for _url, _jwks in _msgs.items():
@@ -301,7 +264,7 @@ class TestAutomatic(object):
 
         assert "response_type" in req
 
-        # Assert that the client's entity_id has been registered as a client
+        # Assert that the client"s entity_id has been registered as a client
         assert self.oc.entity_id in self.oas["oauth_authorization_server"].get_context().cdb
 
     def test_authz_request_with_trust_chain(self):

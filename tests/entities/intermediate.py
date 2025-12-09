@@ -13,11 +13,11 @@ def main(entity_id: str,
          authority_hints: Optional[List[str]] = None,
          trust_anchors: Optional[dict] = None,
          preference: Optional[dict] = None,
-         endpoints: Optional[list] = None,
+         endpoint: Optional[list] = None,
          key_config: Optional[dict] = None,
          httpc_params: Optional[dict] = None):
-    if not endpoints:
-        endpoints = ['entity_configuration', 'fetch', 'list']
+    if not endpoint:
+        endpoint = ['entity_configuration', 'fetch', 'list']
     if not key_config:
         key_config = {"key_defs": DEFAULT_KEY_DEFS}
     if not preference:
@@ -32,15 +32,15 @@ def main(entity_id: str,
             "timeout": 14
         }
 
-    if not endpoints:
-        endpoints = ["entity_configuration", "fetch", "list"]
+    if not endpoint:
+        endpoint = ["entity_configuration", "fetch", "list"]
 
     im = make_federation_entity(
         entity_id,
         preference=preference,
         key_config=key_config,
         authority_hints=authority_hints,
-        endpoints=endpoints,
+        endpoint=endpoint,
         trust_anchors=trust_anchors,
         httpc_params=httpc_params
     )

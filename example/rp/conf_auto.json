@@ -60,7 +60,7 @@
     },
     "authority_hints": "file:rp/rpa_authority_hints.json",
     "trust_anchors": "file:rp/rpa_trust_anchors.json",
-    "endpoints": [
+    "endpoint": [
       "fetch",
       "entity_configuration"
     ],

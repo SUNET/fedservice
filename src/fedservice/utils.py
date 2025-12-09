@@ -37,12 +37,12 @@ def build_entity_config(entity_id: str,
                         key_config: Optional[dict] = None,
                         authority_hints: Optional[Union[List[str], str, Callable]] = None,
                         preference: Optional[dict] = None,
-                        endpoints: Optional[list] = None,
+                        endpoint: Optional[list] = None,
                         services: Optional[list] = None,
                         functions: Optional[list] = None,
                         init_kwargs: Optional[dict] = None,
                         item_args: Optional[dict] = None,
-                        subordinate: Optional[dict] = None,
+                        subordinates: Optional[dict] = None,
                         httpc_params: Optional[dict] = None,
                         persistence: Optional[dict] = None,
                         trust_mark_server: Optional[dict] = None
@@ -59,7 +59,7 @@ def build_entity_config(entity_id: str,
         authority_hints=authority_hints,
         key_conf=_key_conf
     )
-    for name, items in [("service", services), ("function", functions), ("endpoint", endpoints)]:
+    for name, items in [("service", services), ("function", functions), ("endpoint", endpoint)]:
         func = getattr(entity, f"add_{name}s")
 
         if init_kwargs:
@@ -106,13 +106,13 @@ def make_federation_entity(entity_id: str,
                            authority_hints: Optional[List[str]] = None,
                            trust_anchors: Optional[dict] = None,
                            preference: Optional[dict] = None,
-                           endpoints: Optional[list] = None,
+                           endpoint: Optional[list] = None,
                            services: Optional[Union[list, dict]] = None,
                            functions: Optional[Union[list, dict]] = None,
                            trust_marks: Optional[list] = None,
                            init_kwargs: Optional[dict] = None,
                            item_args: Optional[dict] = None,
-                           subordinate: Optional[dict] = None,
+                           subordinates: Optional[dict] = None,
                            metadata_policy: Optional[dict] = None,
                            httpc_params: Optional[dict] = None,
                            persistence: Optional[dict] = None,
@@ -127,7 +127,7 @@ def make_federation_entity(entity_id: str,
         key_config=key_config,
         authority_hints=authority_hints,
         preference=preference,
-        endpoints=endpoints,
+        endpoint=endpoint,
         services=services,
         functions=functions,
         init_kwargs=init_kwargs,
@@ -146,12 +146,12 @@ def make_federation_entity(entity_id: str,
 
         fe.function.trust_chain_collector.trust_anchors = trust_anchors
 
-    if subordinate:
-        if "class" in subordinate and "kwargs" in subordinate:
-            fe.server.subordinate = execute(subordinate)
+    if subordinates:
+        if "class" in subordinates and "kwargs" in subordinates:
+            fe.server.subordinates = execute(subordinates)
         else:
-            for id, info in subordinate.items():
-                fe.server.subordinate[id] = info
+            for id, info in subordinates.items():
+                fe.server.subordinates[id] = info
 
     if metadata_policy:
         for id, info in metadata_policy.items():
@@ -188,10 +188,10 @@ def make_federation_combo(entity_id: str,
                           trust_anchors: Optional[dict] = None,
                           preference: Optional[dict] = None,
                           entity_type: Optional[dict] = None,
-                          endpoints: Optional[List[str]] = None,
+                          endpoint: Optional[List[str]] = None,
                           services: Optional[List[str]] = None,
                           functions: Optional[List[str]] = None,
-                          subordinate: Optional[dict] = None,
+                          subordinates: Optional[dict] = None,
                           metadata_policy: Optional[dict] = None,
                           httpc_params: Optional[dict] = None,
                           init_kwargs: Optional[dict] = None,
@@ -208,7 +208,7 @@ def make_federation_combo(entity_id: str,
         key_config=key_config,
         authority_hints=authority_hints,
         preference=preference,
-        endpoints=endpoints,
+        endpoint=endpoint,
         services=services,
         functions=functions,
         httpc_params=httpc_params,
@@ -225,7 +225,14 @@ def make_federation_combo(entity_id: str,
                 'kwargs': _config
             }
         }
-        entity_config.update(entity_type)
+        # Convert into the 'normal' dictionary model with class and kwargs
+        _etc = {}
+        for e_type, conf in entity_type.items():
+            _etc[e_type] = {
+                "class": conf['class'],
+                "kwargs": {k: v for k, v in conf.items() if k != 'class'}
+            }
+        entity_config.update(_etc)
         if httpc_params:
             entity_config["httpc_params"] = httpc_params
 
@@ -244,12 +251,12 @@ def make_federation_combo(entity_id: str,
 
         federation_entity.function.trust_chain_collector.trust_anchors = trust_anchors
 
-    if subordinate:
-        if "class" in subordinate and "kwargs" in subordinate:
-            federation_entity.server.subordinate = execute(subordinate)
+    if subordinates:
+        if "class" in subordinates and "kwargs" in subordinates:
+            federation_entity.server.subordinates = execute(subordinates)
         else:
-            for id, info in subordinate.items():
-                federation_entity.server.subordinate[id] = info
+            for id, info in subordinates.items():
+                federation_entity.server.subordinates[id] = info
 
     if metadata_policy:
         for id, info in metadata_policy.items():

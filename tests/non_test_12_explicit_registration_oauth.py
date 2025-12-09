@@ -6,7 +6,6 @@ from cryptojwt.jws.jws import factory
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 
 from fedservice.defaults import DEFAULT_OAUTH2_FED_SERVICES
-from fedservice.defaults import federation_services
 from fedservice.defaults import OAUTH2_FED_ENDPOINTS
 from fedservice.entity.function import get_verified_trust_chains
 from . import create_trust_chain_messages
@@ -17,52 +16,56 @@ ROOT_DIR = os.path.join(BASE_PATH, "base_data")
 
 TA_ID = "https://ta.example.org"
 RP_ID = "https://rp.example.org"
-AS_ID = "https://op.example.org"
+OP_ID = "https://op.example.org"
 
 OAUTH_SERVICE = DEFAULT_OAUTH2_FED_SERVICES
-OAUTH_FED_SERVICE = federation_services('entity_configuration', "entity_statement")
+
+OAUTH2_SERVER_ENDPOINTS = OAUTH2_FED_ENDPOINTS.copy()
+OAUTH2_SERVER_ENDPOINTS["access_token"] = {
+    "class": "idpyoidc.server.oauth2.token.Token",
+    'path': 'token',
+    'kwargs': {}
+}
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [RP_ID, AS_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [RP_ID, OP_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ["entity_configuration", "list", "fetch", "resolve"],
+            "endpoint": ["entity_configuration", "list", "fetch", "resolve"],
         }
     },
     RP_ID: {
-        "entity_type": "oauth_client",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
-            "federation_services": OAUTH_FED_SERVICE,
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
+            "services": ['entity_configuration', "entity_statement"],
+        },
+        "oauth_client": {
             "services": OAUTH_SERVICE,
-            "entity_type_config": {
-                "client_id": RP_ID,
-                "client_secret": "a longesh password",
-                "redirect_uris": ["https://example.com/cli/authz_cb"],
-                "keys": {"key_defs": DEFAULT_KEY_DEFS},
-                "preference": {
-                    "grant_types": ["authorization_code", "implicit", "refresh_token"],
-                    "token_endpoint_auth_method": "client_secret_basic",
-                    "token_endpoint_auth_signing_alg": "ES256"
-                }
+            "client_id": RP_ID,
+            "client_secret": "a longesh password",
+            "redirect_uris": ["https://example.com/cli/authz_cb"],
+            "keys": {"key_defs": DEFAULT_KEY_DEFS},
+            "preference": {
+                "grant_types": ["authorization_code", "implicit", "refresh_token"],
+                "token_endpoint_auth_method": "client_secret_basic",
+                "token_endpoint_auth_signing_alg": "ES256"
             }
         }
     },
-    AS_ID: {
-        "entity_type": "oauth_authorization_server",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+    OP_ID: {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
-            "entity_type_config": {
-                "endpoint": OAUTH2_FED_ENDPOINTS
-            }
+            'endpoint': ['entity_configuration', 'fetch']
+        },
+        "oauth_authorization_server": {
+            "endpoint": OAUTH2_SERVER_ENDPOINTS
         }
     }
 }

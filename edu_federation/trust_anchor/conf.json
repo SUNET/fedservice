@@ -57,7 +57,7 @@
       "public_path": "trust_anchor/static/fed_keys.json",
       "read_only": false
     },
-    "endpoints": [
+    "endpoint": [
       "fetch",
       "list",
       "entity_configuration",

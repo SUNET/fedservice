@@ -1,9 +1,9 @@
 import pytest
 import responses
 from cryptojwt.jws.jws import factory
-from fedservice.entity.function import collect_trust_chains
 
 from fedservice.entity.function import apply_policies
+from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import verify_trust_chains
 from tests import create_trust_chain_messages
 from tests.build_federation import build_federation
@@ -19,44 +19,42 @@ TA_ENDPOINTS = ["list", "fetch", "entity_configuration"]
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [IM_ID, TMI_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [IM_ID, TMI_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
             "trust_mark_issuers": {
                 SIRTIFI_TRUST_MARK_TYPE: [TMI_ID],
             },
         }
     },
     IM_ID: {
-        "entity_type": "intermediate",
-        "trust_anchors": [TA_ID],
-        "subordinates": [RP_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
+            "subordinates": [RP_ID],
             "authority_hints": [TA_ID],
+            "endpoint": ['entity_configuration', 'list', 'fetch']
         }
     },
     RP_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [IM_ID],
             "preference": {
                 "organization_name": "The example federation RP operator",
                 "homepage_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com"
             }
-        }
+        },
+        "openid_relying_party": {}
     },
     TMI_ID: {
-        "entity_type": "trust_mark_issuer",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
             "trust_mark_entity": {
                 "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",

@@ -1,107 +1,89 @@
 {
   "https://feide.no": {
-    "entity_type": "trust_anchor",
-    "kwargs": {
+    "federation_entity": {
       "preference": {
         "organization_name": "The FEIDE federation",
         "federation_fetch_endpoint": "https://feide.no/fetch"
-      }
-    },
-    "subordinates": [
-      "https://ntnu.no"
-    ]
+      },
+      "subordinates": [
+        "https://ntnu.no"
+      ],
+      "endpoint": ["fetch", "entity_configuration"]
+    }
   },
   "https://ntnu.no": {
-    "entity_type": "intermediate",
-    "trust_anchors": [
-      "https://feide.no"
-    ],
-    "subordinates": [
-      "https://foodle.uninett.no",
-      "https://op.ntnu.no"
-    ],
-    "kwargs": {
+    "federation_entity": {
+      "trust_anchors": [
+        "https://feide.no"
+      ],
+      "subordinates": [
+        "https://foodle.uninett.no",
+        "https://op.ntnu.no"
+      ],
       "authority_hints": [
         "https://feide.no"
       ],
-      "preference": {
-        "id_token_signing_alg_values_supported": [
-          "RS256",
-          "RS384",
-          "RS512",
-          "ES256",
-          "ES512"
-        ],
-        "authorization_endpoint": "https://op.ntnu.no/authorization",
-        "token_endpoint": "https://op.ntnu.no/accessToken",
-        "userinfo_endpoint": "https://op.ntnu.no/people",
-        "federation_registration_endpoint": "https://op.ntnu.no/fedreg",
-        "token_endpoint_auth_methods_supported": [
-          "private_key_jwt",
-          "client_secret_basic"
-        ],
-        "client_registration_authn_methods_supported": {
-          "ar": [
-            "request_object"
-          ]
-        }
-      }
+      "endpoint": ["fetch", "entity_configuration"]
     }
   },
   "https://foodle.uninett.no": {
-    "entity_type": "openid_relying_party",
-    "federation_services": ["entity_configuration", "entity_statement", "resolve", "list", "register"],
-    "trust_anchors": [
-      "https://feide.no"
-    ],
-    "kwargs": {
+    "federation_entity": {
+      "services": [
+        "entity_configuration",
+        "entity_statement",
+        "resolve",
+        "list",
+        "register"
+      ],
+      "trust_anchors": [
+        "https://feide.no"
+      ],
       "authority_hints": [
         "https://ntnu.no"
       ]
-    }
+    },
+    "openid_relying_party": {}
   },
   "https://op.ntnu.no": {
-    "entity_type": "openid_provider",
-    "trust_anchors": [
-      "https://feide.no"
-    ],
-    "kwargs": {
+    "federation_entity": {
+      "trust_anchors": [
+        "https://feide.no"
+      ],
       "authority_hints": [
         "https://ntnu.no"
       ]
-    }
+    },
+    "openid_provider": {}
   },
   "https://swamid.se": {
-    "entity_type": "trust_anchor",
-    "kwargs": {
+    "federation_entity": {
       "preference": {
         "organization_name": "The SWAMID federation"
-      }
-    },
-    "subordinates": [
-      "https://umu.se"
-    ]
+      },
+      "subordinates": [
+        "https://umu.se"
+      ]
+    }
   },
   "https://umu.se": {
-    "entity_type": "intermediate",
-    "trust_anchors": [
-      "https://swamid.se"
-    ],
-    "subordinates": [
-      "https://op.umu.se"
-    ],
-    "kwargs": {
+    "federation_entity": {
+      "trust_anchors": [
+        "https://swamid.se"
+      ],
+      "subordinates": [
+        "https://op.umu.se"
+      ],
       "authority_hints": [
         "https://swamid.se"
       ]
     }
   },
   "https://op.umu.se": {
-    "entity_type": "openid_provider",
-    "trust_anchors": [
-      "https://swamid.se"
-    ],
-    "kwargs": {
+    "openid_provider": {},
+    "federation_entity": {
+      "trust_anchors": [
+        "https://swamid.se"
+      ],
       "authority_hints": [
         "https://umu.se"
       ]

@@ -64,7 +64,7 @@
     "authority_hints": "file:intermediate/lu_authority_hints.json",
     "trust_anchors": "file:intermediate/lu_trust_anchors.json",
     "subordinate": "file:intermediate/lu_subordinates.json",
-    "endpoints": ["entity_configuration", "fetch", "list"]
+    "endpoint": ["entity_configuration", "fetch", "list"]
   },
   "webserver": {
     "server_cert": "certs/example.crt",

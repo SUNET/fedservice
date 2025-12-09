@@ -9,8 +9,8 @@ from idpyoidc.message import Message
 from fedservice.defaults import LEAF_ENDPOINTS
 from fedservice.entity.function import get_verified_trust_chains
 from fedservice.message import TrustMark
-from fedservice.utils import make_federation_entity
 from tests import create_trust_chain_messages
+from tests.build_federation import build_federation
 
 TA_ENDPOINTS = ["list", "fetch", "entity_configuration"]
 
@@ -37,17 +37,10 @@ def get_client_info(client_id, endpoint):
         return {}
 
 
-class TestTrustMarkEndpoints():
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        # start from scratch every time
-        if os.path.exists(full_path("trust_mark")):
-            os.unlink(full_path("trust_mark"))
-
-        self.ta = make_federation_entity(
-            TA_ID,
-            preference={
+FEDERATION_CONFIG = {
+    TA_ID: {
+        'federation_entity': {
+            'preference': {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.com",
                 "contacts": "operations@ta.example.com",
@@ -55,23 +48,21 @@ class TestTrustMarkEndpoints():
                     TRUST_MARK_TYPE: TMI_ID
                 }
             },
-            key_config={"key_defs": DEFAULT_KEY_DEFS},
-            endpoints=TA_ENDPOINTS
-        )
-
-        ANCHOR = {self.ta.entity_id: self.ta.keyjar.export_jwks()}
-
-        # Federation entity with trust mark endpoints
-        self.trust_mark_issuer = make_federation_entity(
-            TMI_ID,
-            preference={
+            'key_config': {"key_defs": DEFAULT_KEY_DEFS},
+            'endpoint': TA_ENDPOINTS,
+            'subordinates': [TMI_ID, FE_ID]
+        }
+    },
+    TMI_ID: {
+        'federation_entity': {
+            'preference': {
                 "organization_name": "Trust Mark Issuer 'R US"
             },
-            key_config={"key_defs": DEFAULT_KEY_DEFS},
-            authority_hints=[TA_ID],
-            endpoints=["entity_configuration"],
-            trust_anchors=ANCHOR,
-            trust_mark_entity={
+            'key_config': {"key_defs": DEFAULT_KEY_DEFS},
+            'authority_hints': [TA_ID],
+            'endpoint': ["entity_configuration"],
+            'trust_anchors': [TA_ID],
+            'trust_mark_entity': {
                 "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
                 "kwargs": {
                     "trust_mark_specification": {
@@ -107,24 +98,19 @@ class TestTrustMarkEndpoints():
                     }
                 }
             }
-        )
-
-        self.ta.server.subordinate[TMI_ID] = {
-            "jwks": self.trust_mark_issuer.keyjar.export_jwks(),
-            'authority_hints': [TA_ID]
         }
-
-        self.federation_entity = make_federation_entity(
-            FE_ID,
-            preference={
+    },
+    FE_ID: {
+        'federation_entity': {
+            'preference': {
                 "homepage_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com"
             },
-            key_config={"key_defs": DEFAULT_KEY_DEFS},
-            authority_hints=[TA_ID],
-            endpoints=LEAF_ENDPOINTS,
-            trust_anchors=ANCHOR,
-            services={
+            'key_config': {"key_defs": DEFAULT_KEY_DEFS},
+            'authority_hints': [TA_ID],
+            'endpoint': LEAF_ENDPOINTS,
+            'trust_anchors': [TA_ID],
+            'services': {
                 'entity_configuration': {
                     'class': 'fedservice.entity.client.entity_configuration.EntityConfiguration',
                     'kwargs': {}},
@@ -139,12 +125,28 @@ class TestTrustMarkEndpoints():
                     'class': "fedservice.entity.client.trust_mark_status.TrustMarkStatus"
                 }
             }
-        )
-
-        self.ta.server.subordinate[FE_ID] = {
-            "jwks": self.federation_entity.keyjar.export_jwks(),
-            'authority_hints': [FE_ID]
         }
+    }
+}
+
+
+class TestTrustMarkEndpoints():
+
+    #             TA
+    #          +--|--+
+    #          |     |
+    #         FE    TMI
+
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        # start from scratch every time
+        if os.path.exists(full_path("trust_mark")):
+            os.unlink(full_path("trust_mark"))
+
+        federation = build_federation(FEDERATION_CONFIG)
+        self.ta = federation[TA_ID]
+        self.trust_mark_issuer = federation[TMI_ID]
+        self.federation_entity = federation[FE_ID]
 
     def test_list_trust_marks_empty(self):
         _client_service = self.federation_entity.get_service("trust_mark_list")
@@ -196,7 +198,7 @@ class TestTrustMarkEndpoints():
         # Check the signed JWT
         _tm = TrustMark().from_jwt(_resp["response"], keyjar=_kj)
         _tm.verify()
-        assert set(_tm.keys()) == {'iat', 'trust_mark_type', 'sub', 'exp', 'iss'}
+        assert set(_tm.keys()) == {'iat', 'trust_mark_type', 'sub', 'iss'}
 
         # should be one item in the list
         _client_service = self.federation_entity.get_service("trust_mark_list")

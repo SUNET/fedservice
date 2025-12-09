@@ -26,23 +26,21 @@ TRUST_MARK_ISSUER_ID = "https://tmi.example.com"
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [TRUST_MARK_ISSUER_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [TRUST_MARK_ISSUER_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": TA_ENDPOINTS,
+            "endpoint": TA_ENDPOINTS,
             "services": TA_SERVICES,
             "trust_mark_issuers": {"https://refeds.org/sirtfi": [TRUST_MARK_ISSUER_ID]}
         }
     },
     TRUST_MARK_ISSUER_ID: {
-        "entity_type": "trust_mark_issuer",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "preference": {
                 "organization_name": "Trust Mark Issuer 'R US"
             },
@@ -204,12 +202,12 @@ class TestSignedTrustMark():
     def test_metadata(self):
         _metadata = self.tmi.get_metadata()
         assert "federation_entity" in _metadata
-        assert set(_metadata["federation_entity"].keys()) == {'federation_resolve_endpoint',
-                                                              'federation_trust_mark_endpoint',
-                                                              'federation_trust_mark_list_endpoint',
-                                                              'federation_trust_mark_status_endpoint',
-                                                              'federation_trust_mark_endpoint_auth_methods',
-                                                              'federation_trust_mark_list_endpoint_auth_methods',
-                                                              'federation_trust_mark_status_endpoint_auth_methods',
-                                                              'organization_name'}
+        assert set(_metadata["federation_entity"].keys()) == {
+            'organization_name',
+            'federation_trust_mark_endpoint',
+            'federation_trust_mark_endpoint_auth_methods',
+            'federation_trust_mark_list_endpoint',
+            'federation_trust_mark_list_endpoint_auth_methods',
+            'federation_trust_mark_status_endpoint',
+            'federation_trust_mark_status_endpoint_auth_methods'}
         assert _metadata["federation_entity"]["federation_trust_mark_endpoint"] == 'https://tmi.example.com/trust_mark'

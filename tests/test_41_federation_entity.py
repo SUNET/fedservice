@@ -1,8 +1,8 @@
 import os
 
-from cryptojwt.jws.jws import factory
 import pytest
 import responses
+from cryptojwt.jws.jws import factory
 
 from fedservice import get_trust_chain
 from fedservice import save_trust_chains
@@ -27,7 +27,7 @@ TENNANT_ID = "https://example.org/tennant1"
 
 # As long as it doesn't provide the Resolve endpoint it doesn't need
 # services and functions.
-# It must have the openid-federation and fetch endpoints. It may have the
+# It must have the openid-federation and fetch endpoint. It may have the
 # list and status endpoint. That's the case here.
 
 TA_ENDPOINTS = ["list", "fetch", "entity_configuration"]
@@ -39,21 +39,19 @@ KEYDEFS = [
 
 FEDERATION_CONFIG_1 = {
     TA1_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [LEAF_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [LEAF_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": TA_ENDPOINTS
+            "endpoint": TA_ENDPOINTS
         }
     },
     LEAF_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA1_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA1_ID],
             "preference": {
                 "organization_name": "The leaf operator",
                 "homepage_uri": "https://rp.example.org",
@@ -61,21 +59,24 @@ FEDERATION_CONFIG_1 = {
             },
             "key_config": {"key_defs": KEYDEFS},
             "authority_hints": [TA1_ID],
-            "endpoints": ["entity_configuration"]
-        }
+            "endpoint": ["entity_configuration"],
+            'services': ['entity_configuration', 'entity_statement', 'resolve']
+        },
+        "openid_relying_party": {}
     }
 }
 
 
 class TestClient(object):
+
     @pytest.fixture(autouse=True)
     def create_entities(self):
         self.federation_entity = build_federation(FEDERATION_CONFIG_1)
         self.ta_fed = self.federation_entity[TA1_ID]
-        self.rp_fed = self.federation_entity[LEAF_ID]["federation_entity"]
+        self.leaf = self.federation_entity[LEAF_ID]["federation_entity"]
 
     def test_entity_configuration_request(self):
-        _serv = self.rp_fed.get_service('entity_configuration')
+        _serv = self.leaf.get_service('entity_configuration')
         _res = _serv.get_request_parameters(request_args={"entity_id": self.ta_fed.entity_id})
         assert _res == {
             'method': 'GET',
@@ -88,17 +89,18 @@ class TestClient(object):
         }
 
     def test_entity_statement_request(self):
-        _serv = self.rp_fed.get_service('entity_statement')
-        _res = _serv.get_request_parameters(fetch_endpoint=f"{self.ta_fed.entity_id}/fetch", subject=self.rp_fed.entity_id)
+        _serv = self.leaf.get_service('entity_statement')
+        _res = _serv.get_request_parameters(fetch_endpoint=f"{self.ta_fed.entity_id}/fetch",
+                                            subject=self.leaf.entity_id)
         assert _res == {
             'method': 'GET',
             'url': 'https://ta.example.org/fetch?sub=https%3A%2F%2Frp.example.org'
         }
 
     def test_resolve_request(self):
-        _serv = self.rp_fed.get_service('resolve')
+        _serv = self.leaf.get_service('resolve')
         _res = _serv.get_request_parameters(
-            request_args={"sub": self.rp_fed.entity_id, "anchor": self.ta_fed.entity_id},
+            request_args={"sub": self.leaf.entity_id, "anchor": self.ta_fed.entity_id},
             endpoint=f'{self.ta_fed.entity_id}/.well-known/openid-federation')
 
         assert _res == {
@@ -111,31 +113,30 @@ class TestClient(object):
 
 FEDERATION_CONFIG_2 = {
     TA1_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [INTERMEDIATE_ID],
-        "kwargs": {
+        'federation_entity': {
+            "subordinates": [INTERMEDIATE_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
     },
     INTERMEDIATE_ID: {
-        "entity_type": "intermediate",
-        "trust_anchors": [TA1_ID],
-        "subordinates": [LEAF_ID],
-        "kwargs": {
+        'federation_entity': {
+            "trust_anchors": [TA1_ID],
+            "subordinates": [LEAF_ID],
             "authority_hints": [TA1_ID],
+            "endpoint": ['entity_configuration', 'list', 'fetch'],
         }
     },
     LEAF_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA1_ID],
-        "kwargs": {
+        'federation_entity': {
+            "trust_anchors": [TA1_ID],
             "authority_hints": [INTERMEDIATE_ID]
-        }
+        },
+        "openid_relying_party": {}
     }
 }
 
@@ -160,10 +161,7 @@ class TestServer():
         assert isinstance(_func.verifier, TrustChainVerifier)
 
         _client = self.leaf['federation_entity'].client
-        assert _client.get_service_names() == {'entity_configuration',
-                                               'entity_statement',
-                                               'list',
-                                               'resolve'}
+        assert _client.get_service_names() == {'entity_configuration', 'entity_statement'}
 
         assert _client.get_service('entity_configuration').service_name == 'entity_configuration'
         assert _client.get_service('entity_statement').service_name == 'entity_statement'
@@ -206,9 +204,7 @@ class TestServer():
         assert _resp_args['response_msg'] == f'["{self.intermediate.entity_id}"]'
 
     def test_resolve(self):
-        _msgs = create_trust_chain_messages(self.leaf["federation_entity"],
-                                            self.intermediate,
-                                            self.ta)
+        _msgs = create_trust_chain_messages(self.leaf, self.intermediate, self.ta)
 
         with responses.RequestsMock() as rsps:
             for _url, _jwks in _msgs.items():
@@ -231,41 +227,41 @@ class TestServer():
 
 FEDERATION_CONFIG_3 = {
     TA1_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [INTERMEDIATE_ID],
-        "kwargs": {
+        'federation_entity': {
+            "subordinates": [INTERMEDIATE_ID],
             "preference": {
                 "organization_name": "The 1st example federation operator",
                 "homepage_uri": "https://ta_one.example.org",
                 "contacts": "operations@ta_one.example.org"
             },
+            "endpoint": ['entity_configuration', 'list', 'fetch']
         }
     },
     TA2_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [LEAF_ID],
-        "kwargs": {
+        'federation_entity': {
+            "subordinates": [LEAF_ID],
             "preference": {
                 "organization_name": "The 2nd example federation operator",
                 "homepage_uri": "https://ta_two.example.org",
                 "contacts": "operations@ta_two.example.org"
             },
+            "endpoint": ['entity_configuration', 'list', 'fetch']
         }
     },
     INTERMEDIATE_ID: {
-        "entity_type": "intermediate",
-        "trust_anchors": [TA1_ID],
-        "subordinates": [LEAF_ID],
-        "kwargs": {
+        'federation_entity': {
+            "trust_anchors": [TA1_ID],
+            "subordinates": [LEAF_ID],
             "authority_hints": [TA1_ID],
+            "endpoint": ['entity_configuration', 'list', 'fetch']
         }
     },
     LEAF_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA1_ID, TA2_ID],
-        "kwargs": {
+        'federation_entity': {
+            "trust_anchors": [TA1_ID, TA2_ID],
             "authority_hints": [INTERMEDIATE_ID, TA2_ID]
-        }
+        },
+        "openid_relying_party": {},
     }
 }
 

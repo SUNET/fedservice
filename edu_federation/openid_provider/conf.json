@@ -86,7 +86,7 @@
         "file_name": "openid_provider/trust_marks"
       }
     },
-    "endpoints": [
+    "endpoint": [
       "entity_configuration"
     ],
     "entity_type": {

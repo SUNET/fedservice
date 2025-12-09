@@ -131,7 +131,6 @@ class FederationServiceContext(FederationContext):
                     return _val
             raise KeyError(f"{claim} not in server metadata")
 
-
 class FederationClientEntity(ClientUnit):
     name = "federation_entity"
 
@@ -227,7 +226,7 @@ class FederationClient(FederationClientEntity):
             services: Optional[dict] = None,
             httpc: Optional[Callable] = None,
             httpc_params: Optional[dict] = None,
-            context: Optional[FederationContext] = None,
+            # context: Optional[FederationContext] = None,
             upstream_get: Optional[Callable] = None,
             key_conf: Optional[dict] = None,
             entity_id: Optional[str] = "",
@@ -496,3 +495,6 @@ class FederationClient(FederationClientEntity):
         metadata = self.context.claims.get_use()
         logger.debug(f"metadata:{self.name} = {metadata}")
         return {self.name: metadata}
+
+    def set_issuer(self, issuer):
+        self.context.issuer = issuer

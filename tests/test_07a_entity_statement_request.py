@@ -31,50 +31,47 @@ AS_ENDPOINTS = federation_endpoints("entity_configuration", "fetch")
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [IM_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [IM_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ["entity_configuration", "list", "fetch", "resolve"],
+            "endpoint": ["entity_configuration", "list", "fetch", "resolve"],
         }
     },
     OC_ID: {
-        "entity_type": "oauth_client",
-        "trust_anchors": [TA_ID],
-        "services": OC_SERVICES,
-        "kwargs": {
-            "authority_hints": [IM_ID],
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
+            "services": OC_SERVICES,
+            "authority_hints": [IM_ID]
+        },
+        "oauth_client": {
             "services": COMBINED_DEFAULT_OAUTH2_SERVICES,
-            "entity_type_config": {
-                # OAuth2 core keys
-                "keys": {"key_defs": DEFAULT_KEY_DEFS},
-                "base_url": OC_ID,
-                "client_id": OC_ID,
-                "client_secret": "a longeeesh password",
-                "redirect_uris": ["https://rp.example.com/cli/authz_cb"],
-                "preference": {
-                    "grant_types": ["authorization_code", "implicit", "refresh_token"],
-                    "id_token_signed_response_alg": "ES256",
-                    "token_endpoint_auth_method": "client_secret_basic",
-                    "token_endpoint_auth_signing_alg": "ES256",
-                    "client_registration_types": ["automatic"],
-                    "request_parameter_supported": True
-                },
-                "authorization_request_endpoints": [
-                    "authorization_endpoint", "pushed_authorization_request_endpoint"
-                ]
-            }
-        }
+            # OAuth2 core keys
+            "key_config": {"key_defs": DEFAULT_KEY_DEFS},
+            "base_url": OC_ID,
+            "client_id": OC_ID,
+            "client_secret": "a longeeesh password",
+            "redirect_uris": ["https://rp.example.com/cli/authz_cb"],
+            "preference": {
+                "grant_types": ["authorization_code", "implicit", "refresh_token"],
+                "id_token_signed_response_alg": "ES256",
+                "token_endpoint_auth_method": "client_secret_basic",
+                "token_endpoint_auth_signing_alg": "ES256",
+                "client_registration_types": ["automatic"],
+                "request_parameter_supported": True
+            },
+            "authorization_request_endpoints": [
+                "authorization_endpoint", "pushed_authorization_request_endpoint"
+            ]
+        },
     },
     IM_ID: {
-        "entity_type": "federation_entity",
-        "trust_anchors": [TA_ID],
-        "subordinates": [OC_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
+            "subordinates": [OC_ID],
             "authority_hints": [TA_ID]
         }
     }

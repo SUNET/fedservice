@@ -35,7 +35,7 @@ def init_app(config_file, name=None, **kwargs) -> Flask:
 
     app.register_blueprint(oidc_rp_views)
 
-    # Initialize the oidc_provider after views to be able to set correct urls
+    # Initialize the oidc_rp after views to be able to set correct urls
     app.rph = init_oidc_rp_handler(app.srv_config.rp, dir_path)
 
     return app

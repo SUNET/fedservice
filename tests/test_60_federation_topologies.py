@@ -14,46 +14,45 @@ INTERMEDIATE_ID = "https://intermediate.example.org"
 
 FEDERATION_CONFIG = {
     TA1_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [TA2_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [TA2_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
     },
     TA2_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [INTERMEDIATE_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [INTERMEDIATE_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
             "authority_hints": [TA1_ID],
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
     },
     INTERMEDIATE_ID: {
-        "entity_type": "intermediate",
-        "trust_anchors": [TA2_ID, TA1_ID],
-        "subordinates": [LEAF_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA2_ID, TA1_ID],
+            "subordinates": [LEAF_ID],
             "authority_hints": [TA2_ID],
+            "endpoint": ['entity_configuration', 'list', 'fetch'],
         }
     },
     LEAF_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA1_ID, TA2_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA1_ID, TA2_ID],
             "authority_hints": [INTERMEDIATE_ID]
-        }
+        },
+        "openid_relying_party": {}
     }
 }
+
 
 # Topology
 #

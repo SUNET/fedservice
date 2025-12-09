@@ -35,7 +35,7 @@ def test_federation_entity_metadata():
         },
         key_config={"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
         authority_hints=['https://ntnu.no'],
-        endpoints=["entity_configuration"],
+        endpoint=["entity_configuration"],
         trust_marks=TRUST_MARKS
     )
 
@@ -64,7 +64,7 @@ def test_federation_combo_metadata():
         },
         key_config={"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
         authority_hints=['https://ntnu.no'],
-        endpoints=["entity_configuration"],
+        endpoint=["entity_configuration"],
         trust_marks=TRUST_MARKS,
         entity_type={
             "openid_relying_party": {

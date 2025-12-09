@@ -73,7 +73,7 @@
         "file_name": "relying_party_explicit/trust_marks"
       }
     },
-    "endpoints": [
+    "endpoint": [
       "entity_configuration"
     ],
     "services": [

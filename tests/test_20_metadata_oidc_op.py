@@ -9,37 +9,38 @@ IM_ID = "https://im.example.org"
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [IM_ID, OP_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
+            "authority_hints": [TA_ID],
+            "subordinates": [IM_ID, OP_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
     },
     IM_ID: {
-        "entity_type": "intermediate",
-        "trust_anchors": [TA_ID],
-        "subordinates": [RP_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
+            "subordinates": [RP_ID],
             "authority_hints": [TA_ID],
         }
     },
     OP_ID: {
-        "entity_type": "openid_provider",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID]
-        }
+        },
+        "openid_provider": {}
     },
     RP_ID: {
-        "entity_type": "openid_relying_party",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [IM_ID],
+        },
+        "openid_relying_party": {
             "preference": {
                 "organization_name": "The example federation RP operator",
                 "homepage_uri": "https://rp.example.com",
@@ -49,7 +50,9 @@ FEDERATION_CONFIG = {
     }
 }
 
+
 class TestClient(object):
+
     @pytest.fixture(autouse=True)
     def create_entities(self):
         self.federation_entity = build_federation(FEDERATION_CONFIG)

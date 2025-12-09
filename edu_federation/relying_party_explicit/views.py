@@ -176,12 +176,12 @@ def finalize(op_identifier, request_args):
 
     if 'userinfo' in res:
         _context = rp.get_context()
-        endpoints = {}
+        endpoint = {}
         for k, v in _context.provider_info.items():
             if k.endswith('_endpoint'):
                 endp = k.replace('_', ' ')
                 endp = endp.capitalize()
-                endpoints[endp] = v
+                endpoint[endp] = v
 
         kwargs = {}
 
@@ -204,7 +204,7 @@ def finalize(op_identifier, request_args):
         trust_path = trust_chain.iss_path
         trust_path_expires = timestamp2local(trust_chain.exp)
         trust_marks = trust_chain.verified_chain[1].get("trust_marks", [])
-        return render_template('rpe_opresult.html', endpoints=endpoints,
+        return render_template('rpe_opresult.html', endpoint=endpoints,
                                userinfo=res['userinfo'],
                                access_token=res['token'],
                                id_token=res["id_token"],

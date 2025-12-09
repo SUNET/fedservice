@@ -2,6 +2,7 @@ import logging
 import re
 from json import JSONDecodeError
 from typing import Callable
+from typing import List
 from typing import Optional
 from typing import Union
 
@@ -53,12 +54,19 @@ class ClientEntity(ClientUnit):
             jwks_uri: Optional[str] = "",
             httpc_params: Optional[dict] = None,
             context: Optional[OidcContext] = None,
-            key_conf: Optional[dict] = None,
+            key_config: Optional[dict] = None,
             client_type: Optional[str] = '',
-            entity_type: Optional[str] = ''
+            entity_type: Optional[str] = '',
+            **kwargs
     ):
         if config is None:
             config = {}
+
+        for attr in ['preference', 'redirect_uris', 'server_type', 'endpoint', 'base_url',
+                     'client_id', 'client_secret', 'client_authn_methods']:
+            _val = kwargs.get(attr)
+            if _val:
+                config[attr] = _val
 
         self.client_type = config.get('client_type', client_type)
         self.entity_type = config.get("entity_type", entity_type)
@@ -78,7 +86,7 @@ class ClientEntity(ClientUnit):
 
         ClientUnit.__init__(self, upstream_get=upstream_get, keyjar=keyjar, httpc=httpc,
                             httpc_params=httpc_params, context=context, config=config,
-                            entity_id=entity_id, key_conf=key_conf)
+                            entity_id=entity_id, key_conf=key_config)
 
         if 'metadata' in config:
             config.update(config['metadata'])
@@ -97,10 +105,10 @@ class ClientEntity(ClientUnit):
         if context:
             self.context = context
         else:
-            if key_conf:
-                config['key_conf'] = key_conf
+            if key_config:
+                config['key_conf'] = key_config
             self.context = ServiceContext(
-                config=config, jwks_uri=jwks_uri, key_conf=key_conf, upstream_get=self.unit_get,
+                config=config, jwks_uri=jwks_uri, key_conf=key_config, upstream_get=self.unit_get,
                 keyjar=self.keyjar, metadata_class=self.metadata_class,
                 client_type=self.client_type,
                 entity_id=self.entity_id

@@ -1,5 +1,5 @@
-from cryptojwt.jws.jws import factory
 import pytest
+from cryptojwt.jws.jws import factory
 
 from tests.build_federation import build_federation
 
@@ -10,21 +10,19 @@ REFEDS_PERSONALIZED = "https://refeds.org/category/personalized/op"
 
 FEDERATION_CONFIG = {
     TA_ID: {
-        "entity_type": "trust_anchor",
-        "subordinates": [LEAF_ID],
-        "kwargs": {
+        "federation_entity": {
+            "subordinates": [LEAF_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "homepage_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
-            "endpoints": ['entity_configuration', 'list', 'fetch', 'resolve'],
+            "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }
     },
     LEAF_ID: {
-        "entity_type": "federation_entity",
-        "trust_anchors": [TA_ID],
-        "kwargs": {
+        "federation_entity": {
+            "trust_anchors": [TA_ID],
             "authority_hints": [TA_ID],
             "preference": {
                 "organization_name": "The example federation RP operator",
@@ -70,4 +68,3 @@ class TestSelfSignedTrustMark(object):
         assert _payload["trust_marks"]
         assert len(_payload["trust_marks"]) == 1
         assert _payload["trust_marks"][0] == tm
-

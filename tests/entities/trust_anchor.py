@@ -14,14 +14,14 @@ def main(entity_id: str,
          trust_anchors: Optional[dict] = None,
          preference: Optional[dict] = None,
          subordinates: Optional[list] = None,
-         endpoints: Optional[list] = None,
+         endpoint: Optional[list] = None,
          key_config: Optional[dict] = None,
          services: Optional[list] = None,
          trust_mark_issuers: Optional[dict] = None,
          trust_mark_owners: Optional[dict] = None,
          ):
-    if not endpoints:
-        endpoints = TA_ENDPOINTS
+    if not endpoint:
+        endpoint = TA_ENDPOINTS
     if not key_config:
         key_config = {"key_defs": DEFAULT_KEY_DEFS}
     if not services:
@@ -31,7 +31,7 @@ def main(entity_id: str,
         entity_id,
         preference=preference,
         key_config=key_config,
-        endpoints=endpoints,
+        endpoint=endpoint,
         subordinate=subordinates,
         authority_hints=authority_hints,
         trust_anchors=trust_anchors,

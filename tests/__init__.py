@@ -63,7 +63,6 @@ def create_trust_chain_messages(leaf, *entity):
         # _query = _endpoint.full_path + '?' + encoded_args
         # where_and_what[_query] = _endpoint.process_request(_req)["response_msg"]
         where_and_what[_endpoint.full_path] = _endpoint.process_request(_req)["response_msg"]
-        foo = 1
 
     return where_and_what
 

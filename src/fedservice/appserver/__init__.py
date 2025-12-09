@@ -6,6 +6,7 @@ from typing import Union
 
 from cryptojwt import KeyJar
 from cryptojwt.utils import importer
+from idpyoidc.client.service import init_services
 from idpyoidc.configure import Base
 from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
@@ -53,6 +54,15 @@ def import_client_keys(information: Union[Message, dict], keyjar: KeyJar, entity
                 keyjar = import_jwks(keyjar, _jwks, entity_id)
 
 
+def conf_get(config, attr):
+    _val = config.get(attr, None)
+    if _val is None:
+        _cnf = config.get('conf')
+        if _cnf:
+            _val = _cnf.get(attr)
+    return _val
+
+
 class ServerEntity(ServerUnit):
     name = 'openid_provider'
     parameter = {"endpoint": [Endpoint], "context": EndpointContext}
@@ -69,10 +79,19 @@ class ServerEntity(ServerUnit):
             entity_id: Optional[str] = "",
             key_conf: Optional[dict] = None,
             server_type: Optional[str] = "",
-            entity_type: Optional[str] = ''
+            entity_type: Optional[str] = '',
+            metadata_schema: Optional[str] = "",
+            # preference: Optional[dict] = None,
+            **kwargs
     ):
         if config is None:
             config = {}
+
+        # Or should I just add all kwargs args to config
+        for attr in ['preference', 'token_handler_args', 'endpoint', 'template_dir', 'session_params']:
+            _val = kwargs.get(attr)
+            if _val:
+                config[attr] = _val
 
         self.server_type = server_type or config.get("server_type", "")
         if not self.server_type:
@@ -81,11 +100,14 @@ class ServerEntity(ServerUnit):
             elif entity_type == "openid_provider":
                 self.server_type = "oidc"
 
-        if self.server_type == "oauth2":
-            self.name = "oauth_authorization_server"
-            self.metadata_schema = AuthorizationServerMetadata
-        elif self.server_type == "oidc":
-            self.metadata_schema = OPMetadata
+        if metadata_schema:
+            self.metadata_schema = importer(metadata_schema)
+        else:
+            if self.server_type == "oauth2":
+                self.name = "oauth_authorization_server"
+                self.metadata_schema = AuthorizationServerMetadata
+            elif self.server_type == "oidc":
+                self.metadata_schema = OPMetadata
 
         ServerUnit.__init__(self, upstream_get=upstream_get, keyjar=keyjar, httpc=httpc,
                             httpc_params=httpc_params, entity_id=entity_id, key_conf=key_conf,
@@ -108,6 +130,11 @@ class ServerEntity(ServerUnit):
 
         self.endpoint = do_endpoints(config, self.unit_get)
 
+        self.service = {}
+        _srvs = conf_get(config, "services")
+        if _srvs:
+            self.service = init_services(_srvs, self.unit_get)
+
         self.context = EndpointContext(
             conf=config,
             upstream_get=self.unit_get,
@@ -122,9 +149,7 @@ class ServerEntity(ServerUnit):
         if _token_endp:
             _token_endp.allow_refresh = allow_refresh_token(self.context)
 
-        self.context.claims_interface = init_service(
-            config["claims_interface"], self.unit_get
-        )
+        self.context.claims_interface = init_service(config["claims_interface"], self.unit_get)
 
         self.context.provider_info = self.context.claims.get_server_metadata(
             endpoints=self.endpoint.values(),
@@ -208,3 +233,6 @@ class ServerEntity(ServerUnit):
                 target.endpoint_to_authn_method[method.action] = method
             except AttributeError:
                 pass
+
+    def get_service(self, server_name):
+        return self.service[server_name]

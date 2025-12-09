@@ -2,6 +2,7 @@ import logging
 from typing import List
 from typing import Optional
 
+from cryptojwt import KeyJar
 from idpyoidc.message import oidc
 from idpyoidc.message.oidc import RegistrationRequest
 from idpyoidc.node import topmost_unit
@@ -71,12 +72,17 @@ class Authorization(authorization.Authorization):
         # handle the registration request as in the non-federation case.
         # If there is a jwks_uri in the metadata import keys
         _root = topmost_unit(self)
-        if "openid_provider" in _root:
-            get_keys(
-                trust_chain.metadata['openid_relying_party'],
-                self.upstream_get('attribute', 'keyjar'),
-                client_entity_id,
-                self)
+        op = _root.get('openid_provider')
+        if op:
+            if op.keyjar is None:
+                op.keyjar = KeyJar()
+                if op.httpc_params:
+                    op.keyjar.httpc_params = op.httpc_params
+
+            get_keys(trust_chain.metadata['openid_relying_party'],
+                     op.keyjar,
+                     client_entity_id,
+                     self)
 
         req = RegistrationRequest(**trust_chain.metadata['openid_relying_party'])
         req['client_id'] = client_entity_id
@@ -84,7 +90,7 @@ class Authorization(authorization.Authorization):
         kwargs['new_id'] = self.new_client_id
         kwargs["set_secret"] = False
 
-        op = topmost_unit(self)['openid_provider']
+        # op = topmost_unit(self)['openid_provider']
         _registration = op.get_endpoint("registration")
         response_info = _registration.non_fed_process_request(req=req, **kwargs)
 
@@ -103,7 +109,7 @@ class Authorization(authorization.Authorization):
                 if client_info and "automatic_registered" in client_info:  # Remove the old one
                     del _context.cdb[_cid]
                 if _cid in _context.keyjar:
-                    del  _context.keyjar[_cid]
+                    del _context.keyjar[_cid]
                 # try the federation way
                 _trust_chain = request.get('trust_chain', [])
                 registered_client_id = self.do_automatic_registration(_cid, _trust_chain)

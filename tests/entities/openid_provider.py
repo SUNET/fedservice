@@ -117,7 +117,7 @@ def main(entity_id: str,
          authority_hints: Optional[List[str]] = None,
          trust_anchors: Optional[dict] = None,
          preference: Optional[dict] = None,
-         endpoints: Optional[list] = None,
+         endpoint: Optional[list] = None,
          key_config: Optional[dict] = None,
          entity_type_config: Optional[dict] = None,
          services: Optional[list] = None
@@ -128,8 +128,8 @@ def main(entity_id: str,
             "homepage_uri": "https://rp.example.com",
             "contacts": "operations@rp.example.com"
         }
-    if not endpoints:
-        endpoints = ["entity_configuration"]
+    if not endpoint:
+        endpoint = ["entity_configuration"]
     if not key_config:
         key_config = {"key_defs": DEFAULT_KEY_DEFS}
     if not services:
@@ -142,7 +142,7 @@ def main(entity_id: str,
         entity_id,
         preference=preference,
         authority_hints=authority_hints,
-        endpoints=endpoints,
+        endpoint=endpoint,
         key_config=key_config,
         trust_anchors=trust_anchors,
         services=services,
