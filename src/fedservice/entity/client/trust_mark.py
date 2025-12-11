@@ -25,6 +25,7 @@ class TrustMark(FederationService):
     service_name = "trust_mark"
     http_method = "GET"
     response_body_type = "application/trust_mark+jwt"
+    payload_type = 'resolve-response+jwt'
 
     def __init__(self,
                  upstream_get: Callable,

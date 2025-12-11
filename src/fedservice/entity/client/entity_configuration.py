@@ -39,6 +39,7 @@ class EntityConfiguration(FederationService):
     http_method = "GET"
     response_body_type = "jwt"
     response_content_type = "application/entity-statement+jwt"
+    payload_type = "entity-statement+jwt"
 
     def __init__(self,
                  upstream_get: Callable,
@@ -111,6 +112,13 @@ class EntityConfiguration(FederationService):
         return _info
 
     def post_parse_response(self, response, **kwargs):
+        """
+        Cache response
+
+        :param response:
+        :param kwargs:
+        :return:
+        """
         root = get_federation_entity(self)
         _collector = root.function.trust_chain_collector
         _collector.config_cache[response["iss"]] = response

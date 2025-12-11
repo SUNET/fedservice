@@ -48,7 +48,8 @@ FEDERATION_CONFIG = {
                 "organization_name": "The example federation RP operator",
                 "homepage_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com"
-            }
+            },
+            'services': ['entity_configuration', 'entity_statement', 'resolve']
         },
         "openid_relying_party": {}
     },
@@ -174,3 +175,9 @@ class TestComboCollect(object):
 
         assert len(payload["trust_marks"]) == 1
         assert payload["trust_marks"][0]["trust_mark_type"] == SIRTIFI_TRUST_MARK_TYPE
+
+        resolve_client = self.rp["federation_entity"].get_service("resolve")
+        resp = resolve_client.parse_response(response["response_args"])
+        assert resp
+        resp = resolve_client.post_parse_response(resp)
+        assert resp

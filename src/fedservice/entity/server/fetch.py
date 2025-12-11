@@ -26,22 +26,12 @@ class Fetch(Endpoint):
 
     def process_request(self, request=None, **kwargs):
         _context = self.upstream_get("context")
-        _issuer = request.get("iss")
-        if not _issuer:
-            _issuer = self.upstream_get('attribute', 'entity_id')
+        # _issuer = request.get("iss")
+        _issuer = self.upstream_get('attribute', 'entity_id')
 
         _sub = request.get("sub")
         _keyjar = self.upstream_get('attribute', 'keyjar')
-        # if not _sub or _sub == _issuer:
-        #     _server = self.upstream_get("server")
-        #     _entity = _server.upstream_get('unit')
-        #     _metadata = _entity.get_metadata()
-        #     _es = create_entity_configuration(iss=_entity.context.entity_id,
-        #                                       sub=_entity.context.entity_id,
-        #                                       key_jar=_keyjar,
-        #                                       metadata=_metadata,
-        #                                       authority_hints=self.upstream_get('authority_hints'))
-        # else:
+
         _server = self.upstream_get("unit")
         # Information stored about this entity. Contains jwks and possibly entity type and authority_hints
         _response = _server.subordinate.get(_sub)

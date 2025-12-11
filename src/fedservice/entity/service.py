@@ -22,15 +22,16 @@ class FederationService(Service):
         else:
             _keyjar = _context.keyjar
 
-        kwargs = {
-            "iss": _context.issuer,
-            "keyjar": _keyjar,
-            "verify": True
-        }
+        try:
+            _iss = _context.issuer
+        except AttributeError:
+            _iss = response['iss']
+
+        kwargs = {"iss": _iss, "keyjar": _keyjar, "verify": True}
 
         # Refer back to the client_id used in the auth request
         # That client_id might be different from the one used in requests at other times
-        _cstate = getattr(_context,"cstate", None)
+        _cstate = getattr(_context, "cstate", None)
         if _cstate and 'state' in response:
             _client_id = _cstate.get_claim(response["state"], "client_id")
             if _client_id:
@@ -41,4 +42,3 @@ class FederationService(Service):
                 kwargs["allow_http"] = True
 
         return kwargs
-

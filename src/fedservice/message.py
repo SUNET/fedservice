@@ -13,6 +13,8 @@ from idpyoidc import message
 from idpyoidc.exception import MissingRequiredAttribute
 from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
+from idpyoidc.message import msg_deser
+from idpyoidc.message import msg_list_ser
 from idpyoidc.message import msg_ser
 from idpyoidc.message import oauth2 as OAuth2Message
 from idpyoidc.message import OPTIONAL_LIST_OF_STRINGS
@@ -703,23 +705,12 @@ class TrustMark(JsonWebToken):
             if _now > exp:  # have passed the time of expiration
                 raise Expired()
 
-        # _delegation_jwt = self.get("delegation")
-        # if _delegation_jwt:
-        #     # Not verifying the signature
-        #     _delegation = TrustMarkDelegation(**_payload_from_jws(_delegation_jwt))
-        #     # _delegation.verify()
-        #     if self.get("iss") != _delegation["sub"]:
-        #         raise ValueError("Not the issuer the delegation applies to")
-        #     if self.get("trust_mark_type") != _delegation["trust_mark_type"]:
-        #         raise ValueError("Not the trust mark id the delegation applies to")
-        #     self["__delegation"] = _delegation
-
         return True
 
 
 class TrustMarkStatusRequest(Message):
     c_param = {
-        "trust_mark": SINGLE_REQUIRED_STRING
+        "trust_mark": SINGLE_REQUIRED_STRING,
     }
 
 
@@ -732,11 +723,32 @@ SINGLE_REQUIRED_TRUST_MARK = (Message, True, msg_ser, trust_mark_deser, False)
 OPTIONAL_LIST_OF_TRUST_MARKS = ([Message], False, msg_ser, trust_mark_deser, False)
 
 
+class TrustMarkResponse(Message):
+    c_param = {
+        "trust_mark": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_REQUIRED_STRING
+    }
+
+
+def trust_mark_response_deser(val, sformat="json"):
+    """Deserializes a JSON object (most likely) into a Trust Mark Response."""
+    if isinstance(val, dict):
+        return [TrustMarkResponse(**val)]
+
+    _res = []
+    for v in val:
+        _res.append(TrustMarkResponse(**msg_deser(v, sformat)))
+    return _res
+
+
+OPTIONAL_LIST_OF_TRUST_MARK_RESPONSES = ([Message], False, msg_list_ser, trust_mark_response_deser, False)
+
+
 class ResolveRequest(Message):
     c_param = {
         "sub": SINGLE_REQUIRED_STRING,
         "anchor": SINGLE_REQUIRED_STRING,
-        "type": SINGLE_OPTIONAL_STRING
+        "entity_type": OPTIONAL_LIST_OF_STRINGS
     }
 
 
@@ -745,7 +757,8 @@ class ResolveResponse(JsonWebToken):
     c_param.update({
         'metadata': SINGLE_REQUIRED_METADATA,
         'trust_chain': OPTIONAL_LIST_OF_STRINGS,
-        'trust_marks': OPTIONAL_LIST_OF_TRUST_MARKS
+        'trust_marks': OPTIONAL_LIST_OF_TRUST_MARK_RESPONSES,
+        'jwks': SINGLE_OPTIONAL_JSON
     })
 
 

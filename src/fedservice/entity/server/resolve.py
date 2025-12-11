@@ -2,7 +2,6 @@ import logging
 from typing import Optional
 from typing import Union
 
-from fedservice.message import ResolveResponse
 from idpyoidc.message import Message
 from idpyoidc.message import oidc
 from idpyoidc.server.endpoint import Endpoint
@@ -12,6 +11,7 @@ from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import verify_trust_chains
 from fedservice.entity.utils import get_federation_entity
 from fedservice.entity_statement.create import create_entity_statement
+from fedservice.message import ResolveResponse
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,7 @@ class Resolve(Endpoint):
     content_type = 'application/resolve-response+jwt'
     name = "resolve"
     endpoint_name = 'federation_resolve_endpoint'
+    payload_type = "resolve-response+jwt"
 
     def __init__(self, upstream_get, **kwargs):
         Endpoint.__init__(self, upstream_get, **kwargs)
@@ -49,6 +50,9 @@ class Resolve(Endpoint):
         else:
             metadata = _chosen_chain.metadata
 
+        if "entity_type" in request:
+            metadata = {k: v for k, v in metadata.items() if k in request["entity_type"]}
+
         # Now for the trust marks
         verified_trust_marks = []
         for _trust_mark in _chosen_chain.verified_chain[-1].get("trust_marks", []):
@@ -67,6 +71,9 @@ class Resolve(Endpoint):
             args = {"trust_marks": verified_trust_marks}
         else:
             args = {}
+
+        if self.payload_type:
+            args['jws_header_param'] = {'typ': self.payload_type}
 
         _jws = create_entity_statement(
             ResolveResponse,

@@ -40,6 +40,7 @@ class SubordinateStatement(FederationService):
     endpoint_name = "federation_fetch_endpoint"
     response_body_type = "jose"
     response_content_type = "application/entity-statement+jwt"
+    payload_type = 'entity-statement+jwt'
 
     def __init__(self,
                  upstream_get: Callable,

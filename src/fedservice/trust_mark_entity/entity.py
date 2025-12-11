@@ -25,6 +25,7 @@ def create_trust_mark(keyjar, entity_id, **kwargs):
 
 class TrustMarkEntity(Unit):
     name = 'trust_mark_entity'
+    payload_type = "trust-mark+jwt"
 
     def __init__(self,
                  entity_id: str = "",
@@ -92,7 +93,7 @@ class TrustMarkEntity(Unit):
 
         _federation_entity = get_federation_entity(self)
         packer = JWT(key_jar=_federation_entity.keyjar, iss=_federation_entity.entity_id)
-        return packer.pack(payload=content, jws_headers={"typ": "trust-mark+jwt"})
+        return packer.pack(payload=content, jws_headers={"typ": self.payload_type})
 
     def dump_trust_marks(self):
         return self.issued.dumps()
