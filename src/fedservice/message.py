@@ -99,17 +99,15 @@ class AuthorizationServerMetadata(Message):
         "response_modes_supported": OPTIONAL_LIST_OF_STRINGS,
         "grant_types_supported": OPTIONAL_LIST_OF_STRINGS,
         "token_auth_methods_supported": OPTIONAL_LIST_OF_STRINGS,
-        "token_auth_signing_algs_supported": OPTIONAL_LIST_OF_STRINGS,
+        # "endpoint_auth_signing_alg_values_supported": OPTIONAL_LIST_OF_STRINGS,
         "service_documentation": SINGLE_OPTIONAL_STRING,
         "ui_locales_supported": OPTIONAL_LIST_OF_STRINGS,
         "op_policy_uri": SINGLE_OPTIONAL_STRING,
         "op_tos_uri": SINGLE_OPTIONAL_STRING,
         "revocation_endpoint": SINGLE_OPTIONAL_STRING,
         "revocation_auth_methods_supported": SINGLE_OPTIONAL_JSON,
-        "revocation_auth_signing_algs_supported": SINGLE_OPTIONAL_JSON,
         "introspection_endpoint": SINGLE_OPTIONAL_STRING,
         "introspection_auth_methods_supported": OPTIONAL_LIST_OF_STRINGS,
-        "introspection_auth_signing_algs_supported": OPTIONAL_LIST_OF_STRINGS,
         "code_challenge_methods_supported": OPTIONAL_LIST_OF_STRINGS,
         # below Federation additions
         # 'client_registration_types_supported': OPTIONAL_LIST_OF_STRINGS,
@@ -120,7 +118,6 @@ class AuthorizationServerMetadata(Message):
         'pushed_authorization_request_endpoint': SINGLE_OPTIONAL_STRING,
         'require_pushed_authorization_requests': SINGLE_OPTIONAL_BOOLEAN,
         'request_object_signing_alg_values_supported': OPTIONAL_LIST_OF_STRINGS,
-        'token_endpoint_auth_signing_alg_values_supported': OPTIONAL_LIST_OF_STRINGS,
         'token_endpoint_auth_methods_supported': OPTIONAL_LIST_OF_STRINGS
     }
 
@@ -170,7 +167,7 @@ class FederationEntity(InformationalMetadataExtensions):
         "federation_trust_mark_list_endpoint": SINGLE_OPTIONAL_STRING,
         "federation_trust_mark_endpoint": SINGLE_OPTIONAL_STRING,
         "federation_historical_keys_endpoint": SINGLE_OPTIONAL_STRING,
-        "endpoint_auth_signing_alg_values_supported": SINGLE_OPTIONAL_JSON,
+        "endpoint_auth_signing_alg_values_supported": OPTIONAL_LIST_OF_STRINGS,
         # If it's a Trust Anchor
         # "trust_mark_owners": SINGLE_OPTIONAL_DICT,
         # "trust_mark_issuers": SINGLE_OPTIONAL_DICT,
@@ -321,7 +318,7 @@ class OPMetadata(ProviderConfigurationResponse):
         "homepage_uri": SINGLE_OPTIONAL_STRING,
         "jwks": SINGLE_OPTIONAL_DICT,
         "jwks_uri": SINGLE_OPTIONAL_STRING,
-        "signed_jwks_uri": SINGLE_OPTIONAL_STRING
+        "signed_jwks_uri": SINGLE_OPTIONAL_STRING,
     })
 
 

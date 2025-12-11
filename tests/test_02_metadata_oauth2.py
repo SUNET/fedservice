@@ -9,17 +9,12 @@ from fedservice.message import AuthorizationServerMetadata
 from fedservice.message import OauthClientMetadata
 
 
-# from fedservice.message import AuthorizationServerMetadata
-
-
 class TestFedOauth2Client:
 
     @pytest.fixture(autouse=True)
     def setup(self):
         supported = Claims._supports.copy()
-        for service in [
-            "fedservice.appclient.oauth2.authorization.Authorization",
-        ]:
+        for service in ["fedservice.appclient.oauth2.authorization.Authorization"]:
             cls = importer(service)
             supported.update(cls._supports)
 
@@ -53,13 +48,12 @@ class TestFedOauth2Client:
                                               'tos_uri'}
 
     def test_setup(self):
-        # This is AS specified stuff
+        # This is AS specific stuff
         assert set(AuthorizationServerMetadata.c_param.keys()).difference(
             set(self.supported)
         ) == {'authorization_endpoint',
               'code_challenge_methods_supported',
               'introspection_auth_methods_supported',
-              'introspection_auth_signing_algs_supported',
               'introspection_endpoint',
               'issuer',
               'op_policy_uri',
@@ -70,14 +64,11 @@ class TestFedOauth2Client:
               'require_pushed_authorization_requests',
               'response_modes_supported',
               'revocation_auth_methods_supported',
-              'revocation_auth_signing_algs_supported',
               'revocation_endpoint',
               'scopes_supported',
               'service_documentation',
               'token_auth_methods_supported',
-              'token_auth_signing_algs_supported',
               'token_endpoint',
-              'token_endpoint_auth_signing_alg_values_supported',
               'ui_locales_supported'}
 
         # parameters that are not mapped against what the AS's metadata says
@@ -133,9 +124,7 @@ class TestFedOauth2Client:
             elif isinstance(spec[0], list):
                 l_to_s.append(key)
 
-        assert set(non_appear) == {'grant_types_supported',
-                                   'token_auth_signing_algs_supported',
-                                   'token_endpoint_auth_signing_alg_values_supported'}
+        assert set(non_appear) == {'grant_types_supported'}
         assert set(l_to_s) == {"response_types", "scope"}
 
     def test_metadata(self):

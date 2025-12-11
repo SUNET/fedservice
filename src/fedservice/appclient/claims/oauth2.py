@@ -15,7 +15,7 @@ class Claims(OAUth_claims):
     _supports = OAUth_claims._supports.copy()
     _supports.update({
         "signed_jwks_uri": None,
-        'organization_name': None
+        'organization_name': None,
     })
 
     callback_path = {}

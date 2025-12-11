@@ -4,6 +4,14 @@
   "exp": 1568397247,
   "iat": 1568310847,
   "metadata": {
+    "federation_entity": {
+      "endpoint_auth_signing_alg_values_supported": [
+        "ES256",
+        "RS256"
+      ],
+      "organization_name": "Ovulo Mushroom",
+      "organization_uri": "https://amanita.caesarea.example.com"
+    },
     "openid_provider": {
       "issuer": "https://op.umu.se",
       "signed_jwks_uri": "https://op.umu.se/openid/signed_jwks.jose",
@@ -42,10 +50,6 @@
       ],
       "pushed_authorization_request_endpoint": "https://op.umu.se/openid/par",
       "request_object_signing_alg_values_supported": [
-        "ES256",
-        "RS256"
-      ],
-      "token_endpoint_auth_signing_alg_values_supported": [
         "ES256",
         "RS256"
       ]

@@ -95,7 +95,8 @@ class FederationEntityClaims(ClaimsBase):
         'logo_uri': None,
         'homepage_uri': None,
         'trust_mark_owners': None,
-        'trust_mark_issuers': None
+        'trust_mark_issuers': None,
+        "endpoint_auth_signing_alg_values_supported": alg_info.get_signing_algs(),
     }
 
     def metadata(self, supports):

@@ -131,7 +131,8 @@ class TestFederationEntity(object):
                                                                         'federation_trust_mark_list_endpoint_auth_methods',
                                                                         'federation_trust_mark_status_endpoint_auth_methods',
                                                                         'homepage_uri',
-                                                                        'organization_name'
+                                                                        'organization_name',
+                                                                        'endpoint_auth_signing_alg_values_supported'
                                                                         }
 
     def test_fetch(self):

@@ -84,7 +84,7 @@ class TestComboCollect(object):
 
         assert trust_chain.metadata
         assert set(trust_chain.metadata.keys()) == {'federation_entity', 'openid_provider'}
-        assert set(trust_chain.metadata['federation_entity'].keys()) == set()
+        assert set(trust_chain.metadata['federation_entity'].keys()) == {'endpoint_auth_signing_alg_values_supported'}
 
         assert trust_chain.is_expired() is False
 

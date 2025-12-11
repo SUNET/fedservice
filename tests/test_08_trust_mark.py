@@ -204,6 +204,7 @@ class TestSignedTrustMark():
         assert "federation_entity" in _metadata
         assert set(_metadata["federation_entity"].keys()) == {
             'organization_name',
+            'endpoint_auth_signing_alg_values_supported',
             'federation_trust_mark_endpoint',
             'federation_trust_mark_endpoint_auth_methods',
             'federation_trust_mark_list_endpoint',

@@ -107,7 +107,7 @@ def test_oidc_op():
     _msg = FederationEntity().from_dict(_data)
 
     assert set(_msg.keys()) == {'iss', 'sub', 'iat', 'exp', 'metadata', 'jwks', 'authority_hints'}
-    assert set(_msg['metadata'].keys()) == {'openid_provider'}
+    assert set(_msg['metadata'].keys()) == {'openid_provider', 'federation_entity'}
     assert set(_msg['metadata']['openid_provider'].keys()) == {'authorization_endpoint',
                                                                'client_registration_types_supported',
                                                                'federation_registration_endpoint',
@@ -122,8 +122,7 @@ def test_oidc_op():
                                                                'signed_jwks_uri',
                                                                'subject_types_supported',
                                                                'token_endpoint',
-                                                               'token_endpoint_auth_methods_supported',
-                                                               'token_endpoint_auth_signing_alg_values_supported'}
+                                                               'token_endpoint_auth_methods_supported'}
 
 
 def test_JWKSet():

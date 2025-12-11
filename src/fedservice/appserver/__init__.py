@@ -188,7 +188,7 @@ class ServerEntity(ServerUnit):
         if not entity_type:
             entity_type = self.name
         _claims = self.get_context().claims
-        metadata = _claims.get_server_metadata(endpoints=self.endpoint.values(),
+        metadata = _claims.get_server_metadata(endpoints=list(self.endpoint.values()),
                                                metadata_schema=self.metadata_schema)
 
         for param in ["issuer", "certificate_issuer"]:

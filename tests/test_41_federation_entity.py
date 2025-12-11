@@ -181,7 +181,8 @@ class TestServer():
         entity_configuration = verify_self_signed_signature(_resp_args['response'])
         assert entity_configuration['iss'] == self.leaf.entity_id
         assert entity_configuration['sub'] == self.leaf.entity_id
-        assert set(entity_configuration['metadata']['federation_entity'].keys()) == set()
+        assert set(entity_configuration['metadata']['federation_entity'].keys()) == {
+            'endpoint_auth_signing_alg_values_supported'}
 
     def test_fetch(self):
         _endpoint = self.ta.get_endpoint('fetch')

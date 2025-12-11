@@ -226,7 +226,8 @@ class TestTrustMarkEndpoints():
                                                               'federation_trust_mark_endpoint_auth_methods',
                                                               'federation_trust_mark_list_endpoint_auth_methods',
                                                               'federation_trust_mark_status_endpoint_auth_methods',
-                                                              'organization_name'}
+                                                              'organization_name',
+                                                              'endpoint_auth_signing_alg_values_supported'}
         fe_metadata = _metadata["federation_entity"]
         assert fe_metadata["federation_trust_mark_endpoint_auth_methods"] == ["private_key_jwt"]
         assert fe_metadata["federation_trust_mark_list_endpoint_auth_methods"] == ["none"]

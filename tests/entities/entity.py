@@ -13,7 +13,6 @@ from tests import SESSION_PARAMS
 #     'oauth_client',
 #     'openid_provider',
 #     'openid_relying_party'
-# }
 
 ENTITY_TYPES = {
     'federation_entity': {
@@ -121,8 +120,7 @@ ENTITY_TYPES = {
         "preference": {
             "grant_types": ['authorization_code', 'implicit', 'refresh_token'],
             "id_token_signed_response_alg": "ES256",
-            "token_endpoint_auth_method": "client_secret_basic",
-            "token_endpoint_auth_signing_alg": "ES256"
+            "token_endpoint_auth_method": "client_secret_basic"
         }
     },
     'oauth_authorization_server': {
@@ -212,8 +210,7 @@ ENTITY_TYPES = {
         "preference": {
             "grant_types": ['authorization_code', 'implicit', 'refresh_token'],
             "id_token_signed_response_alg": "ES256",
-            "token_endpoint_auth_method": "client_secret_basic",
-            "token_endpoint_auth_signing_alg": "ES256"
+            "token_endpoint_auth_method": "client_secret_basic"
         },
         "server_type": "oauth2",
         "endpoint": OAUTH2_FED_ENDPOINTS

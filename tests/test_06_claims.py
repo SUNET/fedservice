@@ -42,11 +42,11 @@ class TestClaimsEntity():
         base_supported = self.entity.get_context().supports()
         assert set(base_supported.keys()) == {'organization_name', 'homepage_uri', 'contacts',
                                               'policy_uri', 'logo_uri', 'trust_mark_owners',
-                                              'trust_mark_issuers'}
+                                              'trust_mark_issuers', 'endpoint_auth_signing_alg_values_supported'}
 
         assert set(self.entity.context.claims.prefer.keys()) == {
             "organization_name", "homepage_uri", "contacts", "jwks", 'federation_fetch_endpoint',
-            'federation_list_endpoint'
+            'federation_list_endpoint', 'endpoint_auth_signing_alg_values_supported'
         }
 
         assert self.entity.get_endpoint_claims() == {
@@ -61,7 +61,8 @@ class TestClaimsEntity():
             'federation_fetch_endpoint',
             'federation_list_endpoint',
             'homepage_uri',
-            'organization_name'}
+            'organization_name',
+            'endpoint_auth_signing_alg_values_supported'}
 
         # stored under 2 IDs
         assert len(self.entity.keyjar) == 2
@@ -124,7 +125,8 @@ class TestClaimsFRP():
         assert set(_pref.keys()) == {'federation_entity', "openid_relying_party"}
         assert set(_pref["federation_entity"].keys()) == {'contacts', 'federation_fetch_endpoint',
                                                           'federation_list_endpoint',
-                                                          'homepage_uri', 'organization_name'}
+                                                          'homepage_uri', 'organization_name',
+                                                          'endpoint_auth_signing_alg_values_supported'}
         _keys = [k for k, v in _pref["openid_relying_party"].items() if v != []]
         assert set(_keys) == {'application_type',
                               'client_registration_types',

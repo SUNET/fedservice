@@ -157,7 +157,7 @@
               "token_endpoint_auth_methods_supported": [
                 "private_key_jwt"
               ],
-              "token_endpoint_auth_signing_alg_values_supported": [
+              "endpoint_auth_signing_alg_values_supported": [
                 "ES256",
                 "ES384",
                 "ES512"
