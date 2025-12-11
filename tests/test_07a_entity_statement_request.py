@@ -49,7 +49,6 @@ FEDERATION_CONFIG = {
         },
         "oauth_client": {
             "services": COMBINED_DEFAULT_OAUTH2_SERVICES,
-            # OAuth2 core keys
             "key_config": {"key_defs": DEFAULT_KEY_DEFS},
             "base_url": OC_ID,
             "client_id": OC_ID,
@@ -60,7 +59,6 @@ FEDERATION_CONFIG = {
                 "id_token_signed_response_alg": "ES256",
                 "token_endpoint_auth_method": "client_secret_basic",
                 "token_endpoint_auth_signing_alg": "ES256",
-                "client_registration_types": ["automatic"],
                 "request_parameter_supported": True
             },
             "authorization_request_endpoints": [

@@ -19,7 +19,6 @@ class TestFedOauth2Client:
         supported = Claims._supports.copy()
         for service in [
             "fedservice.appclient.oauth2.authorization.Authorization",
-            "fedservice.appclient.oauth2.registration.Registration",
         ]:
             cls = importer(service)
             supported.update(cls._supports)
@@ -36,7 +35,6 @@ class TestFedOauth2Client:
                                               'client_uri',
                                               'client_id',
                                               'client_secret',
-                                              'client_registration_types',
                                               'contacts',
                                               'grant_types',
                                               'grant_types_supported',
@@ -59,9 +57,7 @@ class TestFedOauth2Client:
         assert set(AuthorizationServerMetadata.c_param.keys()).difference(
             set(self.supported)
         ) == {'authorization_endpoint',
-              'client_registration_types_supported',
               'code_challenge_methods_supported',
-              'federation_registration_endpoint',
               'introspection_auth_methods_supported',
               'introspection_auth_signing_algs_supported',
               'introspection_endpoint',
@@ -91,7 +87,6 @@ class TestFedOauth2Client:
               'client_uri',
               'client_id',
               'client_secret',
-              'client_registration_types',
               'contacts',
               'grant_types',
               'jwks',
@@ -112,8 +107,7 @@ class TestFedOauth2Client:
         )
 
         # These are the claims that has default values. A default value should not be an empty list.
-        assert set(claims.prefer.keys()) == {'client_registration_types',
-                                             'grant_types_supported',
+        assert set(claims.prefer.keys()) == {'grant_types_supported',
                                              'response_types_supported',
                                              'token_endpoint_auth_methods_supported'}
 
@@ -151,7 +145,6 @@ class TestFedOauth2Client:
             "authorization_endpoint": f"{AS_BASEURL}/authorization",
             "token_endpoint": f"{AS_BASEURL}/token",
             "jwks_uri": f"{AS_BASEURL}/static/jwks_tE2iLbOAqXhe8bqh.json",
-            "registration_endpoint": f"{AS_BASEURL}/registration",
             "scopes_supported": ["openid", "fee", "faa", "foo", "fum"],
             "response_types_supported": ["code", "id_token", "code id_token"],
             "response_modes_supported": ["query", "form_post", "new_fangled"],
@@ -173,8 +166,7 @@ class TestFedOauth2Client:
         )
 
         # These are the claims that the client has default values for after comparing with what the AS supports
-        assert set(claims.prefer.keys()) == {'client_registration_types',
-                                             'grant_types_supported',
+        assert set(claims.prefer.keys()) == {'grant_types_supported',
                                              'response_types_supported',
                                              'token_endpoint_auth_methods_supported'}
 
@@ -198,7 +190,6 @@ class TestFedOauth2Client:
         reg_req = claims.create_registration_request()
 
         assert set(reg_req.keys()) == {'client_name',
-                                       'client_registration_types',
                                        'grant_types',
                                        'example_extension_parameter',
                                        'policy_uri',

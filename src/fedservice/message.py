@@ -112,8 +112,8 @@ class AuthorizationServerMetadata(Message):
         "introspection_auth_signing_algs_supported": OPTIONAL_LIST_OF_STRINGS,
         "code_challenge_methods_supported": OPTIONAL_LIST_OF_STRINGS,
         # below Federation additions
-        'client_registration_types_supported': OPTIONAL_LIST_OF_STRINGS,
-        'federation_registration_endpoint': SINGLE_OPTIONAL_STRING,
+        # 'client_registration_types_supported': OPTIONAL_LIST_OF_STRINGS,
+        # 'federation_registration_endpoint': SINGLE_OPTIONAL_STRING,
         # 'request_authentication_methods_supported': OPTIONAL_LIST_OF_STRINGS,
         # 'request_authentication_signing_alg_values_supported': OPTIONAL_LIST_OF_STRINGS,
         # PAR additions

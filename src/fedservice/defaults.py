@@ -28,8 +28,6 @@ DEFAULT_OIDC_FED_SERVICES = {
 DEFAULT_OAUTH2_FED_SERVICES = {
     'oauth_authorization': {
         'class': 'fedservice.appclient.oauth2.authorization.Authorization'},
-    'oauth_registration': {
-        'class': 'fedservice.appclient.oauth2.registration.Registration'},
 }
 
 COMBINED_DEFAULT_OIDC_SERVICES = DEFAULT_OIDC_FED_SERVICES
