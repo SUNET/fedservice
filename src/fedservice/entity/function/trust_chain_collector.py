@@ -261,6 +261,9 @@ class TrustChainCollector(Function):
         :return: A signed JWT
         """
         _serv = self._get_service('entity_statement')
+        if _serv is None:
+            raise ValueError("Have no entity_statement service defined")
+
         _res = _serv.get_request_parameters(subject=subject, fetch_endpoint=fetch_endpoint)
 
         try:

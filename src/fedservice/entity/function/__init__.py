@@ -160,6 +160,11 @@ def collect_trust_chains(unit,
                          authority_hints: Optional[list] = None):
     _federation_entity = get_federation_entity(unit)
 
+    _chains = _federation_entity.trust_chain.get(entity_id)
+    if _chains:
+        # Are they still active ?
+        pass
+
     _collector = _federation_entity.function.trust_chain_collector
 
     # Collect the trust chains
@@ -182,6 +187,7 @@ def collect_trust_chains(unit,
     if tree:
         chains = tree2chains(tree)
         logger.debug("%d chains", len(chains))
+        _federation_entity.trust_chain[entity_id] = chains
         return chains, signed_entity_configuration
     elif tree == {}:
         return [], signed_entity_configuration

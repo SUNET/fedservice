@@ -1,27 +1,27 @@
 from typing import Callable
 from typing import Optional
 from typing import Union
-from urllib.parse import urlencode
 
 from cryptojwt.jws.jws import factory
 from idpyoidc.client.configure import Configuration
-from idpyoidc.exception import MissingAttribute
-from idpyoidc.message import oauth2
 from idpyoidc.message.oauth2 import ResponseMessage
 
-from fedservice import message
+from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.service import FederationService
+from fedservice.message import TrustMarkStatusRequest
+from fedservice.message import TrustMarkStatusResponse
 
 
 class TrustMarkStatus(FederationService):
     """The service that talks to the OIDC federation Status endpoint."""
 
-    msg_type = oauth2.Message
-    response_cls = message.Message
+    msg_type = TrustMarkStatusRequest
+    response_cls = TrustMarkStatusResponse
     error_msg = ResponseMessage
     synchronous = True
     service_name = "trust_mark_status"
     http_method = "GET"
+    payload_type = "trust-mark-status-response+jwt"
 
     def __init__(self,
                  upstream_get: Callable,
@@ -51,18 +51,18 @@ class TrustMarkStatus(FederationService):
         if not method:
             method = self.http_method
 
-        if "trust_mark" in request_args:
-            _q_args = {'trust_mark': request_args["trust_mark"]}
-            _jws = factory(request_args["trust_mark"])
-            tm_payload = _jws.jwt.payload()
-            fetch_endpoint = tm_payload['iss']
-        else:
-            _q_args = {k: v for k, v in request_args.items() if k in ['sub', 'trust_mark_type', 'iat']}
-            if not fetch_endpoint:
-                fetch_endpoint = kwargs.get("endpoint")
-                if not fetch_endpoint:
-                    raise MissingAttribute('fetch_endpoint')
+        _req = TrustMarkStatusRequest(**request_args)
+        _req.verify()
 
-        _url = f"{fetch_endpoint}?{urlencode(_q_args)}"
+        if not fetch_endpoint:
+            fetch_endpoint = kwargs.get("endpoint")
+            if not fetch_endpoint:
+                _tm = factory(_req["trust_mark"])
+                _trust_chains = get_verified_trust_chains(self, _tm.jwt.payload()["iss"])
+                if _trust_chains:
+                    fetch_endpoint = _trust_chains[0].metadata[
+                        'federation_entity']['federation_trust_mark_status_endpoint']
+
+        _url = _req.request(fetch_endpoint)
 
         return {"url": _url, 'method': method}

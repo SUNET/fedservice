@@ -21,9 +21,11 @@ def create_trust_mark(keyjar, entity_id, **kwargs):
 
 class TrustMarkStatus(Endpoint):
     request_cls = oidc.Message
-    response_format = "json"
+    response_format = "jose"
     name = "trust_mark_status"
     endpoint_name = 'federation_trust_mark_status_endpoint'
+    response_content_type = "application/trust-mark-status-response+jwt"
+    payload_type = 'trust-mark-status-response+jwt'
 
     def __init__(self,
                  upstream_get: Callable,
@@ -34,9 +36,7 @@ class TrustMarkStatus(Endpoint):
 
         Endpoint.__init__(self, upstream_get, **kwargs)
 
-    def process_request(self,
-                        request: Optional[dict] = None,
-                        **kwargs) -> dict:
+    def process_request(self, request: Optional[dict] = None, **kwargs):
         _trust_mark_issuer = self.upstream_get("unit")
 
         _federation_entity = get_federation_entity(self)
@@ -44,13 +44,13 @@ class TrustMarkStatus(Endpoint):
         if 'trust_mark' in request:
             _mark = _trust_mark_issuer.unpack_trust_mark(request['trust_mark'])
             if _trust_mark_issuer.find(_mark['trust_mark_type'], _mark['sub']):
-                msg = {'status': "active"}
+                msg = {'status': "active", 'trust_mark': request["trust_mark"]}
                 packer = JWT(key_jar=_federation_entity.keyjar,
                              iss=_federation_entity.entity_id,
                              lifetime=300,
                              sign_alg=DEFAULT_SIGNING_ALGORITHM)
 
-                return packer.pack(payload=msg, jws_headers={'typ': "trust-mark-status-response+jwt"})
+                return packer.pack(payload=msg, jws_headers={'typ': self.payload_type})
         else:
             if 'sub' in request:
                 _id = ""

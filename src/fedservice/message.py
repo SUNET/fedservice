@@ -711,6 +711,13 @@ class TrustMarkStatusRequest(Message):
     }
 
 
+class TrustMarkStatusResponse(JsonWebToken):
+    c_param = {
+        "trust_mark": SINGLE_REQUIRED_STRING,
+        "status": SINGLE_REQUIRED_STRING
+    }
+
+
 def trust_mark_deser(val, sformat="json"):
     """Deserializes a JSON object (most likely) into a Trust Mark."""
     return deserialize_from_one_of(val, TrustMark, sformat)
@@ -720,7 +727,7 @@ SINGLE_REQUIRED_TRUST_MARK = (Message, True, msg_ser, trust_mark_deser, False)
 OPTIONAL_LIST_OF_TRUST_MARKS = ([Message], False, msg_ser, trust_mark_deser, False)
 
 
-class TrustMarkResponse(Message):
+class TrustMarkResponse(ResponseMessage):
     c_param = {
         "trust_mark": SINGLE_REQUIRED_STRING,
         "trust_mark_type": SINGLE_REQUIRED_STRING

@@ -1,8 +1,6 @@
 import os
 from urllib.parse import urlencode
 
-from cryptojwt.utils import importer
-
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
 
@@ -66,6 +64,7 @@ def create_trust_chain_messages(leaf, *entity):
 
     return where_and_what
 
+
 def create_trust_chain_messages2(leaf, *entity):
     where_and_what = {}
 
@@ -107,6 +106,7 @@ def create_trust_chain_messages2(leaf, *entity):
 
     return request
 
+
 def create_trust_chain(leaf, *entity):
     chain = []
 
@@ -140,9 +140,9 @@ def create_trust_chain(leaf, *entity):
 
     return chain
 
+
 def rm_dir_files(dir):
     for file_object in os.listdir(dir):
         file_object_path = os.path.join(dir, file_object)
         if os.path.isfile(file_object_path) or os.path.islink(file_object_path):
             os.unlink(file_object_path)
-
