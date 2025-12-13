@@ -3,6 +3,7 @@ from typing import Optional
 from typing import Union
 
 from cryptojwt import JWT
+from cryptojwt.jws.jws import factory
 from idpyoidc.client.service import Service
 
 from fedservice.entity.function import verify_entity_statement
@@ -214,9 +215,10 @@ class Registration(registration.Registration):
     endpoint_name = 'federation_registration_endpoint'
     request_body_type = 'jwt'
     response_body_type = 'jwt'
-    content_type = "application/entity-statement+jwt"
+    content_type = "application/explicit-registration-response+jwt"
     name = 'registration'
     application_protocol = "oidc"
+    payload_type = 'explicit-registration-response+jwt'
 
     _supports = {
         "client_registration_types": ["automatic", "explicit"]
@@ -283,6 +285,12 @@ class Registration(registration.Registration):
 
         # Find the part of the system that deals with the federation
         _federation_entity = get_federation_entity(self)
+
+        # Verify payload type
+        if self.payload_type:
+            _jws = factory(resp)
+            if _jws.jwt.headers['typ'] != self.payload_type:
+                raise ValueError('Expected payload type did not matched received')
 
         # verify signature with OP's federation keys
         _jwt = JWT(key_jar=_federation_entity.keyjar)

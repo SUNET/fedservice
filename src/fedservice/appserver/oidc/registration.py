@@ -23,6 +23,7 @@ class Registration(registration.Registration):
         "client_registration_types_supported": ["automatic", "explicit"]
     }
     application_protocol = "oidc"
+    payload_type = 'explicit-registration-response'
 
     def __init__(self, upstream_get, **kwargs):
         registration.Registration.__init__(self, upstream_get, **kwargs)

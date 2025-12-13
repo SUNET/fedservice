@@ -149,10 +149,14 @@ SINGLE_OPTIONAL_NAMING_CONSTRAINTS = (Message, False, msg_ser, naming_constraint
 class InformationalMetadataExtensions(Message):
     c_param = {
         "organization_name": SINGLE_OPTIONAL_STRING,
+        "display_name": SINGLE_OPTIONAL_STRING,
+        "description": SINGLE_OPTIONAL_STRING,
+        "keywords": OPTIONAL_LIST_OF_STRINGS,
         "contacts": OPTIONAL_LIST_OF_STRINGS,
         "logo_url": SINGLE_OPTIONAL_STRING,
         "policy_url": SINGLE_OPTIONAL_STRING,
-        "homepage_uri": SINGLE_OPTIONAL_STRING,
+        "information_uri": SINGLE_OPTIONAL_STRING,
+        "organization_uri": SINGLE_OPTIONAL_STRING
     }
 
 
@@ -205,8 +209,8 @@ def trust_mark_issuer_deser(val, sformat="json"):
 class OauthClientMetadata(OAuth2Message.OauthClientMetadata):
     """Metadata for an OAuth2 Client."""
     c_param = OAuth2Message.OauthClientMetadata.c_param.copy()
+    c_param.update(InformationalMetadataExtensions.c_param)
     c_param.update({
-        "organization_name": SINGLE_OPTIONAL_STRING,
         "signed_jwks_uri": SINGLE_OPTIONAL_STRING,
     })
 
@@ -272,6 +276,7 @@ OPTIONAL_OAUTH_PROTECTED_RESOURCE_METADATA = (
 
 class OIDCRPMetadata(RegistrationRequest):
     c_param = RegistrationRequest.c_param.copy()
+    c_param.update(InformationalMetadataExtensions.c_param)
     c_param.update({
         "client_registration_types": REQUIRED_LIST_OF_STRINGS,
         "organization_name": SINGLE_OPTIONAL_STRING,
@@ -306,6 +311,7 @@ OPTIONAL_RP_REGISTRATION_RESPONSE = (
 
 class OPMetadata(ProviderConfigurationResponse):
     c_param = ProviderConfigurationResponse.c_param.copy()
+    c_param.update(InformationalMetadataExtensions.c_param)
     c_param.update({
         "client_registration_types_supported": REQUIRED_LIST_OF_STRINGS,
         "federation_registration_endpoint": SINGLE_OPTIONAL_STRING,
@@ -324,6 +330,7 @@ class OPMetadata(ProviderConfigurationResponse):
 
 class FedASConfigurationResponse(ASConfigurationResponse):
     c_param = ASConfigurationResponse.c_param.copy()
+    c_param.update(InformationalMetadataExtensions.c_param)
     c_param.update({
         "organization_name": SINGLE_OPTIONAL_STRING,
         "contacts": OPTIONAL_LIST_OF_STRINGS,
@@ -557,6 +564,7 @@ class EntityConfiguration(EntityStatement):
         'trust_marks': OPTIONAL_LIST_OF_STRINGS,
         'trust_mark_owners': SINGLE_OPTIONAL_JSON,
         'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
+        'trust_anchor_hints': OPTIONAL_LIST_OF_STRINGS
     })
 
     def verify(self, **kwargs):
@@ -589,7 +597,7 @@ class EntityConfiguration(EntityStatement):
 class ExplicitRegistrationResponse(EntityConfiguration):
     c_param = EntityConfiguration.c_param.copy()
     c_param.update({
-        'trust_anchor': SINGLE_OPTIONAL_STRING
+        'trust_anchor': OPTIONAL_LIST_OF_STRINGS
     })
 
     def verify(self, **kwargs):
@@ -603,13 +611,12 @@ class ExplicitRegistrationResponse(EntityConfiguration):
                 if _trust_anchor not in _trust_anchors:
                     raise ValueError(f"The Server used a trust anchor I do not trust: {_trust_anchor}")
 
+        _authority_hints = self.get('authority_hints', [])
+        if len(_authority_hints) != 1:
+            raise ValueError("Should only be one authority_hint in registration response")
 
 class ExplicitRegistrationRequest(EntityConfiguration):
     c_param = EntityConfiguration.c_param.copy()
-    c_param.update({
-        'peer_trust_chain': OPTIONAL_LIST_OF_STRINGS,
-        'trust_chain': OPTIONAL_LIST_OF_STRINGS,
-    })
 
 
 class SubordinateStatement(EntityStatement):
