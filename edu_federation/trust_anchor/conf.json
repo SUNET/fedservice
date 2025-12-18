@@ -34,49 +34,53 @@
   },
   "entity": {
     "entity_id": "https://127.0.0.1:7010",
-    "httpc_params": {
-      "verify": false
-    },
-    "key_config": {
-      "private_path": "trust_anchor/private/fed_keys.json",
-      "key_defs": [
-        {
-          "type": "RSA",
-          "use": [
-            "sig"
-          ]
+    "entity_type": {
+      "federation_entity": {
+        "httpc_params": {
+          "verify": false
         },
-        {
-          "type": "EC",
-          "crv": "P-256",
-          "use": [
-            "sig"
-          ]
+        "key_config": {
+          "private_path": "trust_anchor/private/fed_keys.json",
+          "key_defs": [
+            {
+              "type": "RSA",
+              "use": [
+                "sig"
+              ]
+            },
+            {
+              "type": "EC",
+              "crv": "P-256",
+              "use": [
+                "sig"
+              ]
+            }
+          ],
+          "public_path": "trust_anchor/static/fed_keys.json",
+          "read_only": false
+        },
+        "endpoint": [
+          "fetch",
+          "list",
+          "entity_configuration",
+          "resolve"
+        ],
+        "subordinates": {
+          "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
+          "kwargs": {
+            "fdir": "trust_anchor/subordinates",
+            "key_conv": "idpyoidc.util.Base64",
+            "value_conv": "idpyoidc.util.JSON"
+          }
+        },
+        "trust_mark_issuers": {
+          "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
+          "kwargs": {
+            "fdir": "trust_anchor/trust_mark_issuers",
+            "key_conv": "idpyoidc.util.Base64",
+            "value_conv": "idpyoidc.util.JSON"
+          }
         }
-      ],
-      "public_path": "trust_anchor/static/fed_keys.json",
-      "read_only": false
-    },
-    "endpoint": [
-      "fetch",
-      "list",
-      "entity_configuration",
-      "resolve"
-    ],
-    "subordinates": {
-      "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
-      "kwargs": {
-        "fdir": "trust_anchor/subordinates",
-        "key_conv": "idpyoidc.util.Base64",
-        "value_conv": "idpyoidc.util.JSON"
-      }
-    },
-    "trust_mark_issuers": {
-      "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
-      "kwargs": {
-        "fdir": "trust_anchor/trust_mark_issuers",
-        "key_conv": "idpyoidc.util.Base64",
-        "value_conv": "idpyoidc.util.JSON"
       }
     }
   },

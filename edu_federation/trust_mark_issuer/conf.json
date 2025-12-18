@@ -34,87 +34,91 @@
   },
   "entity": {
     "entity_id": "https://127.0.0.1:6010",
-    "key_config": {
-      "private_path": "trust_mark_issuer/private/fed_keys.json",
-      "key_defs": [
-        {
-          "type": "RSA",
-          "use": [
-            "sig"
-          ]
-        },
-        {
-          "type": "EC",
-          "crv": "P-256",
-          "use": [
-            "sig"
-          ]
-        }
-      ],
-      "public_path": "trust_mark_issuer/static/fed_keys.json",
-      "read_only": false
-    },
-    "endpoint": [
-      "entity_configuration"
-    ],
-    "authority_hints": {
-      "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
-      "kwargs": {
-        "file_name": "trust_mark_issuer/authority_hints"
-      }
-    },
-    "trust_anchors": {
-      "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
-      "kwargs": {
-        "fdir": "trust_mark_issuer/trust_anchors",
-        "key_conv": "idpyoidc.util.Base64",
-        "value_conv": "idpyoidc.util.JSON"
-      }
-    },
-    "trust_mark_entity": {
-      "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
-      "kwargs": {
-        "trust_mark_specification": {
-          "http://dc4eu.example.com/PersonIdentificationData/se": {
-            "lifetime": 2592000
-          },
-          "http://dc4eu.example.com/OpenBadgeCredential/se": {
-            "lifetime": 2592000
-          },
-          "https://refeds.org/category/personalized": {
-            "lifetime": 2592000
-          }
-        },
-        "trust_mark_db": {
-          "class": "fedservice.trust_mark_entity.FileDB",
-          "kwargs": {
-            "http://dc4eu.example.com/PersonIdentificationData/se": "trust_mark_issuer/pid_se",
-            "http://dc4eu.example.com/OpenBadgeCredential/se": "trust_mark_issuer/obc_se",
-            "https://refeds.org/category/personalized": "trust_mark_issuer/personalized"
-          }
-        },
-        "endpoint": {
-          "trust_mark": {
-            "path": "trust_mark",
-            "class": "fedservice.trust_mark_entity.server.trust_mark.TrustMark",
-            "kwargs": {
-              "client_authn_method": [
-                "none"
-              ],
-              "auth_signing_alg_values": [
-                "ES256"
+    "entity_type": {
+      "federation_entity": {
+        "key_config": {
+          "private_path": "trust_mark_issuer/private/fed_keys.json",
+          "key_defs": [
+            {
+              "type": "RSA",
+              "use": [
+                "sig"
+              ]
+            },
+            {
+              "type": "EC",
+              "crv": "P-256",
+              "use": [
+                "sig"
               ]
             }
-          },
-          "trust_mark_list": {
-            "path": "trust_mark_list",
-            "class": "fedservice.trust_mark_entity.server.trust_mark_list.TrustMarkList",
-            "kwargs": {}
-          },
-          "trust_mark_status": {
-            "path": "trust_mark_status",
-            "class": "fedservice.trust_mark_entity.server.trust_mark_status.TrustMarkStatus",
-            "kwargs": {}
+          ],
+          "public_path": "trust_mark_issuer/static/fed_keys.json",
+          "read_only": false
+        },
+        "endpoint": [
+          "entity_configuration"
+        ],
+        "authority_hints": {
+          "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
+          "kwargs": {
+            "file_name": "trust_mark_issuer/authority_hints"
+          }
+        },
+        "trust_anchors": {
+          "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
+          "kwargs": {
+            "fdir": "trust_mark_issuer/trust_anchors",
+            "key_conv": "idpyoidc.util.Base64",
+            "value_conv": "idpyoidc.util.JSON"
+          }
+        },
+        "trust_mark_entity": {
+          "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
+          "kwargs": {
+            "trust_mark_specification": {
+              "http://dc4eu.example.com/PersonIdentificationData/se": {
+                "lifetime": 2592000
+              },
+              "http://dc4eu.example.com/OpenBadgeCredential/se": {
+                "lifetime": 2592000
+              },
+              "https://refeds.org/category/personalized": {
+                "lifetime": 2592000
+              }
+            },
+            "trust_mark_db": {
+              "class": "fedservice.trust_mark_entity.FileDB",
+              "kwargs": {
+                "http://dc4eu.example.com/PersonIdentificationData/se": "trust_mark_issuer/pid_se",
+                "http://dc4eu.example.com/OpenBadgeCredential/se": "trust_mark_issuer/obc_se",
+                "https://refeds.org/category/personalized": "trust_mark_issuer/personalized"
+              }
+            },
+            "endpoint": {
+              "trust_mark": {
+                "path": "trust_mark",
+                "class": "fedservice.trust_mark_entity.server.trust_mark.TrustMark",
+                "kwargs": {
+                  "client_authn_method": [
+                    "none"
+                  ],
+                  "auth_signing_alg_values": [
+                    "ES256"
+                  ]
+                }
+              },
+              "trust_mark_list": {
+                "path": "trust_mark_list",
+                "class": "fedservice.trust_mark_entity.server.trust_mark_list.TrustMarkList",
+                "kwargs": {}
+              },
+              "trust_mark_status": {
+                "path": "trust_mark_status",
+                "class": "fedservice.trust_mark_entity.server.trust_mark_status.TrustMarkStatus",
+                "kwargs": {}
+              }
+            }
           }
         }
       }

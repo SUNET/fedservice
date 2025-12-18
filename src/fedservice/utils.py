@@ -180,16 +180,20 @@ def make_federation_combo(entity_id: str, entity_type: dict, key_config: Optiona
                 'kwargs': _config
             }
         }
-        # Convert into the 'normal' dictionary model with class and kwargs
+
         _etc = {}
         for e_type, conf in entity_type.items():
             if e_type == "federation_entity":
                 continue
 
-            _etc[e_type] = {
-                "class": conf['class'],
-                "kwargs": {k: v for k, v in conf.items() if k != 'class'}
-            }
+            if set(conf.keys()) == {"class", "kwargs"}:
+                _etc[e_type] = conf
+            else:  # Convert into the 'normal' dictionary model with class and kwargs
+                _etc[e_type] = {
+                    "class": conf['class'],
+                    "kwargs": {k: v for k, v in conf.items() if k != 'class'}
+                }
+
         entity_config.update(_etc)
 
         entity = FederationCombo(entity_config)

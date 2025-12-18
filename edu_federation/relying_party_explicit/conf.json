@@ -28,61 +28,63 @@
   },
   "entity": {
     "entity_id": "https://127.0.0.1:4010",
-    "httpc_params": {
-      "verify": false
-    },
-    "key_config": {
-      "private_path": "relying_party_explicit/private/fed_keys.json",
-      "key_defs": [
-        {
-          "type": "RSA",
-          "key": "",
-          "use": [
-            "sig"
-          ]
-        },
-        {
-          "type": "EC",
-          "crv": "P-256",
-          "use": [
-            "sig"
-          ]
-        }
-      ],
-      "public_path": "relying_party_explicit/static/fed_keys.json",
-      "read_only": false,
-      "uri_path": "jwks/federation_entity"
-    },
-    "authority_hints": {
-      "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
-      "kwargs": {
-        "file_name": "relying_party_explicit/authority_hints"
-      }
-    },
-    "trust_anchors": {
-      "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
-      "kwargs": {
-        "fdir": "relying_party_explicit/trust_anchors",
-        "key_conv": "idpyoidc.util.Base64",
-        "value_conv": "idpyoidc.util.JSON"
-      }
-    },
-    "trust_marks": {
-      "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
-      "kwargs": {
-        "file_name": "relying_party_explicit/trust_marks"
-      }
-    },
-    "endpoint": [
-      "entity_configuration"
-    ],
-    "services": [
-      "entity_configuration",
-      "entity_statement",
-      "oidc_registration",
-      "list"
-    ],
     "entity_type": {
+      "federation_entity": {
+        "httpc_params": {
+          "verify": false
+        },
+        "key_config": {
+          "private_path": "relying_party_explicit/private/fed_keys.json",
+          "key_defs": [
+            {
+              "type": "RSA",
+              "key": "",
+              "use": [
+                "sig"
+              ]
+            },
+            {
+              "type": "EC",
+              "crv": "P-256",
+              "use": [
+                "sig"
+              ]
+            }
+          ],
+          "public_path": "relying_party_explicit/static/fed_keys.json",
+          "read_only": false,
+          "uri_path": "jwks/federation_entity"
+        },
+        "authority_hints": {
+          "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
+          "kwargs": {
+            "file_name": "relying_party_explicit/authority_hints"
+          }
+        },
+        "trust_anchors": {
+          "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
+          "kwargs": {
+            "fdir": "relying_party_explicit/trust_anchors",
+            "key_conv": "idpyoidc.util.Base64",
+            "value_conv": "idpyoidc.util.JSON"
+          }
+        },
+        "trust_marks": {
+          "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
+          "kwargs": {
+            "file_name": "relying_party_explicit/trust_marks"
+          }
+        },
+        "endpoint": [
+          "entity_configuration"
+        ],
+        "services": [
+          "entity_configuration",
+          "entity_statement",
+          "oidc_registration",
+          "list"
+        ]
+      },
       "openid_relying_party": {
         "class": "idpyoidc.client.rp_handler.RPHandler",
         "kwargs": {
