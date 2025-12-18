@@ -8,13 +8,8 @@ from tests import CRYPT_CONFIG
 from tests import RESPONSE_TYPES_SUPPORTED
 from tests import SESSION_PARAMS
 
-#     "federation_entity",
-#     'oauth_authorization_server',
-#     'oauth_client',
-#     'openid_provider',
-#     'openid_relying_party'
 
-ENTITY_TYPES = {
+ENTITY_TYPE_DEFAULTS = {
     'federation_entity': {
         "endpoint": ['entity_configuration'],
         'key_config': {"key_defs": DEFAULT_KEY_DEFS},
@@ -235,8 +230,8 @@ def main(entity_id: str, **kwargs):
     fe_args = {}
     at_args = {}
     for attr, val in kwargs.items():
-        if attr in ENTITY_TYPES:
-            _cpy = ENTITY_TYPES[attr].copy()
+        if attr in ENTITY_TYPE_DEFAULTS:
+            _cpy = ENTITY_TYPE_DEFAULTS[attr].copy()
             if attr == "federation_entity":
                 fe_args = _cpy
                 fe_args.update(val)
@@ -258,10 +253,10 @@ def main(entity_id: str, **kwargs):
             **fe_args,
         )
     else:
+        at_args["federation_entity"] = fe_args
         entity = make_federation_combo(
             entity_id,
-            entity_type=at_args,
-            **fe_args,
+            entity_type=at_args
         )
 
     return entity

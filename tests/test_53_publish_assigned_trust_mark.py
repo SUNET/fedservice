@@ -6,8 +6,8 @@ from cryptojwt.key_jar import init_key_jar
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
 
-from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
 from fedservice.appclient import ClientEntity
+from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
 from fedservice.utils import make_federation_combo
 from fedservice.utils import make_federation_entity
 
@@ -30,7 +30,7 @@ def test_federation_entity_metadata():
         ENTITY_ID,
         preference={
             "organization_name": "The leaf operator",
-            "homepage_uri": "https://leaf.example.com",
+            "organization_uri": "https://leaf.example.com",
             "contacts": "operations@leaf.example.com"
         },
         key_config={"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
@@ -57,16 +57,18 @@ def test_federation_combo_metadata():
 
     entity = make_federation_combo(
         ENTITY_ID,
-        preference={
-            "organization_name": "The leaf operator",
-            "homepage_uri": "https://leaf.example.com",
-            "contacts": "operations@leaf.example.com"
-        },
-        key_config={"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
-        authority_hints=['https://ntnu.no'],
-        endpoint=["entity_configuration"],
-        trust_marks=TRUST_MARKS,
         entity_type={
+            "federation_entity": {
+                "preference": {
+                    "organization_name": "The leaf operator",
+                    "organization_uri": "https://leaf.example.com",
+                    "contacts": "operations@leaf.example.com"
+                },
+                "key_config": {"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
+                "authority_hints": ['https://ntnu.no'],
+                "endpoint": ["entity_configuration"],
+                "trust_marks": TRUST_MARKS,
+            },
             "openid_relying_party": {
                 'class': ClientEntity,
                 'kwargs': {

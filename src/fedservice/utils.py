@@ -42,10 +42,9 @@ def build_entity_config(entity_id: str,
                         functions: Optional[list] = None,
                         init_kwargs: Optional[dict] = None,
                         item_args: Optional[dict] = None,
-                        subordinates: Optional[dict] = None,
                         httpc_params: Optional[dict] = None,
                         persistence: Optional[dict] = None,
-                        trust_mark_server: Optional[dict] = None
+                        **kwargs
                         ) -> dict:
     _key_conf = key_config or {"key_defs": DEFAULT_KEY_DEFS}
 
@@ -59,6 +58,7 @@ def build_entity_config(entity_id: str,
         authority_hints=authority_hints,
         key_conf=_key_conf
     )
+
     for name, items in [("service", services), ("function", functions), ("endpoint", endpoint)]:
         func = getattr(entity, f"add_{name}s")
 
@@ -101,123 +101,78 @@ def build_entity_config(entity_id: str,
     return entity.conf
 
 
-def make_federation_entity(entity_id: str,
-                           key_config: Optional[dict] = None,
-                           authority_hints: Optional[List[str]] = None,
-                           trust_anchors: Optional[dict] = None,
-                           preference: Optional[dict] = None,
-                           endpoint: Optional[list] = None,
-                           services: Optional[Union[list, dict]] = None,
-                           functions: Optional[Union[list, dict]] = None,
-                           trust_marks: Optional[list] = None,
-                           init_kwargs: Optional[dict] = None,
-                           item_args: Optional[dict] = None,
-                           subordinates: Optional[dict] = None,
-                           metadata_policy: Optional[dict] = None,
-                           httpc_params: Optional[dict] = None,
-                           persistence: Optional[dict] = None,
-                           trust_mark_entity: Optional[dict] = None,
-                           client_authn_methods: Optional[list] = None,
-                           self_signed_trust_mark_entity: Optional[dict] = None,
-                           trust_mark_issuers: Optional[dict] = None,
-                           trust_mark_owners: Optional[dict] = None
-                           ):
+def make_federation_entity(entity_id: str, **kwargs):
     _config = build_entity_config(
         entity_id=entity_id,
-        key_config=key_config,
-        authority_hints=authority_hints,
-        preference=preference,
-        endpoint=endpoint,
-        services=services,
-        functions=functions,
-        init_kwargs=init_kwargs,
-        item_args=item_args,
-        httpc_params=httpc_params,
-        persistence=persistence
+        **kwargs
     )
 
-    fe = FederationEntity(client_authn_methods=client_authn_methods, **_config)
+    # fe = FederationEntity(client_authn_methods=client_authn_methods, **_config)
+    entity = FederationEntity(**_config)
+    extra_args(entity, kwargs)
+    return entity
+
+
+def extra_args(federation_entity, config):
+    trust_anchors = config.get("trust_anchors")
     if trust_anchors:
         if "class" in trust_anchors and "kwargs" in trust_anchors:
             trust_anchors = execute(trust_anchors)
 
         for id, jwk in trust_anchors.items():
-            fe.keyjar = import_jwks(fe.keyjar, jwk, id)
+            federation_entity.keyjar = import_jwks(federation_entity.keyjar, jwk, id)
 
-        fe.function.trust_chain_collector.trust_anchors = trust_anchors
+        federation_entity.function.trust_chain_collector.trust_anchors = trust_anchors
 
+    subordinates = config.get("subordinates")
     if subordinates:
         if "class" in subordinates and "kwargs" in subordinates:
-            fe.server.subordinates = execute(subordinates)
+            federation_entity.server.subordinates = execute(subordinates)
         else:
             for id, info in subordinates.items():
-                fe.server.subordinates[id] = info
+                federation_entity.server.subordinates[id] = info
 
+    metadata_policy = config.get("metadata_policy")
     if metadata_policy:
         for id, info in metadata_policy.items():
-            fe.server.policy[id] = info
+            federation_entity.server.policy[id] = info
 
+    trust_marks = config.get("trust_marks")
     if trust_marks:
-        fe.context.trust_marks = trust_marks
+        federation_entity.context.trust_marks = trust_marks
 
+    trust_mark_entity = config.get("trust_mark_entity")
     if trust_mark_entity:
         _kwargs = trust_mark_entity.get("kwargs", {})
-        _tme = instantiate(trust_mark_entity['class'], upstream_get=fe.unit_get, **_kwargs)
+        _tme = instantiate(trust_mark_entity['class'], upstream_get=federation_entity.unit_get, **_kwargs)
         for name, endp in _tme.endpoint.items():
-            fe.server.endpoint[name] = endp
-        fe.server.trust_mark_entity = _tme
+            federation_entity.server.endpoint[name] = endp
+        federation_entity.server.trust_mark_entity = _tme
 
+    self_signed_trust_mark_entity = config.get("self_signed_trust_mark_entity")
     if self_signed_trust_mark_entity:
         _kwargs = self_signed_trust_mark_entity.get("kwargs", {})
-        _tme = instantiate(self_signed_trust_mark_entity['class'], upstream_get=fe.unit_get,
+        _tme = instantiate(self_signed_trust_mark_entity['class'], upstream_get=federation_entity.unit_get,
                            **_kwargs)
-        fe.server.self_signed_trust_mark_entity = _tme
+        federation_entity.server.self_signed_trust_mark_entity = _tme
 
+    trust_mark_issuers = config.get("trust_mark_issuers")
     if trust_mark_issuers:
-        fe.context.trust_mark_issuers = trust_mark_issuers
+        federation_entity.context.trust_mark_issuers = trust_mark_issuers
 
+    trust_mark_owners = config.get("trust_mark_owners")
     if trust_mark_owners:
-        fe.context.trust_mark_owners = trust_mark_owners
-
-    return fe
+        federation_entity.context.trust_mark_owners = trust_mark_owners
 
 
-def make_federation_combo(entity_id: str,
-                          key_config: Optional[dict] = None,
-                          authority_hints: Optional[List[str]] = None,
-                          trust_anchors: Optional[dict] = None,
-                          preference: Optional[dict] = None,
-                          entity_type: Optional[dict] = None,
-                          endpoint: Optional[List[str]] = None,
-                          services: Optional[List[str]] = None,
-                          functions: Optional[List[str]] = None,
-                          subordinates: Optional[dict] = None,
-                          metadata_policy: Optional[dict] = None,
-                          httpc_params: Optional[dict] = None,
-                          init_kwargs: Optional[dict] = None,
-                          item_args: Optional[dict] = None,
-                          trust_marks: Optional[dict] = None,
-                          persistence: Optional[dict] = None,
-                          trust_mark_issuers: Optional[dict] = None,
-                          trust_mark_owner: Optional[dict] = None,
-                          trust_mark_entity: Optional[dict] = None,
-                          self_signed_trust_mark_entity: Optional[dict] = None
-                          ):
-    _config = build_entity_config(
-        entity_id=entity_id,
-        key_config=key_config,
-        authority_hints=authority_hints,
-        preference=preference,
-        endpoint=endpoint,
-        services=services,
-        functions=functions,
-        httpc_params=httpc_params,
-        init_kwargs=init_kwargs,
-        item_args=item_args,
-        persistence=persistence
-    )
-
-    if entity_type:
+def make_federation_combo(entity_id: str, entity_type: dict, key_config: Optional[dict] = None):
+    if set(entity_type.keys()) == {'federation_entity'}:
+        entity = make_federation_entity(entity_id, **entity_type['federation_entity'])
+    else:
+        _config = build_entity_config(
+            entity_id=entity_id,
+            **entity_type["federation_entity"]
+        )
         entity_config = {
             'entity_id': entity_id,
             "federation_entity": {
@@ -228,71 +183,17 @@ def make_federation_combo(entity_id: str,
         # Convert into the 'normal' dictionary model with class and kwargs
         _etc = {}
         for e_type, conf in entity_type.items():
+            if e_type == "federation_entity":
+                continue
+
             _etc[e_type] = {
                 "class": conf['class'],
                 "kwargs": {k: v for k, v in conf.items() if k != 'class'}
             }
         entity_config.update(_etc)
-        if httpc_params:
-            entity_config["httpc_params"] = httpc_params
 
         entity = FederationCombo(entity_config)
-        federation_entity = entity["federation_entity"]
-    else:
-        entity = FederationEntity(**_config)
-        federation_entity = entity
-
-    if trust_anchors:
-        if "class" in trust_anchors and "kwargs" in trust_anchors:
-            trust_anchors = execute(trust_anchors)
-
-        for id, jwk in trust_anchors.items():
-            federation_entity.keyjar = import_jwks(federation_entity.keyjar, jwk, id)
-
-        federation_entity.function.trust_chain_collector.trust_anchors = trust_anchors
-
-    if subordinates:
-        if "class" in subordinates and "kwargs" in subordinates:
-            federation_entity.server.subordinates = execute(subordinates)
-        else:
-            for id, info in subordinates.items():
-                federation_entity.server.subordinates[id] = info
-
-    if metadata_policy:
-        for id, info in metadata_policy.items():
-            federation_entity.server.policy[id] = info
-
-    if trust_marks:
-        if "class" in trust_marks:
-            federation_entity.context.trust_marks = execute(trust_marks)
-        else:
-            federation_entity.context.trust_marks = trust_marks
-
-    if trust_mark_issuers:
-        if "class" in trust_mark_issuers:
-            federation_entity.context.trust_mark_issuers = execute(trust_mark_issuers)
-        else:
-            federation_entity.context.trust_mark_issuers = trust_mark_issuers
-
-    if trust_mark_owner:
-        if "class" in trust_mark_owner:
-            federation_entity.context.trust_mark_owner = execute(trust_mark_owner)
-        else:
-            federation_entity.context.trust_mark_owner = trust_mark_owner
-
-    if trust_mark_entity:
-        _kwargs = trust_mark_entity.get("kwargs", {})
-        _tme = instantiate(trust_mark_entity['class'], upstream_get=federation_entity.unit_get,
-                           **_kwargs)
-        for name, endp in _tme.endpoint.items():
-            federation_entity.server.endpoint[name] = endp
-        federation_entity.server.trust_mark_entity = _tme
-
-    if self_signed_trust_mark_entity:
-        _kwargs = self_signed_trust_mark_entity.get("kwargs", {})
-        _tme = instantiate(self_signed_trust_mark_entity['class'],
-                           upstream_get=federation_entity.unit_get, **_kwargs)
-        federation_entity.server.self_signed_trust_mark_entity = _tme
+        extra_args(entity["federation_entity"], entity_type["federation_entity"])
 
     return entity
 

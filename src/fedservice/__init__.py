@@ -34,9 +34,9 @@ def get_trust_chain(federation_context, entity_id: str, trust_anchor: Optional[s
 
 
 def with_common_trust_anchor(federation_context, leaf: str, peer: str):
-    for ta, trust_chain in federation_context.trust_chain[leaf].items():
-        if ta in federation_context.trust_chain[peer]:
-            return trust_chain, federation_context.trust_chain[peer][ta]
+    for ta, trust_chain in federation_context.trust_chain_instance[leaf].items():
+        if ta in federation_context.trust_chain_instance[peer]:
+            return trust_chain, federation_context.trust_chain_instance[peer][ta]
     return None, None
 
 

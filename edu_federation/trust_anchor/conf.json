@@ -63,7 +63,7 @@
       "entity_configuration",
       "resolve"
     ],
-    "subordinate": {
+    "subordinates": {
       "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
       "kwargs": {
         "fdir": "trust_anchor/subordinates",

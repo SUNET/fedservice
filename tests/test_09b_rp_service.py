@@ -73,7 +73,9 @@ class TestRpService(object):
                                                                  'client_registration_types',
                                                                  'default_max_age',
                                                                  'grant_types_supported',
+                                                                 'grant_types',
                                                                  'id_token_signing_alg_values_supported',
+                                                                 'id_token_signed_response_alg',
                                                                  'jwks',
                                                                  'redirect_uris',
                                                                  'request_object_signing_alg_values_supported',
@@ -82,6 +84,7 @@ class TestRpService(object):
                                                                  'response_types_supported',
                                                                  'scopes_supported',
                                                                  'subject_types_supported',
+                                                                 'token_endpoint_auth_method',
                                                                  'token_endpoint_auth_methods_supported',
                                                                  'token_endpoint_auth_signing_alg_values_supported',
                                                                  'userinfo_signing_alg_values_supported'}

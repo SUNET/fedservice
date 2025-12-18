@@ -14,6 +14,7 @@ from fedservice.entity.claims import FederationEntityClaims
 from fedservice.entity_statement.create import create_entity_configuration
 from fedservice.entity_statement.create import create_explicit_registration_request
 from fedservice.entity_statement.create import create_explicit_registration_response
+from fedservice.message import FederationEntity
 
 
 def entity_type(metadata):
@@ -32,6 +33,8 @@ class FederationContext(ImpExp):
         "signed_trust_marks": [],
         "trust_marks": [],
     })
+
+    metadata_class = FederationEntity
 
     def __init__(self,
                  config: Optional[Union[dict, Configuration]] = None,
@@ -91,7 +94,8 @@ class FederationContext(ImpExp):
 
         if preference:
             config['preference'] = preference
-        _keyjar = self.claims.load_conf(config, supports=self.supports(), keyjar=keyjar)
+        _keyjar = self.claims.load_conf(config, supports=self.supports(), keyjar=keyjar,
+                                        metadata_class=self.metadata_class)
 
         if self.upstream_get:
             _unit = self.upstream_get('unit')

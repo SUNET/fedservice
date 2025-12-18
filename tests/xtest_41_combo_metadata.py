@@ -31,7 +31,7 @@ class TestFederationEntity(object):
             ENTITY_ID,
             metadata={
                 "organization_name": "The example cooperation",
-                "homepage_uri": "https://www.example.com",
+                "organization_uri": "https://www.example.com",
                 "contacts": "operations@example.com"
             },
             key_conf={'key_defs': KEYDEFS}
@@ -48,7 +48,7 @@ class TestFederationEntity(object):
         assert list(metadata.keys()) == ['federation_entity']
         assert set(metadata['federation_entity'].keys()) == {'organization_name',
                                                              'contacts',
-                                                             'homepage_uri'}
+                                                             'organization_uri'}
 
     def test_create_entity_configuration(self):
         _endpoint = self.entity.server.get_endpoint('entity_configuration')

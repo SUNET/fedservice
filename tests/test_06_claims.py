@@ -27,7 +27,7 @@ class TestClaimsEntity():
             ENTITY_ID,
             preference={
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.com",
+                "organization_uri": "https://ta.example.com",
                 "contacts": "operations@ta.example.com"
             },
             key_conf={"key_defs": KEYSPEC}
@@ -40,13 +40,15 @@ class TestClaimsEntity():
 
     def test_supported(self):
         base_supported = self.entity.get_context().supports()
-        assert set(base_supported.keys()) == {'organization_name', 'homepage_uri', 'contacts',
-                                              'policy_uri', 'logo_uri', 'trust_mark_owners',
-                                              'trust_mark_issuers', 'endpoint_auth_signing_alg_values_supported'}
+        # Not metadata claims. These appear on the EntityStatement level
+        assert set(base_supported.keys()) == {'endpoint_auth_signing_alg_values_supported',
+                                              'trust_mark_owners',
+                                              'trust_mark_issuers'}
 
         assert set(self.entity.context.claims.prefer.keys()) == {
-            "organization_name", "homepage_uri", "contacts", "jwks", 'federation_fetch_endpoint',
-            'federation_list_endpoint', 'endpoint_auth_signing_alg_values_supported'
+            "jwks", 'federation_fetch_endpoint', 'federation_list_endpoint',
+            'endpoint_auth_signing_alg_values_supported',
+            'organization_uri', 'contacts', 'organization_name'
         }
 
         assert self.entity.get_endpoint_claims() == {
@@ -60,8 +62,8 @@ class TestClaimsEntity():
             'contacts',
             'federation_fetch_endpoint',
             'federation_list_endpoint',
-            'homepage_uri',
             'organization_name',
+            'organization_uri',
             'endpoint_auth_signing_alg_values_supported'}
 
         # stored under 2 IDs
@@ -78,7 +80,7 @@ class TestClaimsFRP():
             ENTITY_ID,
             preference={
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.com",
+                "organization_uri": "https://ta.example.com",
                 "contacts": "operations@ta.example.com"
             },
             key_conf={"key_defs": KEYSPEC},
@@ -110,7 +112,8 @@ class TestClaimsFRP():
                             "grant_types": ['authorization_code', 'implicit', 'refresh_token'],
                             "id_token_signed_response_alg": "ES256",
                             "token_endpoint_auth_method": "client_secret_basic",
-                            "token_endpoint_auth_signing_alg": "ES256"
+                            "token_endpoint_auth_signing_alg": "ES256",
+                            "keywords": ['alpha', 'beta', 'gamma']
                         }
                     },
                     "services": oidc_service
@@ -125,7 +128,7 @@ class TestClaimsFRP():
         assert set(_pref.keys()) == {'federation_entity', "openid_relying_party"}
         assert set(_pref["federation_entity"].keys()) == {'contacts', 'federation_fetch_endpoint',
                                                           'federation_list_endpoint',
-                                                          'homepage_uri', 'organization_name',
+                                                          'organization_name', 'organization_uri',
                                                           'endpoint_auth_signing_alg_values_supported'}
         _keys = [k for k, v in _pref["openid_relying_party"].items() if v != []]
         assert set(_keys) == {'application_type',
@@ -134,6 +137,7 @@ class TestClaimsFRP():
                               'grant_types',
                               'id_token_signed_response_alg',
                               'jwks_uri',
+                              'keywords',
                               'redirect_uris',
                               'request_object_signing_alg',
                               'response_modes',

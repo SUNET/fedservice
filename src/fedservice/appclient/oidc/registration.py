@@ -80,8 +80,8 @@ def create_explicit_registration_request(request_args: Optional[dict] = None,
     if _context.trust_marks:
         _args["trust_marks"] = _context.get_trust_marks()
 
-    for claim in ["aud"]:
-        _args[claim] = request_args.get(claim)
+    # for claim in ["aud"] and request_args != None:
+    #     _args[claim] = request_args.get(claim)
 
     if _trust_chain:
         # peer = _args["aud"]
@@ -97,8 +97,7 @@ def create_explicit_registration_request(request_args: Optional[dict] = None,
         jws_header_param = {}
 
     if service.application_protocol == "oauth2":
-        service.endpoint = _combo["oauth_client"].context.server_metadata["oauth_authorization_server"][
-            'federation_registration_endpoint']
+        raise ValueError("No OAuth2 support for explicit registration")
 
     _jws = _context.create_explicit_registration_request(
         iss=_entity_id,
@@ -289,6 +288,8 @@ class Registration(registration.Registration):
         # Verify payload type
         if self.payload_type:
             _jws = factory(resp)
+            if _jws is None:
+                raise ValueError('Response NOT a signed JWT')
             if _jws.jwt.headers['typ'] != self.payload_type:
                 raise ValueError('Expected payload type did not matched received')
 
@@ -339,49 +340,3 @@ class Registration(registration.Registration):
             _context.registration_response = _resp
             return _resp
 
-    # def update_service_context(self, resp: Union[Message, dict], **kwargs):
-    #     """
-    #     Updates the service context with information from the Entity Statement return by the server
-    #
-    #     :param resp: A Entity Statement
-    #     :param kwargs: extra key word arguments
-    #     """
-    #     # Updated service_context per entity type
-    #     _root = topmost_unit(self)
-    #     _metadata = resp["metadata"]
-    #     for guise, item in _root.items():
-    #         _guise_metadata = _metadata.get(guise)
-    #         if not _guise_metadata:
-    #             continue
-    #
-    #         if isinstance(item, RPHandler):
-    #             _behaviour_args = kwargs.get("behaviour_args")
-    #             if _behaviour_args:
-    #                 _client = _behaviour_args.get("client")
-    #                 if _client:
-    #                     _context = _client.context
-    #                     _context.map_preferred_to_registered(_guise_metadata)
-    #
-    #                     for arg in ["client_id", "client_secret"]:
-    #                         _val = _context.claims.get_usage(arg)
-    #                         if _val:
-    #                             setattr(_context, arg, _val)
-    #
-    #                         if arg == "client_secret" and _val:
-    #                             _context.keyjar.add_symmetric("", _val)
-    #                             _context.keyjar.add_symmetric(_context.claims.get_usage("client_id"), _val)
-    #
-    #         else:
-    #             _context = item.get_context()
-    #             _md = self.response_cls(**_guise_metadata)
-    #             _md.verify()
-    #             _md.weed()
-    #             _context.map_preferred_to_registered(_md, uri_claims=RP_URI_CLAIMS)
-    #
-    #             _client_id = _context.claims.get_usage("client_id")
-    #             if _client_id:
-    #                 _context.client_id = _client_id
-    #
-    #             _client_secret = _context.claims.get_usage("client_secret")
-    #             _context.keyjar.add_symmetric("", _client_secret)
-    #             _context.keyjar.add_symmetric(_client_id, _client_secret)

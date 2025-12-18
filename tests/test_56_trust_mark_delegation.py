@@ -30,7 +30,7 @@ FEDERATION_CONFIG = {
             "subordinates": [TMI_ID, FE_ID],
             "preference": {
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.org",
+                "organization_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org",
             },
             "trust_mark_owners": {

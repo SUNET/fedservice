@@ -42,7 +42,7 @@ FEDERATION_CONFIG = {
         'federation_entity': {
             'preference': {
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.com",
+                "organization_uri": "https://ta.example.com",
                 "contacts": "operations@ta.example.com",
                 "trust_mark_issuers": {
                     TRUST_MARK_TYPE: TMI_ID
@@ -103,7 +103,7 @@ FEDERATION_CONFIG = {
     FE_ID: {
         'federation_entity': {
             'preference': {
-                "homepage_uri": "https://rp.example.com",
+                "organization_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com"
             },
             'key_config': {"key_defs": DEFAULT_KEY_DEFS},

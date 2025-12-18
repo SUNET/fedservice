@@ -20,7 +20,7 @@ FEDERATION_CONFIG = {
             "subordinates": [IM_ID, TRUST_MARK_ISSUER_ID],
             "preference": {
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.org",
+                "organization_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
             "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
@@ -90,7 +90,7 @@ FEDERATION_CONFIG = {
             "authority_hints": [IM_ID],
             "preference": {
                 "organization_name": "The example federation RP operator",
-                "homepage_uri": "https://rp.example.com",
+                "organization_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com"
             }
         },

@@ -30,7 +30,7 @@ FEDERATION_CONFIG = {
             "subordinates": [TRUST_MARK_ISSUER_ID],
             "preference": {
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.org",
+                "organization_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
             "endpoint": TA_ENDPOINTS,
@@ -158,23 +158,22 @@ class TestSignedTrustMark():
         _issuer = _endpoint.upstream_get("unit")
         _trust_mark = _issuer.create_trust_mark("https://refeds.org/sirtfi", _sub)
 
-        # Ask for a verification of the Trust Mark
-        _jws = factory(_trust_mark)
-        _payload = _jws.jwt.payload()
-
+        # Ask for a verification of the status of the Trust Mark
         tms = self.ta.get_service('trust_mark_status')
         req = tms.get_request_parameters(
             request_args={
-                'sub': _payload['sub'],
-                'trust_mark_type': _payload['trust_mark_type']
+                'trust_mark': _trust_mark
             },
             fetch_endpoint=self.tmi.get_endpoint('trust_mark_status').full_path
         )
         p = urlparse(req['url'])
         tmr = TrustMarkRequest().from_urlencoded(p.query)
 
-        resp = self.tmi.get_endpoint('trust_mark_status').process_request(tmr.to_dict())
-        assert resp == {'response_args': {'active': True}}
+        _resp = self.tmi.get_endpoint('trust_mark_status').process_request(tmr.to_dict())
+        # Response is a signed JWT if not an error. Need the TMI's keys to be able to verify the answer
+        self.ta.keyjar.import_jwks(self.tmi.keyjar.export_jwks(issuer_id=''), issuer_id=self.tmi.entity_id)
+        resp = tms.parse_response(_resp, sformat='jose')
+        assert resp.get('status') == 'active'
 
     def test_trust_mark_verifier(self):
         _endpoint = self.tmi.get_endpoint('trust_mark_status')

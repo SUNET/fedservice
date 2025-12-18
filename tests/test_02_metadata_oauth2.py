@@ -110,8 +110,16 @@ class TestFedOauth2Client:
                 reg_claim.append(key)
 
         # These I have not assigned any values. Which is OK since all fields are optional !
-        assert set(OauthClientMetadata.c_param.keys()).difference(set(reg_claim)) == {
-            'scope', 'software_statement', 'grant_type'}
+        assert set(OauthClientMetadata.c_param.keys()).difference(set(reg_claim)) == {'description',
+                                                                                      'display_name',
+                                                                                      'grant_type',
+                                                                                      'information_uri',
+                                                                                      'keywords',
+                                                                                      'logo_url',
+                                                                                      'organization_uri',
+                                                                                      'policy_url',
+                                                                                      'scope',
+                                                                                      'software_statement'}
 
         # Which ones are list -> singletons
         l_to_s = []

@@ -57,7 +57,7 @@ class TestExplicit(object):
             TA_ID,
             preference={
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.com",
+                "organization_uri": "https://ta.example.com",
                 "contacts": "operations@ta.example.com"
             },
             key_config={"key_defs": DEFAULT_KEY_DEFS},
@@ -72,7 +72,7 @@ class TestExplicit(object):
             IM_ID,
             preference={
                 "organization_name": "The organization",
-                "homepage_uri": "https://example.com",
+                "organization_uri": "https://example.com",
                 "contacts": "operations@example.com"
             },
             key_config={"key_defs": DEFAULT_KEY_DEFS},
@@ -106,7 +106,7 @@ class TestExplicit(object):
             entity_id=RP_ID,
             preference={
                 "organization_name": "The RP",
-                "homepage_uri": "https://rp.example.com",
+                "organization_uri": "https://rp.example.com",
                 "contacts": "operations@rp.example.com"
             },
             authority_hints=[IM_ID],
@@ -160,7 +160,7 @@ class TestExplicit(object):
             entity_id=OP_ID,
             preference={
                 "organization_name": "The OP operator",
-                "homepage_uri": "https://op.example.com",
+                "organization_uri": "https://op.example.com",
                 "contacts": "operations@op.example.com"
             },
             authority_hints=[TA_ID],

@@ -5,6 +5,7 @@ from typing import Union
 from cryptojwt import JWT
 from cryptojwt.jws.jws import factory
 from cryptojwt.jwt import utc_time_sans_frac
+from fedservice.entity.function import verify_trust_chains
 from idpyoidc.client.configure import Configuration
 from idpyoidc.message import oauth2
 from idpyoidc.message.oauth2 import ResponseMessage
@@ -35,15 +36,14 @@ class SignedJWKS(FederationService):
         federation_entity = get_federation_entity(self)
         # There may already be trust chains in the cache
         trust_chains = federation_entity.get_trust_chains(entity_id)
-        if trust_chains:
-            pass
-        else:
+        if not trust_chains:
             trust_chains = get_verified_trust_chains(federation_entity, entity_id)
             if trust_chains:
                 federation_entity.store_trust_chains(entity_id, trust_chains)
             else:
                 return ""
 
+        # list of lists with signed entity statements
         return trust_chains[0].metadata["federation_entity"]["signed_jwks_uri"]
 
     def get_request_parameters(self, request_args=None, **kwargs):

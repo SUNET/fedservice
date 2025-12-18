@@ -33,7 +33,7 @@ FEDERATION_CONFIG = {
             "endpoint": ["entity_configuration", "list", "fetch", "resolve"],
             "preference": {
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.org",
+                "organization_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             }
         }

@@ -89,11 +89,6 @@ class ClientClaims(OAuth2ClientClaims.Claims):
 
 class FederationEntityClaims(ClaimsBase):
     _supports = {
-        'organization_name': None,
-        'contacts': None,
-        'policy_uri': None,
-        'logo_uri': None,
-        'homepage_uri': None,
         'trust_mark_owners': None,
         'trust_mark_issuers': None,
         "endpoint_auth_signing_alg_values_supported": alg_info.get_signing_algs(),

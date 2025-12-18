@@ -9,6 +9,7 @@ from cryptojwt import KeyJar
 from cryptojwt.utils import importer
 from idpyoidc.claims import Claims as ClaimsBase
 from idpyoidc.client.client_auth import client_auth_setup
+from idpyoidc.client.service import SUCCESSFUL
 from idpyoidc.key_import import import_jwks
 from idpyoidc.node import Unit
 from idpyoidc.server.util import execute
@@ -17,22 +18,19 @@ from requests import request
 
 from fedservice import get_payload
 from fedservice import message
+from fedservice.defaults import MAX_302_REDIRECTS
 from fedservice.entity.context import FederationContext
 from fedservice.entity.function import apply_policies
 from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.function import verify_trust_chains
+from fedservice.exception import FedServiceError
 
 logger = logging.getLogger(__name__)
 
 
 class FederationEntityClaims(ClaimsBase):
     _supports = {
-        'organization_name': None,
-        'contacts': None,
-        'policy_uri': None,
-        'logo_uri': None,
-        'homepage_uri': None,
         'trust_mark_owners': None,
         'trust_mark_issuers': None
     }
@@ -51,6 +49,7 @@ class FederationEntityClaims(ClaimsBase):
 
 class FederationEntity(Unit):
     name = "federation_entity"
+    metadata_class = message.FederationEntity
 
     def __init__(self,
                  upstream_get: Optional[Callable] = None,
@@ -93,7 +92,7 @@ class FederationEntity(Unit):
                 _kwargs.update(_args)
                 setattr(self, key, instantiate(val["class"], **_kwargs))
 
-        _args = {}
+        _args = {'metadata_class': self.metadata_class}
         for claim in ["trust_mark_issuers", "trust_mark_owners"]:
             _val = kwargs.get(claim)
             if _val:
@@ -107,6 +106,7 @@ class FederationEntity(Unit):
             self.context.client_authn_methods = client_auth_setup(client_authn_methods)
 
         self.trust_chain = {}
+        self.trust_chain_instance = {}
 
         self.context.provider_info = self.context.claims.get_server_metadata(
             endpoints=self.server.endpoint.values(),
@@ -294,28 +294,25 @@ class FederationEntity(Unit):
         return _info
 
     def get_trust_chains(self, entity_id):
-        _trust_chains = self.trust_chain.get(entity_id, None)
+        _trust_chains = self.trust_chain_instance.get(entity_id, None)
         if _trust_chains is None:
             _trust_chains = get_verified_trust_chains(self, entity_id)
             if _trust_chains:
-                self.store_trust_chain(entity_id, _trust_chains)
+                self.store_trust_chains(entity_id, _trust_chains)
             else:
                 return []
 
         return _trust_chains
 
-    def store_trust_chain(self, entity_id, trust_chains):
-        self.trust_chain[entity_id] = trust_chains
-
-    def store_trust_chains(self, entity_id, chains):
-        self.trust_chain[entity_id] = chains
+    def store_trust_chains(self, entity_id, trust_chains):
+        self.trust_chain_instance[entity_id] = trust_chains
 
     def get_verified_metadata(self, entity_id: str, *args):
         _trust_chains = self.trust_chain.get(entity_id)
         if _trust_chains is None:
             _trust_chains = get_verified_trust_chains(self, entity_id)
             if _trust_chains:
-                self.store_trust_chain(entity_id, _trust_chains)
+                self.store_trust_chains(entity_id, _trust_chains)
 
         if _trust_chains:
             return _trust_chains[0].metadata
@@ -445,3 +442,60 @@ class FederationEntity(Unit):
 
         res.update(self.context.claims._supports)
         return res
+
+    def get_document(self,
+                     url: str,
+                     method: Optional[str] = "GET",
+                     body: Optional[dict] = None,
+                     headers: Optional[dict] = None,
+                     **kwargs
+                     ):
+        """
+
+        :param url: Target URL
+        :param httpc_args: Arguments for the HTTP call.
+        :return: Signed EntityConfiguration or SubordinateStatement
+        """
+        _data = kwargs.get("data", None)
+        if _data and not body:
+            body = _data
+
+        _httpc_params = self.keyjar.httpc_params
+        logger.debug(f"keyjar.httpc_params: {_httpc_params}")
+        if not _httpc_params:
+            _httpc_params = self.httpc_params
+            logger.debug(f"federation_entity.httpc_params: {_httpc_params}")
+
+        logger.debug(f"Using HTTPC Params: {_httpc_params}")
+
+        try:
+            response = self.httpc(method, url, data=body, headers=headers, **_httpc_params)
+        except ConnectionError as err:
+            logger.error(f'Could not connect to {url}:{err}')
+            raise
+
+        if response.status_code in SUCCESSFUL:
+            return response.text
+        elif response.status_code in [302, 303]:
+            # redirect assumes allow_redirects=True not in httpc_param
+            max_redirects = MAX_302_REDIRECTS
+            redirect_count = 0
+            while response.status_code in (301, 302) and redirect_count < max_redirects:
+                response = self.httpc(method, response.headers["Location"], data=body, headers=headers, **_httpc_params)
+                redirect_count += 1
+                logger.debug(f"{redirect_count}, {response.url}")
+            if redirect_count == max_redirects:
+                raise FedServiceError("HTTP redirects reached max redirects")
+            return response.text
+        elif response.status_code == 500:
+            logger.error("(%d) %s" % (response.status_code, response.text))
+            raise response("ERROR: Something went wrong: %s" % response.text)
+        elif 400 <= response.status_code < 500:
+            logger.error(f"Error response ({response.status_code}): {response.text}")
+            raise FedServiceError(f"Error response: ({response.status_code}): '{response.text}'")
+        else:
+            _err = f"status_code: {response.status_code} on get {url}"
+            if response.text:
+                raise FedServiceError(f"HTTP Error {_err}: {response.text}")
+            else:
+                raise FedServiceError(_err)

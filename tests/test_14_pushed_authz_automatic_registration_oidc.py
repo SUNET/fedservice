@@ -35,7 +35,7 @@ ROOT_DIR = os.path.join(BASE_PATH, "base_data")
 #         "kwargs": {
 #             "preference": {
 #                 "organization_name": "The example federation operator",
-#                 "homepage_uri": "https://ta.example.org",
+#                 "organization_uri": "https://ta.example.org",
 #                 "contacts": "operations@ta.example.org"
 #             },
 #             "endpoint": ["entity_configuration", "list", "fetch", "resolve"],

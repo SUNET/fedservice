@@ -50,6 +50,7 @@ def create_entity_statement(cls, iss, key_jar,
             # The public signing keys of the subject
             msg['jwks'] = key_jar.export_jwks()
 
+    # default
     _header_param = {'typ': "entity-statement+jwt"}
     if jws_header_param:
         _header_param.update(jws_header_param)

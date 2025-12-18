@@ -28,68 +28,73 @@
   },
   "entity": {
     "entity_id": "https://127.0.0.1:4020",
-    "httpc_params": {
-      "verify": false
-    },
-    "key_config": {
-      "private_path": "openid_provider/private/fed_keys.json",
-      "key_defs": [
-        {
-          "type": "RSA",
-          "use": [
-            "sig"
-          ]
-        },
-        {
-          "type": "EC",
-          "crv": "P-256",
-          "use": [
-            "sig"
-          ]
-        }
-      ],
-      "read_only": false
-    },
-    "authority_hints": {
-      "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
-      "kwargs": {
-        "file_name": "openid_provider/authority_hints"
-      }
-    },
-    "self_signed_trust_mark_entity": {
-      "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
-      "kwargs": {
-        "trust_mark_specification": {
-          "http://dc4eu.example.com/PersonIdentificationData/se": {
-            "lifetime": 2592000
-          },
-          "http://dc4eu.example.com/OpenBadgeCredential/se": {
-            "lifetime": 2592000
-          },
-          "https://refeds.org/category/personalized": {
-            "lifetime": 2592000
-          }
-        }
-      }
-    },
-    "trust_anchors": {
-      "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
-      "kwargs": {
-        "fdir": "openid_provider/trust_anchors",
-        "key_conv": "idpyoidc.util.Base64",
-        "value_conv": "idpyoidc.util.JSON"
-      }
-    },
-    "trust_marks": {
-      "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
-      "kwargs": {
-        "file_name": "openid_provider/trust_marks"
-      }
-    },
-    "endpoint": [
-      "entity_configuration"
-    ],
     "entity_type": {
+      "federation_entity": {
+        "class": "fedservice.entity.FederationEntity",
+        "kwargs": {
+          "httpc_params": {
+            "verify": false
+          },
+          "key_config": {
+            "private_path": "openid_provider/private/fed_keys.json",
+            "key_defs": [
+              {
+                "type": "RSA",
+                "use": [
+                  "sig"
+                ]
+              },
+              {
+                "type": "EC",
+                "crv": "P-256",
+                "use": [
+                  "sig"
+                ]
+              }
+            ],
+            "read_only": false
+          },
+          "authority_hints": {
+            "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
+            "kwargs": {
+              "file_name": "openid_provider/authority_hints"
+            }
+          },
+          "self_signed_trust_mark_entity": {
+            "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
+            "kwargs": {
+              "trust_mark_specification": {
+                "http://dc4eu.example.com/PersonIdentificationData/se": {
+                  "lifetime": 2592000
+                },
+                "http://dc4eu.example.com/OpenBadgeCredential/se": {
+                  "lifetime": 2592000
+                },
+                "https://refeds.org/category/personalized": {
+                  "lifetime": 2592000
+                }
+              }
+            }
+          },
+          "trust_anchors": {
+            "class": "idpyoidc.storage.abfile_no_cache.AbstractFileSystemNoCache",
+            "kwargs": {
+              "fdir": "openid_provider/trust_anchors",
+              "key_conv": "idpyoidc.util.Base64",
+              "value_conv": "idpyoidc.util.JSON"
+            }
+          },
+          "trust_marks": {
+            "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
+            "kwargs": {
+              "file_name": "openid_provider/trust_marks"
+            }
+          },
+          "endpoint": [
+            "entity_configuration"
+          ]
+        }
+      },
       "openid_provider": {
         "class": "fedservice.appserver.ServerEntity",
         "kwargs": {

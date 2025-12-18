@@ -317,11 +317,6 @@ class OPMetadata(ProviderConfigurationResponse):
         "federation_registration_endpoint": SINGLE_OPTIONAL_STRING,
         "request_authentication_methods_supported": SINGLE_OPTIONAL_JSON,
         "request_authentication_signing_alg_values_supported": OPTIONAL_LIST_OF_STRINGS,
-        "organization_name": SINGLE_OPTIONAL_STRING,
-        "contacts": OPTIONAL_LIST_OF_STRINGS,
-        "logo_uri": SINGLE_OPTIONAL_STRING,
-        "policy_uri": SINGLE_OPTIONAL_STRING,
-        "homepage_uri": SINGLE_OPTIONAL_STRING,
         "jwks": SINGLE_OPTIONAL_DICT,
         "jwks_uri": SINGLE_OPTIONAL_STRING,
         "signed_jwks_uri": SINGLE_OPTIONAL_STRING,
@@ -332,11 +327,6 @@ class FedASConfigurationResponse(ASConfigurationResponse):
     c_param = ASConfigurationResponse.c_param.copy()
     c_param.update(InformationalMetadataExtensions.c_param)
     c_param.update({
-        "organization_name": SINGLE_OPTIONAL_STRING,
-        "contacts": OPTIONAL_LIST_OF_STRINGS,
-        "logo_uri": SINGLE_OPTIONAL_STRING,
-        "policy_uri": SINGLE_OPTIONAL_STRING,
-        "homepage_uri": SINGLE_OPTIONAL_STRING,
         "jwks": SINGLE_OPTIONAL_DICT,
         "jwks_uri": SINGLE_OPTIONAL_STRING,
         "signed_jwks_uri": SINGLE_OPTIONAL_STRING

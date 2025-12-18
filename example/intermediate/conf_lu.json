@@ -38,7 +38,7 @@
     "entity_id": "https://127.0.0.1:6003",
     "preference": {
       "organization_name": "The LU organization",
-      "homepage_uri": "https://lu.example.com",
+      "organization_uri": "https://lu.example.com",
       "contacts": "operations@lu.example.com"
     },
     "key_config": {

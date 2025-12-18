@@ -167,9 +167,15 @@ class StandAloneClientEntity(ClientEntity):
 
         # What kind of registration I can do
         _ability = _context.claims.get_preference("client_registration_types")
+
         # What the server supports
-        _trust_chain = self.pick_from_stored_trust_chains(_context.issuer, _federation_entity)
-        _supported = _trust_chain.metadata["openid_provider"]['client_registration_types_supported']
+        server_entity_id = ""
+        _trust_chains =_federation_entity.get_trust_chains(server_entity_id)
+        if not _trust_chains:
+            raise ValueError("No verified trust chains found")
+
+        _supported = _trust_chains[0].metadata["openid_provider"]['client_registration_types_supported']
+
         _possible = set(_ability).intersection(set(_supported))
         if len(_possible) == 0:
             raise ValueError("No common client registration method")

@@ -15,7 +15,7 @@ from flask.helpers import send_from_directory
 from idpyoidc.client.exception import OidcServiceError
 from idpyoidc.client.rp_handler import RPHandler
 
-from fedservice.entity_statement.create import create_entity_statement
+from fedservice.entity_statement.create import create_entity_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def wkof():
         cli = _rph.issuer2rp[list(_rph.issuer2rp.keys())[0]]
 
     _metadata = current_app.server.get_metadata(cli)
-    #_metadata.update(cli.get_metadata())
+    # _metadata.update(cli.get_metadata())
 
     _fed_entity = current_app.server["federation_entity"]
 
@@ -83,13 +83,14 @@ def wkof():
     else:
         args = {}
 
-    _ec = create_entity_statement(iss=_fed_entity.entity_id,
-                                  sub=_fed_entity.entity_id,
-                                  key_jar=_fed_entity.get_attribute('keyjar'),
-                                  metadata=_metadata,
-                                  authority_hints=_fed_entity.get_authority_hints(),
-                                  **args
-                                  )
+    _ec = create_entity_configuration(iss=_fed_entity.entity_id,
+                                      key_jar=_fed_entity.get_attribute('keyjar'),
+                                      metadata=_metadata,
+                                      authority_hints=_fed_entity.get_authority_hints(),
+                                      lifetime=_fed_entity.context.default_lifetime,
+                                      include_jwks=True,
+                                      **args
+                                      )
 
     response = make_response(_ec)
     response.headers['Content-Type'] = 'application/jose; charset=UTF-8'

@@ -124,7 +124,7 @@ class TrustChainVerifier(Function):
 
         :param chain: A chain of Entity Statements. The first one issued by a TA about an
             entity, the last an Entity Configuration.
-        :returns: A TrustChain instances
+        :returns: A list of TrustChain instances or None
         """
         logger.debug("Evaluate trust chain")
         verified_trust_chains = self.verify_trust_chain(chain)

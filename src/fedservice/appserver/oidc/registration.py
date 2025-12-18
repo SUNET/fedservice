@@ -1,7 +1,5 @@
 import logging
 
-from fedservice.entity_statement.create import create_entity_statement
-from fedservice.message import ExplicitRegistrationResponse
 from idpyoidc.message.oidc import RegistrationRequest
 from idpyoidc.server.oidc import registration
 
@@ -23,7 +21,7 @@ class Registration(registration.Registration):
         "client_registration_types_supported": ["automatic", "explicit"]
     }
     application_protocol = "oidc"
-    payload_type = 'explicit-registration-response'
+    payload_type = 'explicit-registration-response+jwt'
 
     def __init__(self, upstream_get, **kwargs):
         registration.Registration.__init__(self, upstream_get, **kwargs)
@@ -80,7 +78,8 @@ class Registration(registration.Registration):
                 metadata={opponent_entity_type: _response_metadata},
                 aud=payload['iss'],
                 authority_hints=_federation_entity.get_authority_hints(),
-                include_jwks=False
+                include_jwks=False,
+                jws_header_param={'typ': self.payload_type}
             )
             response_info["response_msg"] = entity_configuration
             del response_info["response_args"]

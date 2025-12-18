@@ -1,6 +1,4 @@
-from typing import Callable
 from typing import Optional
-from typing import Union
 
 from fedservice.defaults import DEFAULT_FEDERATION_ENTITY_FUNCTIONS
 from fedservice.defaults import federation_endpoints
@@ -16,16 +14,12 @@ class FederationEntityBuilder():
 
     def __init__(self,
                  entity_id: Optional[str] = '',
-                 preference: Optional[dict] = None,
-                 key_conf: Optional[dict] = None,
-                 authority_hints: Optional[Union[list, str, Callable]] = None
+                 **kwargs
                  ):
-        self.conf = {
-            "entity_id": entity_id,
-            "key_conf": key_conf,
-            "preference": preference,
-            "authority_hints": authority_hints
-        }
+        self.conf = {"entity_id": entity_id}
+        for attr in ['key_conf', 'preference', 'authority_hints']:
+            _val = kwargs.get(attr)
+            self.conf[attr] = _val
 
     def add_services(self,
                      preference: Optional[dict] = None,
@@ -100,6 +94,137 @@ class FederationEntityBuilder():
             kwargs['functions'] = functions
         else:
             kwargs['functions'] = DEFAULT_FEDERATION_ENTITY_FUNCTIONS
+
+        if kwargs_spec:
+            for key, val in kwargs_spec.items():
+                if key in kwargs["functions"]:
+                    kwargs["functions"][key]["kwargs"].update(val)
+
+        if preference:
+            kwargs['preference'] = {}
+
+        if kwargs_spec:
+            for key, val in kwargs_spec.items():
+                if key in kwargs["functions"]:
+                    kwargs["functions"][key]["kwargs"].update(val)
+
+        self.conf['function'] = {
+            'class': 'idpyoidc.node.Collection',
+            'kwargs': kwargs
+        }
+
+    def set_attr(self, section, what):
+        self.conf[section]['kwargs'].update(what)
+
+
+EntityClass = {
+    'openid_relying_party': {
+        'endpoint': 'idpyoidc.server.Server',
+        'function': 'idpyoidc.node.Collection',
+        'service': 'idpyoidc.client.oidc.RP'
+    },
+    'openid_provider': {
+        'endpoint': 'idpyoidc.server.Server',
+        'function': 'idpyoidc.node.Collection',
+        'service': 'idpyoidc.client.oidc.RP'
+    },
+    'oauth_authorization_server': {
+        'endpoint': 'idpyoidc.server.Server',
+        'function': 'idpyoidc.node.Collection',
+        'service': 'idpyoidc.client.oauth2.Client'
+    },
+    'oauth_client': {
+        'endpoint': 'idpyoidc.server.Server',
+        'function': 'idpyoidc.node.Collection',
+        'service': 'idpyoidc.client.oauth2.Client'
+    }
+}
+
+
+class EntityBuilder():
+
+    def __init__(self,
+                 entity_id,
+                 entity_type,
+                 **kwargs
+                 ):
+        self.conf = {"entity_id": entity_id}
+        for attr in ['key_conf', 'preference']:
+            _val = kwargs.get(attr)
+            self.conf[attr] = _val
+
+    def add_services(self,
+                     preference: Optional[dict] = None,
+                     args: Optional[dict] = None,
+                     kwargs_spec: Optional[dict] = None,
+                     **services):
+        # services are used to send request to endpoints
+
+        kwargs = {}
+        if not services:
+            return
+
+        kwargs['services'] = services
+
+        if kwargs_spec:
+            for key, val in kwargs_spec.items():
+                if key in kwargs["services"]:
+                    kwargs["services"][key]["kwargs"].update(val)
+
+        if preference:
+            kwargs['preference'] = {}
+
+        if kwargs_spec:
+            for key, val in kwargs_spec.items():
+                if key in kwargs["services"]:
+                    kwargs["services"][key]["kwargs"].update(val)
+
+        self.conf['client'] = {
+            'class': 'fedservice.entity.client.FederationClient',
+            'kwargs': kwargs
+        }
+
+    def add_endpoints(self,
+                      preference: Optional[dict] = None,
+                      args: Optional[dict] = None,
+                      kwargs_spec: Optional[dict] = None,
+                      **endpoints):
+        # endpoints are accessible to services. Accepts requests and returns responses.
+        if not endpoints:
+            return
+
+        kwargs = {'endpoint': endpoints}
+
+        if kwargs_spec:
+            for key, val in kwargs_spec.items():
+                if key in kwargs["endpoint"]:
+                    kwargs["endpoint"][key]["kwargs"].update(val)
+
+        if preference:
+            kwargs['preference'] = {}
+
+        if args:
+            for item_type, _kwargs in args.items():
+                if item_type in kwargs["endpoint"]:
+                    kwargs["endpoint"][item_type]["kwargs"].update(_kwargs)
+
+        self.conf['server'] = {
+            'class': 'fedservice.entity.server.FederationServerEntity',
+            'kwargs': kwargs
+        }
+
+    def add_functions(self,
+                      preference: Optional[dict] = None,
+                      args: Optional[dict] = None,
+                      kwargs_spec: Optional[dict] = None,
+                      **functions):
+        # functions perform higher level service based on the
+        # available basic services.
+
+        if not functions:
+            return
+
+        kwargs = {'functions': functions}
 
         if kwargs_spec:
             for key, val in kwargs_spec.items():

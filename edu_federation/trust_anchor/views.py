@@ -4,6 +4,9 @@ import sys
 import traceback
 
 import werkzeug
+from fedservice.entity_statement.create import create_entity_configuration
+
+from fedservice.entity_statement.create import create_entity_statement
 from flask import Blueprint
 from flask import current_app
 from flask import redirect
@@ -179,10 +182,10 @@ def wkof():
     _fe = current_app.federation_entity
     metadata = _fe.get_metadata()
     _ctx = _fe.context
-    iss = sub = _ctx.entity_id
-    _statement = _ctx.create_entity_statement(
-        metadata=metadata, iss=iss, sub=sub, authority_hints=_fe.get_authority_hints(),
-        lifetime=_ctx.default_lifetime)
+    iss = _ctx.entity_id
+    _statement = create_entity_configuration(
+        iss=iss, key_jar=_fe.keyjar, metadata=metadata, authority_hints=_fe.get_authority_hints(),
+        lifetime=_ctx.default_lifetime, include_jwks=True)
 
     response = make_response(_statement)
     if 'Content-Type' not in response.headers:

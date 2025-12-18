@@ -1,14 +1,18 @@
 import pytest
 from cryptojwt import BadSyntax
+from cryptojwt import JWT
+from cryptojwt.jws.jws import factory
+from cryptojwt.key_jar import init_key_jar
 from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
 from idpyoidc.message.oauth2 import ResponseMessage
 
+from fedservice.appclient import ClientEntity
+from fedservice.appclient.oidc.registration import create_explicit_registration_request
 from fedservice.build_entity import FederationEntityBuilder
 from fedservice.combo import FederationCombo
 from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
 from fedservice.defaults import LEAF_ENDPOINTS
 from fedservice.entity import FederationEntity
-from fedservice.appclient import ClientEntity
 
 LEAF_ID = 'https://foodle.uninett.no'
 
@@ -51,7 +55,7 @@ class TestClient:
             LEAF_ID,
             preference={
                 "organization_name": "The leaf operator",
-                "homepage_uri": "https://leaf.example.com",
+                "organization_uri": "https://leaf.example.com",
                 "contacts": "operations@leaf.example.com",
                 "client_registration_types": ['explicit']
             },
@@ -92,12 +96,39 @@ class TestClient:
         self.entity = FederationCombo(config=config)
         self.rp = self.entity['openid_relying_party']
 
-    def test_parse_error(self):
+        self.request = create_explicit_registration_request(service=self.rp.get_service('registration'),
+                                                            client=self.rp)
+
+        self.server_entity_id = 'https://foobar.example.org'
+        self.server_keyjar = init_key_jar(key_defs=KEY_DEFS)
+        self.entity['federation_entity'].keyjar.import_jwks(self.server_keyjar.export_jwks(issuer_id=''),
+                                                            self.server_entity_id)
+
+    def create_response(self):
+        payload = factory(self.request).jwt.payload()
+        jwt = JWT(key_jar=self.server_keyjar, iss=self.server_entity_id)
+        jws = jwt.pack(payload, jws_headers={'typ': 'explicit-registration-response+jwt'})
+        return jws
+
+    def test_ok(self):
+        _jws = self.create_response()
         _resp = MockResponse(
             status_code=200,
-            text='Some information',
+            text=_jws,
             headers={
-                'content-type': 'text/plain'
+                'content-type': "application/explicit-registration-response+jwt"
+            }
+        )
+
+        self.rp.parse_request_response(self.rp.get_service('registration'), _resp)
+
+    def test_parse_error(self):
+        _jws = self.create_response()
+        _resp = MockResponse(
+            status_code=200,
+            text=_jws,
+            headers={
+                'content-type': "application/explicit-registration-response+jwt"
             }
         )
 

@@ -66,7 +66,7 @@ class TestRpService(object):
         assert set(_info.keys()) == {"method", "url", "body", "headers", "request"}
         assert _info["method"] == "POST"
         assert _info["url"] == "https://op.example.org/registration"
-        assert _info["headers"] == {"Content-Type": "application/entity-statement+jwt"}
+        assert _info["headers"] == {"Content-Type": 'application/explicit-registration-response+jwt'}
 
         _jws = _info["body"]
         _jwt = factory(_jws)
@@ -133,7 +133,7 @@ class TestRpService(object):
             _req = _reg_endp.parse_request(_info["request"])
             resp = _reg_endp.process_request(_req)
 
-        # >>>>>>>>>> On the RP"s side <<<<<<<<<<<<<<
+        # >>>>>>>>>> On the RP's side <<<<<<<<<<<<<<
         _msgs = create_trust_chain_messages(self.rp, self.ta)
         # Already has the TA EC
         del _msgs['https://ta.example.org/.well-known/openid-federation']
@@ -192,3 +192,54 @@ class TestRpService(object):
         _jws = factory(jws)
         reg_uris = _jws.jwt.payload()["metadata"]["openid_relying_party"]["redirect_uris"]
         assert msg["redirect_uri"] in reg_uris
+
+    def test_parse_registration_response_wrong_jwt_type(self):
+        # Collect trust chain OP->TA
+        _msgs = create_trust_chain_messages(self.op, self.ta)
+        with responses.RequestsMock() as rsps:
+            for _url, _jwks in _msgs.items():
+                rsps.add("GET", _url, body=_jwks,
+                         adding_headers={"Content-Type": "application/entity-statement+jwt"},
+                         status=200)
+
+            _trust_chains = get_verified_trust_chains(self.rp,
+                                                      self.op["federation_entity"].entity_id)
+        # Store it in a number of places
+        self.rp["openid_relying_party"].context.server_metadata = _trust_chains[0].metadata
+        self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
+
+        _sc = self.registration_service.upstream_get("context")
+        self.registration_service.endpoint = _sc.get_metadata_claim(
+            "federation_registration_endpoint")
+
+        # construct the client registration request
+        _rp_fe = self.rp["federation_entity"]
+        req_args = {"entity_id": _rp_fe.context.entity_id}
+        jws = self.registration_service.construct(request_args=req_args)
+        assert jws
+
+        # construct the information needed to send the request
+        _info = self.registration_service.get_request_parameters(
+            request_body_type="jose", method="POST")
+
+        # >>>>> The OP as federation entity <<<<<<<<<<
+
+        _reg_endp = self.op["openid_provider"].get_endpoint("registration")
+
+        # Collect trust chain for RP->TA
+        _msgs = create_trust_chain_messages(self.rp, self.ta)
+        with responses.RequestsMock() as rsps:
+            for _url, _jwks in _msgs.items():
+                rsps.add("GET", _url, body=_jwks,
+                         adding_headers={"Content-Type": "application/entity-statement+jwt"},
+                         status=200)
+
+            _req = _reg_endp.parse_request(_info["request"])
+            # Set the JWT type to something faulty
+            _reg_endp.payload_type = "foobar+jwt"
+            resp = _reg_endp.process_request(_req)
+
+        # >>>>>>>>>> On the RP's side <<<<<<<<<<<<<<
+        # Wrong JWT type
+        with pytest.raises(ValueError):
+            self.registration_service.parse_response(resp["response_msg"], request=_info["body"])

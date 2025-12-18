@@ -78,7 +78,7 @@ def test_federation_entity():
                                 'federation_list_endpoint',
                                 'federation_trust_mark_list_endpoint',
                                 'federation_trust_mark_status_endpoint',
-                                'homepage_uri',
+                                'organization_uri',
                                 'organization_name'}
 
 

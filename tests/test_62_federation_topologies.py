@@ -18,7 +18,7 @@ FEDERATION_CONFIG = {
             "subordinates": [INTERMEDIATE_ID, INTERMEDIATE_ID_2],
             "preference": {
                 "organization_name": "The example federation operator",
-                "homepage_uri": "https://ta.example.org",
+                "organization_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org"
             },
             "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],

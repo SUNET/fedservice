@@ -109,33 +109,36 @@ class TrustChainCollector(Function):
         :param httpc_args: Arguments for the HTTP call.
         :return: Signed EntityConfiguration or SubordinateStatement
         """
-        _keyjar = self.upstream_get('attribute', 'keyjar')
+        federation_entity = get_federation_entity(self)
 
-        _httpc_params = _keyjar.httpc_params
-        logger.debug(f"keyjar.httpc_params: {_httpc_params}")
-        if not _httpc_params:
-            federation_entity = get_federation_entity(self)
-            _httpc_params = federation_entity.httpc_params
-            logger.debug(f"federation_entity.httpc_params: {_httpc_params}")
+        response = federation_entity.get_document(url, "GET")
+        return response
 
-        logger.debug(f"Using HTTPC Params: {_httpc_params}")
-        try:
-            response = self.upstream_get('attribute', 'httpc')("GET", url, **_httpc_params)
-        except ConnectionError as err:
-            logger.error(f'Could not connect to {url}:{err}')
-            raise
-
-        if response.status_code == 200:
-            if 'application/entity-statement+jwt' not in response.headers['Content-Type']:
-                logger.warning(f"Wrong Content-Type: {response.headers['Content-Type']}")
-            return response.text
-        elif response.status_code == 404:
-            raise MissingPage(f"No such page: '{url}'")
-        else:
-            logger.error(f"status_code: {response.status_code} on get {url}")
-            if response.text:
-                logger.info(f"Error description: {response.text}")
-            raise FailedConfigurationRetrieval()
+        # _httpc_params = _keyjar.httpc_params
+        # logger.debug(f"keyjar.httpc_params: {_httpc_params}")
+        # if not _httpc_params:
+        #     federation_entity = get_federation_entity(self)
+        #     _httpc_params = federation_entity.httpc_params
+        #     logger.debug(f"federation_entity.httpc_params: {_httpc_params}")
+        #
+        # logger.debug(f"Using HTTPC Params: {_httpc_params}")
+        # try:
+        #     response = self.upstream_get('attribute', 'httpc')("GET", url, **_httpc_params)
+        # except ConnectionError as err:
+        #     logger.error(f'Could not connect to {url}:{err}')
+        #     raise
+        #
+        # if response.status_code == 200:
+        #     if 'application/entity-statement+jwt' not in response.headers['Content-Type']:
+        #         logger.warning(f"Wrong Content-Type: {response.headers['Content-Type']}")
+        #     return response.text
+        # elif response.status_code == 404:
+        #     raise MissingPage(f"No such page: '{url}'")
+        # else:
+        #     logger.error(f"status_code: {response.status_code} on get {url}")
+        #     if response.text:
+        #         logger.info(f"Error description: {response.text}")
+        #     raise FailedConfigurationRetrieval()
 
     def read_entity_configuration(self, entity_id):
         """

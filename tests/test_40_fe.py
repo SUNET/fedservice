@@ -34,50 +34,54 @@ class TestFederationEntity(object):
     def server_setup(self):
         self.entity = make_federation_combo(
             ENTITY_ID,
-            preference={
-                "organization_name": "The leaf operator",
-                "homepage_uri": "https://leaf.example.com",
-                "contacts": "operations@leaf.example.com"
-            },
-            key_config={"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
-            authority_hints=['https://ntnu.no'],
-            endpoint=["entity_configuration", "fetch", "list", "resolve"],
-            trust_mark_entity={
-                "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
-                "kwargs": {
-                    "trust_mark_specification": {
-                        "https://refeds.org/sirtfi": {
-                            "lifetime": 2592000
-                        }
+            entity_type={
+                "federation_entity": {
+                    "preference": {
+                        "organization_name": "The leaf operator",
+                        "organization_uri": "https://leaf.example.com",
+                        "contacts": "operations@leaf.example.com"
                     },
-                    "trust_mark_db": {
-                        "class": "fedservice.trust_mark_entity.FileDB",
+                    "key_config": {"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
+                    "authority_hints": ['https://ntnu.no'],
+                    "endpoint": ["entity_configuration", "fetch", "list", "resolve"],
+                    "trust_mark_entity": {
+                        "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
                         "kwargs": {
-                            "https://refeds.org/sirtfi": "sirtfi",
-                        }
-                    },
-                    "endpoint": {
-                        "trust_mark": {
-                            "path": "trust_mark",
-                            "class": "fedservice.trust_mark_entity.server.trust_mark.TrustMark",
-                            "kwargs": {
-                                "client_authn_method": [
-                                    "private_key_jwt"
-                                ],
-                                "auth_signing_alg_values": [
-                                    "ES256"
-                                ]
+                            "trust_mark_specification": {
+                                "https://refeds.org/sirtfi": {
+                                    "lifetime": 2592000
+                                }
+                            },
+                            "trust_mark_db": {
+                                "class": "fedservice.trust_mark_entity.FileDB",
+                                "kwargs": {
+                                    "https://refeds.org/sirtfi": "sirtfi",
+                                }
+                            },
+                            "endpoint": {
+                                "trust_mark": {
+                                    "path": "trust_mark",
+                                    "class": "fedservice.trust_mark_entity.server.trust_mark.TrustMark",
+                                    "kwargs": {
+                                        "client_authn_method": [
+                                            "private_key_jwt"
+                                        ],
+                                        "auth_signing_alg_values": [
+                                            "ES256"
+                                        ]
+                                    }
+                                },
+                                "trust_mark_list": {
+                                    "path": "trust_mark_list",
+                                    "class": "fedservice.trust_mark_entity.server.trust_mark_list.TrustMarkList",
+                                    "kwargs": {}
+                                },
+                                "trust_mark_status": {
+                                    "path": "trust_mark_status",
+                                    "class": "fedservice.trust_mark_entity.server.trust_mark_status.TrustMarkStatus",
+                                    "kwargs": {}
+                                }
                             }
-                        },
-                        "trust_mark_list": {
-                            "path": "trust_mark_list",
-                            "class": "fedservice.trust_mark_entity.server.trust_mark_list.TrustMarkList",
-                            "kwargs": {}
-                        },
-                        "trust_mark_status": {
-                            "path": "trust_mark_status",
-                            "class": "fedservice.trust_mark_entity.server.trust_mark_status.TrustMarkStatus",
-                            "kwargs": {}
                         }
                     }
                 }
@@ -130,7 +134,7 @@ class TestFederationEntity(object):
                                                                         'federation_trust_mark_endpoint_auth_methods',
                                                                         'federation_trust_mark_list_endpoint_auth_methods',
                                                                         'federation_trust_mark_status_endpoint_auth_methods',
-                                                                        'homepage_uri',
+                                                                        'organization_uri',
                                                                         'organization_name',
                                                                         'endpoint_auth_signing_alg_values_supported'
                                                                         }
