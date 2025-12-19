@@ -172,9 +172,13 @@ def make_federation_combo(entity_id: str, entity_type: dict, key_config: Optiona
     if set(entity_type.keys()) == {'federation_entity'}:
         entity = make_federation_entity(entity_id, **entity_type['federation_entity'])
     else:
+        if set(entity_type["federation_entity"].keys()) == {"class", "kwargs"}:
+            fe_conf = entity_type["federation_entity"]["kwargs"]
+        else:
+            fe_conf = entity_type["federation_entity"]
         _config = build_entity_config(
             entity_id=entity_id,
-            **entity_type["federation_entity"]
+            **fe_conf
         )
         entity_config = {
             'entity_id': entity_id,
