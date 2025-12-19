@@ -199,7 +199,7 @@
     "port": 4010,
     "server_cert": "certs/cert.pem",
     "server_key": "certs/key.pem",
-    "domain": "127.0.0.1",
+    "domain": "0.0.0.0",
     "debug": true
   }
 }

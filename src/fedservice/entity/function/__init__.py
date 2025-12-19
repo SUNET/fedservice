@@ -2,17 +2,18 @@ import logging
 from typing import Callable
 from typing import List
 from typing import Optional
+from typing import Set
 
 from cryptojwt.jws.jws import factory
 from cryptojwt.jws.utils import alg2keytype
 from cryptojwt.jwt import JWT
 from cryptojwt.key_jar import KeyJar
-from fedservice.entity_statement.statement import TrustChain
 from idpyoidc.impexp import ImpExp
 from idpyoidc.key_import import import_jwks
 
 from fedservice import DEFAULT_SKEW
 from fedservice.entity.utils import get_federation_entity
+from fedservice.entity_statement.statement import TrustChain
 from fedservice.message import EntityConfiguration
 from fedservice.message import ExplicitRegistrationResponse
 from fedservice.message import SubordinateStatement
@@ -318,3 +319,23 @@ def collect_trust_chain_by_authority_hints(unit, entity_id: str, authority_hints
         raise ValueError("Trust chain did not end in expected Trust Anchor")
 
     return chain
+
+
+def pick_trust_anchors(unit, server_entity_id) -> Optional[List[str]]:
+    _federation_entity = get_federation_entity(unit)
+    _collector = _federation_entity.function.trust_chain_collector
+
+    # Pick up the Entity Configuration for the server entity
+    entity_config, signed_entity_config = _collector.get_entity_configuration(server_entity_id)
+
+    ta_hints = entity_config.get('trust_anchor_hints')
+    if ta_hints:
+        usable_ta = set(_collector.trust_anchors.keys()).intersection(set(ta_hints))
+        if usable_ta:
+            return list(usable_ta)
+    else:  # Try to find a chain from the server to a trusted TA
+        for ta in _collector.trust_anchors.keys():
+            chains = get_verified_trust_chains(unit, server_entity_id, stop_at=ta)
+            if chains:
+                return [ta]  # Only need one
+    return None

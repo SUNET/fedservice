@@ -7,6 +7,7 @@ from typing import Optional
 from typing import Union
 
 from cryptojwt.jwt import utc_time_sans_frac
+from fedservice.message import EntityConfiguration
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.key_import import import_jwks
 from idpyoidc.server.util import execute
@@ -44,6 +45,7 @@ def build_entity_config(entity_id: str,
                         item_args: Optional[dict] = None,
                         httpc_params: Optional[dict] = None,
                         persistence: Optional[dict] = None,
+                        # trust_anchor_hints: Optional[List[str]] = None
                         **kwargs
                         ) -> dict:
     _key_conf = key_config or {"key_defs": DEFAULT_KEY_DEFS}
@@ -98,6 +100,10 @@ def build_entity_config(entity_id: str,
     if persistence:
         entity.conf["persistence"] = persistence
 
+    for key, val in kwargs.items():
+        if key in EntityConfiguration.c_param:
+            entity.conf[key] = val
+
     return entity.conf
 
 
@@ -109,11 +115,11 @@ def make_federation_entity(entity_id: str, **kwargs):
 
     # fe = FederationEntity(client_authn_methods=client_authn_methods, **_config)
     entity = FederationEntity(**_config)
-    extra_args(entity, kwargs)
+    args_eval(entity, kwargs)
     return entity
 
 
-def extra_args(federation_entity, config):
+def args_eval(federation_entity, config):
     trust_anchors = config.get("trust_anchors")
     if trust_anchors:
         if "class" in trust_anchors and "kwargs" in trust_anchors:
@@ -137,10 +143,6 @@ def extra_args(federation_entity, config):
         for id, info in metadata_policy.items():
             federation_entity.server.policy[id] = info
 
-    trust_marks = config.get("trust_marks")
-    if trust_marks:
-        federation_entity.context.trust_marks = trust_marks
-
     trust_mark_entity = config.get("trust_mark_entity")
     if trust_mark_entity:
         _kwargs = trust_mark_entity.get("kwargs", {})
@@ -156,13 +158,14 @@ def extra_args(federation_entity, config):
                            **_kwargs)
         federation_entity.server.self_signed_trust_mark_entity = _tme
 
-    trust_mark_issuers = config.get("trust_mark_issuers")
-    if trust_mark_issuers:
-        federation_entity.context.trust_mark_issuers = trust_mark_issuers
+    trust_marks = config.get("trust_marks")
+    if trust_marks:
+        federation_entity.server.trust_marks = execute(trust_marks)
 
-    trust_mark_owners = config.get("trust_mark_owners")
-    if trust_mark_owners:
-        federation_entity.context.trust_mark_owners = trust_mark_owners
+    for key in ["trust_mark_issuers", "trust_mark_owners", "trust_anchor_hints"]:
+        value = config.get(key)
+        if value:
+            setattr(federation_entity.context, key, value)
 
 
 def make_federation_combo(entity_id: str, entity_type: dict, key_config: Optional[dict] = None):
@@ -197,7 +200,7 @@ def make_federation_combo(entity_id: str, entity_type: dict, key_config: Optiona
         entity_config.update(_etc)
 
         entity = FederationCombo(entity_config)
-        extra_args(entity["federation_entity"], entity_type["federation_entity"])
+        args_eval(entity["federation_entity"], entity_type["federation_entity"])
 
     return entity
 
