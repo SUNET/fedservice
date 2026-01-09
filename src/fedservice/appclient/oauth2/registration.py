@@ -218,5 +218,5 @@ class Registration(registration.Registration):
 
         return resp
 
-    def _get_trust_anchor_id(self, entity_statement):
+    def _get_trust_anchor(self, entity_statement):
         return entity_statement.get('trust_anchor')
