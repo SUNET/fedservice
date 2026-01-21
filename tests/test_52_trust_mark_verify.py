@@ -1,6 +1,7 @@
 import pytest
 import responses
 
+from fedservice.entity import get_federation_entity_keyjar
 from fedservice.trust_mark_entity.entity import create_trust_mark
 from tests import create_trust_chain_messages
 from tests.build_federation import build_federation
@@ -126,8 +127,8 @@ class TestComboCollect(object):
     def test_trust_mark_verifier(self):
         where_and_what = create_trust_chain_messages(self.tmi, self.ta)
 
-        _trust_mark = create_trust_mark(entity_id=self.tmi.entity_id,
-                                        keyjar=self.tmi.get_attribute('keyjar'),
+        _trust_mark = create_trust_mark(entity_id=self.tmi.context.entity_id,
+                                        keyjar=get_federation_entity_keyjar(self.tmi),
                                         trust_mark_type="https://refeds.org/sirtfi",
                                         sub=self.rp.entity_id,
                                         lifetime=3600,
@@ -139,6 +140,6 @@ class TestComboCollect(object):
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.rp["federation_entity"].function.trust_mark_verifier(
-                trust_mark=_trust_mark, trust_anchor=self.ta.entity_id)
+                trust_mark=_trust_mark, trust_anchor=self.ta.context.entity_id)
 
         assert verified_trust_mark

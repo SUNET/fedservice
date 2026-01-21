@@ -51,9 +51,7 @@
               ]
             }
           ],
-          "public_path": "relying_party_explicit/static/fed_keys.json",
-          "read_only": false,
-          "uri_path": "jwks/federation_entity"
+          "public_path": "relying_party_explicit/static/fed_keys.json"
         },
         "authority_hints": {
           "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
@@ -86,7 +84,7 @@
         ]
       },
       "openid_relying_party": {
-        "class": "idpyoidc.client.rp_handler.RPHandler",
+        "class": "idpyoidc.client.oidc.rp.RP",
         "kwargs": {
           "config": {
             "client_class": "fedservice.appclient.stand_alone_client_entity.StandAloneClientEntity",
@@ -114,9 +112,7 @@
                   ]
                 }
               ],
-              "public_path": "relying_party_explicit/static/rp_keys.json",
-              "read_only": false,
-              "uri_path": "jwks/openid_relying_party"
+              "public_path": "relying_party_explicit/static/rp_keys.json"
             },
             "preference": {
               "application_name": "rphandler",

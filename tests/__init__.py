@@ -1,6 +1,7 @@
 import os
 from urllib.parse import urlencode
 
+from fedservice.combo import FederationCombo
 from fedservice.entity import FederationEntity
 from fedservice.entity.utils import get_federation_entity
 
@@ -52,14 +53,14 @@ def create_trust_chain_messages(leaf, *entity):
         if n == 0:
             if isinstance(leaf, str):
                 _sub = leaf
+            elif isinstance(leaf, FederationCombo):
+                _sub = leaf['federation_entity'].context.entity_id
             else:
-                _sub = leaf.entity_id
+                _sub = leaf.context.entity_id
         else:
-            _sub = entity[n - 1].entity_id
-        _req = _endpoint.parse_request({'iss': ent.entity_id, 'sub': _sub})
-        # encoded_args = urlencode({'iss': ent.entity_id, 'sub': _sub})
-        # _query = _endpoint.full_path + '?' + encoded_args
-        # where_and_what[_query] = _endpoint.process_request(_req)["response_msg"]
+            _sub = entity[n - 1].context.entity_id
+        _req = _endpoint.parse_request({'iss': ent.context.entity_id, 'sub': _sub})
+
         where_and_what[_endpoint.full_path] = _endpoint.process_request(_req)["response_msg"]
 
     return where_and_what
@@ -93,15 +94,15 @@ def create_trust_chain_messages2(leaf, *entity):
             if isinstance(leaf, str):
                 _sub = leaf
             else:
-                _sub = leaf.entity_id
+                _sub = leaf.context.entity_id
         else:
-            _sub = entity[n - 1].entity_id
-        _req = _endpoint.parse_request({'iss': ent.entity_id, 'sub': _sub})
+            _sub = entity[n - 1].context.entity_id
+        _req = _endpoint.parse_request({'iss': ent.context.entity_id, 'sub': _sub})
         _msg = _endpoint.process_request(_req)["response_msg"]
         if _endpoint.full_path.endswith("openid-federation"):
             encoded_args = ""
         else:
-            encoded_args = urlencode({'iss': ent.entity_id, 'sub': _sub})
+            encoded_args = urlencode({'iss': ent.context.entity_id, 'sub': _sub})
         request.append([_endpoint.full_path, encoded_args, _msg])
 
     return request
@@ -132,10 +133,10 @@ def create_trust_chain(leaf, *entity):
             if isinstance(leaf, str):
                 _sub = leaf
             else:
-                _sub = leaf.entity_id
+                _sub = leaf.context.entity_id
         else:
-            _sub = entity[n - 1].entity_id
-        _req = _endpoint.parse_request({'iss': ent.entity_id, 'sub': _sub})
+            _sub = entity[n - 1].context.entity_id
+        _req = _endpoint.parse_request({'iss': ent.context.entity_id, 'sub': _sub})
         chain.append(_endpoint.process_request(_req)["response"])
 
     return chain

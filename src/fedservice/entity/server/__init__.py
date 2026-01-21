@@ -62,12 +62,14 @@ class FederationServerEntity(ServerUnit):
 
         # self.context.do_add_on(endpoints=self.endpoint)
 
-        self.setup_client_authn_methods()
-        for endpoint_name, _ in self.endpoint.items():
-            self.endpoint[endpoint_name].unit_get = self.unit_get
+        self.setup_client_authn_methods(config, self.context)
+        for endpoint_name, item in self.endpoint.items():
+            item.unit_get = self.unit_get
+            item.context = self.context
 
         self.policy = {}
         self.subordinate = {}
+        self.keyjar = None
 
         # Initiate class instance to handle policies and subordinates
         for attr in ['policy', 'subordinate']:
@@ -102,9 +104,9 @@ class FederationServerEntity(ServerUnit):
     def get_server(self, *args):
         return self
 
-    def setup_client_authn_methods(self):
-        self.context.client_authn_methods = client_auth_setup(
-            self.unit_get, self.conf.get("client_authn_methods")
+    def setup_client_authn_methods(self, config, context):
+        context.client_authn_methods = client_auth_setup(
+            context, self.unit_get, self.conf.get("client_authn_methods")
         )
 
 class Context(object):

@@ -56,4 +56,7 @@ def get_keys(metadata, keyjar, entity_id, unit):
             keyjar.add_url(entity_id, _jwks_uri)
         else:
             _jwks = metadata.get('jwks')
-            _keyjar = import_jwks(keyjar, _jwks, entity_id)
+            if _jwks:
+                keyjar.import_jwks(_jwks, entity_id)
+            else:
+                raise ValueError("Missing key specification")

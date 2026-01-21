@@ -126,7 +126,7 @@ def args_eval(federation_entity, config):
             trust_anchors = execute(trust_anchors)
 
         for id, jwk in trust_anchors.items():
-            federation_entity.keyjar = import_jwks(federation_entity.keyjar, jwk, id)
+            federation_entity.context.keyjar = import_jwks(federation_entity.context.keyjar, jwk, id)
 
         federation_entity.function.trust_chain_collector.trust_anchors = trust_anchors
 
@@ -146,6 +146,7 @@ def args_eval(federation_entity, config):
     trust_mark_entity = config.get("trust_mark_entity")
     if trust_mark_entity:
         _kwargs = trust_mark_entity.get("kwargs", {})
+        _kwargs['entity_id'] = federation_entity.context.entity_id
         _tme = instantiate(trust_mark_entity['class'], upstream_get=federation_entity.unit_get, **_kwargs)
         for name, endp in _tme.endpoint.items():
             federation_entity.server.endpoint[name] = endp
@@ -160,7 +161,7 @@ def args_eval(federation_entity, config):
 
     trust_marks = config.get("trust_marks")
     if trust_marks:
-        federation_entity.server.trust_marks = execute(trust_marks)
+        federation_entity.context.trust_marks = trust_marks
 
     for key in ["trust_mark_issuers", "trust_mark_owners", "trust_anchor_hints"]:
         value = config.get(key)

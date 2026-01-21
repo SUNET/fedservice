@@ -1,5 +1,6 @@
 import logging
 
+from fedservice.entity.function import get_federation_entity_keyjar
 from idpyoidc.message import oidc
 from idpyoidc.server.endpoint import Endpoint
 
@@ -25,16 +26,16 @@ class Fetch(Endpoint):
         pass
 
     def process_request(self, request=None, **kwargs):
-        _context = self.upstream_get("context")
+        _context = self.context
         # _issuer = request.get("iss")
-        _issuer = self.upstream_get('attribute', 'entity_id')
+        _issuer = _context.entity_id
 
         _sub = request.get("sub")
-        _keyjar = self.upstream_get('attribute', 'keyjar')
+        _keyjar = get_federation_entity_keyjar(self)
 
         _server = self.upstream_get("unit")
         # Information stored about this entity. Contains jwks and possibly entity type and authority_hints
-        _response = _server.subordinate.get(_sub)
+        _response = _server.subordinate.get(_sub, None)
         if not _response:
             logger.debug(f"Unknown subordinate: {_sub}")
             logger.debug(f"Known subordinates: {list(_server.subordinate.keys())}")

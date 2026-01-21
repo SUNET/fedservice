@@ -44,7 +44,7 @@ class Authorization(authorization.Authorization):
         self.new_client_id = kwargs.get('new_client_id', False)
         self.config = conf or {}
 
-    def _reset_client_id(self, request, client_id, context, **kwargs):
+    def _reset_client_id(self, context, request, client_id, **kwargs):
         request['client_id'] = client_id
         return request
 
@@ -74,13 +74,13 @@ class Authorization(authorization.Authorization):
         _root = topmost_unit(self)
         op = _root.get('openid_provider')
         if op:
-            if op.keyjar is None:
-                op.keyjar = KeyJar()
+            if op.context.keyjar is None:
+                op.context.keyjar = KeyJar()
                 if op.httpc_params:
-                    op.keyjar.httpc_params = op.httpc_params
+                    op.context.keyjar.httpc_params = op.httpc_params
 
             get_keys(trust_chain.metadata['openid_relying_party'],
-                     op.keyjar,
+                     op.context.keyjar,
                      client_entity_id,
                      self)
 
@@ -101,18 +101,22 @@ class Authorization(authorization.Authorization):
 
     def client_authentication(self, request, auth=None, **kwargs):
         _cid = request["client_id"]
-        _context = self.upstream_get("context")
         # If this is a registered client then this should return some info
-        client_info = _context.cdb.get(_cid)
+        client_info = self.context.cdb.get(_cid)
         if client_info is None or "automatic_registered" in client_info:
-            if 'automatic' in _context.provider_info.get('client_registration_types_supported', []):
+            if 'automatic' in self.context.provider_info.get('client_registration_types_supported', []):
                 if client_info and "automatic_registered" in client_info:  # Remove the old one
-                    del _context.cdb[_cid]
-                if _cid in _context.keyjar:
-                    del _context.keyjar[_cid]
+                    del self.context.cdb[_cid]
+                if _cid in self.context.keyjar:
+                    del self.context.keyjar[_cid]
                 # try the federation way
                 _trust_chain = request.get('trust_chain', [])
-                registered_client_id = self.do_automatic_registration(_cid, _trust_chain)
+                try:
+                    registered_client_id = self.do_automatic_registration(_cid, _trust_chain)
+                except Exception as e:
+                    logger.exception(f'Automatic registration failed: {e}')
+                    raise
+
                 if registered_client_id is None:
                     return {
                         'error': 'unauthorized_client',
@@ -120,12 +124,12 @@ class Authorization(authorization.Authorization):
                     }
                 else:
                     logger.debug('Automatic registration done')
-                    _context.cdb[registered_client_id]["automatic_registered"] = True
+                    self.context.cdb[registered_client_id]["automatic_registered"] = True
                     if registered_client_id != _cid:
                         request["client_id"] = registered_client_id
                         kwargs["also_known_as"] = {_cid: registered_client_id}
-                        client_info = _context.cdb[registered_client_id]
-                        _context.cdb[_cid] = client_info
+                        client_info = self.context.cdb[registered_client_id]
+                        self.context.cdb[_cid] = client_info
                         client_info['entity_id'] = _cid
                         # _context.cdb[registered_client_id] = client_info
             else:

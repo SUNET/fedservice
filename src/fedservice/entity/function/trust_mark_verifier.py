@@ -6,6 +6,8 @@ from cryptojwt import as_unicode
 from cryptojwt import KeyJar
 from cryptojwt.exception import Expired
 from cryptojwt.jws.jws import factory
+
+from fedservice.entity import get_federation_entity_keyjar
 from fedservice.message import TrustMarkDelegation
 
 from fedservice.message import TrustMark
@@ -115,7 +117,7 @@ class TrustMarkVerifier(Function):
         # Now try to verify the signature on the trust_mark
         # should have the necessary keys
         _jwt = factory(trust_mark)
-        keyjar = _federation_entity.get_attribute('keyjar')
+        keyjar = get_federation_entity_keyjar(self)
 
         keys = keyjar.get_jwt_verify_keys(_jwt.jwt)
         if not keys:

@@ -1,12 +1,14 @@
 __author__ = 'Roland Hedberg'
 
 import logging
+import os
 from typing import Callable
 from typing import Optional
 from typing import Union
 
 from cryptojwt import KeyJar
 from cryptojwt.utils import importer
+from fedservice.entity.function import get_federation_entity_keyjar
 from idpyoidc.claims import Claims as ClaimsBase
 from idpyoidc.client.client_auth import client_auth_setup
 from idpyoidc.client.service import SUCCESSFUL
@@ -71,12 +73,10 @@ class FederationEntity(Unit):
         if upstream_get is None and httpc is None:
             httpc = request
 
-        if not keyjar and not key_conf:
-            keyjar = False
-
         self.entity_id = entity_id
-        Unit.__init__(self, upstream_get=upstream_get, keyjar=keyjar, httpc=httpc,
-                      httpc_params=httpc_params, key_conf=key_conf, issuer_id=entity_id)
+        Unit.__init__(self, upstream_get=upstream_get, keyjar=None, httpc=httpc,
+                      httpc_params=httpc_params, issuer_id=entity_id)
+        self.keyjar = None
 
         _args = {
             "upstream_get": self.unit_get,
@@ -84,6 +84,10 @@ class FederationEntity(Unit):
             "httpc_params": self.httpc_params,
             "entity_id": entity_id
         }
+
+        self.context = FederationContext(entity_id=entity_id, upstream_get=self.unit_get,
+                                         authority_hints=authority_hints, keyjar=keyjar, key_conf=key_conf,
+                                         preference=preference, httpc=self.httpc, httpc_params=self.httpc_params)
 
         self.client = self.server = self.function = None
         for key, val in [('client', client), ('server', server), ('function', function)]:
@@ -98,9 +102,15 @@ class FederationEntity(Unit):
             if _val:
                 _args[claim] = _val
 
-        self.context = FederationContext(entity_id=entity_id, upstream_get=self.unit_get,
-                                         authority_hints=authority_hints, keyjar=self.keyjar,
-                                         preference=preference, **_args)
+        _args = {
+            "httpc": self.httpc,
+            "httpc_params": self.httpc_params,
+        }
+
+        if key_conf is not None and key_conf.get("jwks_uri"):
+            self.context.claims.prefer["jwks_uri"] = os.path.join(self.context.entity_id, key_conf["jwks_uri"])
+        else:
+            self.context.claims.prefer["jwks"] = self.context.keyjar.export_jwks(issuer_id=self.context.entity_id)
 
         if client_authn_methods:
             self.context.client_authn_methods = client_auth_setup(client_authn_methods)
@@ -345,7 +355,7 @@ class FederationEntity(Unit):
             _es = self.client.do_request("entity_statement", issuer=superior, subject=subordinate)
 
             # add subjects key/-s to keyjar
-            _kj = self.get_federation_entity().keyjar
+            _kj = get_federation_entity_keyjar(self)
             _kj = import_jwks(_kj, _es["jwks"], _es["sub"])
 
             # Fetch Entity Configuration
@@ -422,14 +432,11 @@ class FederationEntity(Unit):
         self.get_function("trust_chain_collector").trust_anchors = value
 
     def add_trust_anchor(self, entity_id, jwks):
-        if self.keyjar:
-            _keyjar = self.keyjar
-        elif self.upstream_get:
-            _keyjar = self.upstream_get('attribute', 'keyjar')
-        else:
+        _keyjar = self.context.keyjar
+        if _keyjar is None:
             raise ValueError("Missing keyjar")
 
-        _keyjar = import_jwks(_keyjar, jwks, entity_id)
+        _keyjar.import_jwks(jwks, entity_id)
         self.trust_anchors[entity_id] = jwks
 
     def supports(self):
@@ -460,7 +467,7 @@ class FederationEntity(Unit):
         if _data and not body:
             body = _data
 
-        _httpc_params = self.keyjar.httpc_params
+        _httpc_params = get_federation_entity_keyjar(self).httpc_params
         logger.debug(f"keyjar.httpc_params: {_httpc_params}")
         if not _httpc_params:
             _httpc_params = self.httpc_params

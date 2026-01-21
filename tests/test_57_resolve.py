@@ -177,7 +177,8 @@ class TestComboCollect(object):
         assert payload["trust_marks"][0]["trust_mark_type"] == SIRTIFI_TRUST_MARK_TYPE
 
         resolve_client = self.rp["federation_entity"].get_service("resolve")
-        resp = resolve_client.parse_response(response["response_args"])
+        _context = resolve_client.upstream_get('unit').context
+        resp = resolve_client.parse_response(context=_context, info=response["response_args"])
         assert resp
-        resp = resolve_client.post_parse_response(resp)
+        resp = resolve_client.post_parse_response(_context, resp)
         assert resp

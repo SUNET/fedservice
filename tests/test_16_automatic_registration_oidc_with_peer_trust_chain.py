@@ -47,9 +47,10 @@ class TestAutomatic(object):
                          adding_headers={"Content-Type": "application/entity-statement+jwt"},
                          status=200)
 
-            _trust_chains = get_verified_trust_chains(self.rp, self.op["federation_entity"].entity_id)
+            _trust_chains = get_verified_trust_chains(self.rp, self.op["federation_entity"].context.entity_id)
 
-        self.rp["openid_relying_party"].context.server_metadata = _trust_chains[0].metadata
+        _rp_context = self.rp['openid_relying_party'].context['']
+        _rp_context.server_metadata = _trust_chains[0].metadata
         self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
 
         peer_trust_chain = _trust_chains[0].chain[:]
@@ -66,7 +67,7 @@ class TestAutomatic(object):
                          adding_headers={"Content-Type": "application/entity-statement+jwt"},
                          status=200)
 
-            _trust_chains = get_verified_trust_chains(self.rp, self.rp["federation_entity"].entity_id)
+            _trust_chains = get_verified_trust_chains(self.rp, self.rp["federation_entity"].context.entity_id)
 
         trust_chain = _trust_chains[0].chain[:]
         trust_chain.reverse()
@@ -75,33 +76,35 @@ class TestAutomatic(object):
 
     def test_automatic_registration_new_client_id(self):
         # No clients registered with the OP at the beginning
-        assert len(self.op["openid_provider"].get_context().cdb.keys()) == 0
+        _op_context = self.op["openid_provider"].get_context()
+        assert len(_op_context.cdb.keys()) == 0
 
         ####################################################
         # [1] Let the RP gather some provider info
 
         # Point the RP to the OP
-        self.rp["openid_relying_party"].get_context().issuer = self.op.entity_id
+        _rp_context = self.rp["openid_relying_party"].get_context()
+        _rp_context.issuer = self.op.entity_id
 
         trust_chain, peer_trust_chain = self.create_trust_chains()
 
         req_args = {"response_type": "code", "state": rndstr(),
-                    "entity_id": self.rp["federation_entity"].entity_id,
+                    "entity_id": self.rp["federation_entity"].context.entity_id,
                     "peer_trust_chain": peer_trust_chain,
                     'trust_chain': trust_chain,
-                    'aud': self.op.entity_id}
+                    'aud': self.op['federation_entity'].context.entity_id}
 
         # create the authorization request
 
         _auth_service = self.rp["openid_relying_party"].get_service("authorization")
-        authn_request = _auth_service.construct(request_args=req_args)
+        authn_request = _auth_service.construct(_rp_context, request_args=req_args)
 
         # ------------------------------
         # <<<<<< On the OP's side >>>>>>>
 
         _msgs = create_trust_chain_messages(self.rp, self.im, self.ta)
         # add the jwks_uri
-        _jwks_uri = self.rp["openid_relying_party"].get_context().get_preference("jwks_uri")
+        _jwks_uri = _rp_context.get_preference("jwks_uri")
         if _jwks_uri:
             _msgs[_jwks_uri] = self.rp["openid_relying_party"].keyjar.export_jwks_as_json()
         # This has been seen already
@@ -134,7 +137,8 @@ class TestAutomatic(object):
         # [1] Let the RP gather some provider info discovery
 
         # Point the RP to the OP
-        self.rp["openid_relying_party"].get_context().issuer = self.op.entity_id
+        _rp_context = self.rp["openid_relying_party"].context['']
+        _rp_context.issuer = self.op.entity_id
 
         # Create the URLs and messages that will be involved in this process OP -> TA
         _msgs = create_trust_chain_messages(self.op, self.ta)
@@ -146,12 +150,13 @@ class TestAutomatic(object):
                          status=200)
 
             # The client collects trust chain from the OP
-            _trust_chains = get_verified_trust_chains(self.rp, self.op["federation_entity"].entity_id)
+            _trust_chains = get_verified_trust_chains(self.rp, self.op["federation_entity"].context.entity_id)
 
         # one would assume this
         # self.rp["openid_relying_party"].context.server_metadata = _trust_chains[0].metadata['openid_provider']
         # But NO this is what is expected
-        self.rp["openid_relying_party"].context.server_metadata = _trust_chains[0].metadata
+        _rp_context = self.rp["openid_relying_party"].context['']
+        _rp_context.server_metadata = _trust_chains[0].metadata
         self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
 
         # create trust chain client->TA. This will later be added to the Authz request
@@ -163,9 +168,9 @@ class TestAutomatic(object):
         # create authorization request with request object
         _auth_service = self.rp["openid_relying_party"].get_service("authorization")
         authn_request = _auth_service.construct(
+            _rp_context,
             request_args={"response_type": "code", "state": rndstr(), "trust_chain": trust_chain,
-                          "redirect_uri":
-                              self.rp["openid_relying_party"].context.claims.get_preference("redirect_uris")[0]})
+                          "redirect_uri":_rp_context.claims.get_preference("redirect_uris")[0]})
 
         assert "request" in authn_request
         _req_args = get_payload(authn_request["request"])
@@ -186,7 +191,7 @@ class TestAutomatic(object):
         _msgs = create_trust_chain_messages(self.rp, self.im, self.ta)
         # _msgs = create_trust_chain_messages(self.rp)
         # add the jwks_uri
-        _jwks_uri = self.rp["openid_relying_party"].get_context().get_preference("jwks_uri")
+        _jwks_uri = _rp_context.get_preference("jwks_uri")
         if _jwks_uri:
             _msgs[_jwks_uri] = self.rp["openid_relying_party"].keyjar.export_jwks_as_json()
 

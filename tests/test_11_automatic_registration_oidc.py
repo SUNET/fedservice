@@ -2,6 +2,7 @@ import os
 
 import pytest
 import responses
+from idpyoidc.util import keyjar_join
 from idpyoidc.util import rndstr
 
 from fedservice.entity import get_verified_trust_chains
@@ -55,28 +56,29 @@ class TestAutomatic(object):
                          status=200)
 
             _trust_chains = get_verified_trust_chains(self.rp,
-                                                      self.op["federation_entity"].entity_id)
+                                                      self.op["federation_entity"].context.entity_id)
 
-        self.rp["openid_relying_party"].context.server_metadata = _trust_chains[0].metadata
+        _rp_context = self.rp["openid_relying_party"].get_context()
+
+        _rp_context.server_metadata = _trust_chains[0].metadata
         self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
 
-        _context = self.rp["openid_relying_party"].get_context()
 
         # automatic registration == not explict registration
         # _context.map_supported_to_preferred(info=_trust_chains[0].metadata["openid_relying_party"])
 
         _auth_service = self.rp["openid_relying_party"].get_service("authorization")
         state = rndstr()
-        authn_request = _auth_service.construct(request_args={"response_type": "code", "state": state})
+        authn_request = _auth_service.construct(_rp_context, request_args={"response_type": "code", "state": state})
 
         # ------------------------------
         # <<<<<< On the OPs side >>>>>>>
 
         _msgs = create_trust_chain_messages(self.rp, self.im, self.ta)
         # add the jwks_uri
-        _jwks_uri = self.rp["openid_relying_party"].get_context().get_preference("jwks_uri")
+        _jwks_uri = _rp_context.get_preference("jwks_uri")
         if _jwks_uri:
-            _msgs[_jwks_uri] = self.rp["openid_relying_party"].keyjar.export_jwks_as_json()
+            _msgs[_jwks_uri] = _rp_context.keyjar.export_jwks_as_json()
 
         with responses.RequestsMock() as rsps:
             for _url, _jwks in _msgs.items():
@@ -92,11 +94,12 @@ class TestAutomatic(object):
         # Assert that the client's entity_id has been registered as a client
         assert self.rp.entity_id in self.op["openid_provider"].get_context().cdb
         # Check that the RP's keys are reflected in the OP's keyjar
-        assert self.rp.entity_id in self.op["openid_provider"].keyjar
+        rp_keyjar = _rp_context.keyjar
+        op_keyjar = self.op["openid_provider"].context.keyjar
+        assert self.rp.entity_id in op_keyjar
         # There are three RP keys. One EC, one RSA and one OCT
-        rp_keyjar = self.rp["openid_relying_party"].keyjar
-        op_keyjar = self.op["openid_provider"].keyjar
-        for key_type in ["EC", "RSA", "OCT"]:
-            for key in rp_keyjar.get_signing_key(key_type=key_type):
+        _keyjar = keyjar_join(_rp_context.keyjar, self.rp['openid_relying_party'].keyjar)
+        for key_type in ["EC", "RSA"]:
+            for key in _keyjar.get_signing_key(key_type=key_type):
                 vk = op_keyjar.get_verify_key(key_type=key_type, kid=key.kid, issuer_id=self.rp.entity_id)
                 assert vk

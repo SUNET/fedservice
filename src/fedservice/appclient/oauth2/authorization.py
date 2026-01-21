@@ -31,12 +31,12 @@ def use_pushed_authorization(entity, context, post_args, ams, entity_type):
         context.add_on['pushed_authorization']['apply'] = True
 
 
-def automatic_registration(request_args, service, post_args=None, **kwargs):
-    _context = service.upstream_get("context")
+def automatic_registration(context, request_args, service, post_args=None, **kwargs):
+    # _context = service.upstream_get("context")
     if post_args is None:
         post_args = {}
 
-    _request_endpoints = conf_get(_context.config, 'authorization_request_endpoints',
+    _request_endpoints = conf_get(context.config, 'authorization_request_endpoints',
                                   ["authorization_endpoint", "pushed_authorization_request_endpoint"]  # default
                                   )
 
@@ -49,7 +49,7 @@ def automatic_registration(request_args, service, post_args=None, **kwargs):
     else:
         raise KeyError(f"Unknown client_type: {_client_type}")
 
-    _registration_type_supported = _context.get_metadata_claim('client_registration_types_supported', [_entity_type])
+    _registration_type_supported = context.get_metadata_claim('client_registration_types_supported', [_entity_type])
 
     _func = None
     if _registration_type_supported:
@@ -61,11 +61,11 @@ def automatic_registration(request_args, service, post_args=None, **kwargs):
             else:
                 raise("Can not du automatic registration")
 
-            post_args = _func(service, _context, post_args, _registration_type_supported, _entity_type)
+            post_args = _func(service, context, post_args, _registration_type_supported, _entity_type)
 
     if not _func:  # The OP does not support automatic registration
         # am I already registered ?
-        if not _context.registration_response:  # Not registered
+        if not context.registration_response:  # Not registered
             raise OtherError("Can not send an authorization request without being registered"
                              " and automatic registration not supported")
 
@@ -76,13 +76,13 @@ def automatic_registration(request_args, service, post_args=None, **kwargs):
     return request_args, post_args
 
 
-def create_request(request_args, **kwargs):
+def create_request(context, request_args, **kwargs):
     request_arg = kwargs.get('request_param', "")
     if request_arg == "request":
         service = kwargs.get("service")
         del kwargs["service"]
         _args = {k: request_args[k] for k in service.msg_type().required_parameters() if k in request_args}
-        _req = construct_request_parameter(service, request_args, **kwargs)
+        _req = construct_request_parameter(context, service, request_args, **kwargs)
         _args["request"] = _req
         return service.msg_type(**_args)
     else:

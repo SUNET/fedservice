@@ -53,7 +53,7 @@ if __name__ == '__main__':
                                                trust_anchors=trust_anchors)
 
     if args.insecure:
-        federation_entity.keyjar.httpc_params = {"verify": False}
+        federation_entity.context.keyjar.httpc_params = {"verify": False}
 
     chains, leaf_ec = collect_trust_chains(federation_entity, entity_id=args.url)
     if len(chains) == 0:

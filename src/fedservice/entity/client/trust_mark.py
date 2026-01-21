@@ -40,6 +40,7 @@ class TrustMark(FederationService):
 
     def construct_request(
             self,
+            context,
             request_args: Optional[dict] = None,
             **kwargs
     ) -> Message:

@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     if args.insecure:
         _param = {"verify": False}
-        federation_entity.keyjar.httpc_params = _param
+        federation_entity.context.keyjar.httpc_params = _param
         federation_entity.httpc_params = _param
         federation_entity.client.httpc_params = _param
 

@@ -234,23 +234,21 @@ class TestAutomatic(object):
                          adding_headers={"Content-Type": "application/entity-statement+jwt"},
                          status=200)
 
-            _trust_chains = get_verified_trust_chains(self.rp,
-                                                      self.op["federation_entity"].entity_id)
+            _trust_chains = get_verified_trust_chains(self.rp, self.op.entity_id)
 
-        _context = self.rp['openid_relying_party'].context
-        _context.server_metadata = _trust_chains[0].metadata
+        _rp_context = self.rp['openid_relying_party'].context['']
+        _rp_context.server_metadata = _trust_chains[0].metadata
         self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
-        _context.provider_info = _context.server_metadata["openid_provider"]
+        _rp_context.provider_info = _rp_context.server_metadata["openid_provider"]
 
         # create the authorization request
 
-        request_args = AuthorizationRequest(response_type="code", state=rndstr(),
-                                            client_id=self.rp["federation_entity"].entity_id)
+        request_args = AuthorizationRequest(response_type="code", state=rndstr(), client_id=_rp_context.entity_id)
         _auth_service = self.rp['openid_relying_party'].get_service("authorization")
 
         # There is a side effect here. The function is really badly named.
         # client_assertion and client_assertion_type are added to the request
-        _headers = _auth_service.get_headers(request_args, http_method="POST", authn_method="private_key_jwt")
+        _headers = _auth_service.get_headers(_rp_context, request_args, http_method="POST", authn_method="private_key_jwt")
         _headers["Content-Type"] = "application/x-www-form-urlencoded"
 
         _body = request_args.to_urlencoded()
@@ -272,5 +270,5 @@ class TestAutomatic(object):
 
         assert "response_type" in req
 
-        # Assert that the client"s entity_id has been registered as a client
+        # Assert that the client's entity_id has been registered as a client
         assert self.rp.entity_id in self.op["openid_provider"].get_context().cdb

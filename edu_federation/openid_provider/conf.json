@@ -37,6 +37,7 @@
           },
           "key_config": {
             "private_path": "openid_provider/private/fed_keys.json",
+            "public_path": "openid_provider/public/fed_keys.json",
             "key_defs": [
               {
                 "type": "RSA",
@@ -51,8 +52,7 @@
                   "sig"
                 ]
               }
-            ],
-            "read_only": false
+            ]
           },
           "authority_hints": {
             "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
@@ -203,9 +203,7 @@
                   ]
                 }
               ],
-              "public_path": "openid_provider/static/jwks.json",
-              "uri_path": "jwks/openid_provider",
-              "read_only": false
+              "public_path": "openid_provider/static/jwks.json"
             },
             "endpoint": {
               "webfinger": {

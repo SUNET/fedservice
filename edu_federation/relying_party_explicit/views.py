@@ -13,7 +13,7 @@ from flask import session
 from flask.helpers import make_response
 from flask.helpers import send_from_directory
 from idpyoidc.client.exception import OidcServiceError
-from idpyoidc.client.rp_handler import RPHandler
+from idpyoidc.client.oidc.rp import RP
 
 from fedservice.entity_statement.create import create_entity_configuration
 
@@ -33,8 +33,8 @@ def keys(guise):
         _ent_type = current_app.server[guise]
         logger.debug(f"Returning keys for {guise}")
         logger.debug(f"_ent_type: {_ent_type}")
-        if isinstance(_ent_type, RPHandler):
-            logger.debug(f"<<RPHandler>>")
+        if isinstance(_ent_type, RP):
+            logger.debug(f"<<RP>>")
             _json = _ent_type.keyjar.export_jwks_as_json()
         else:
             _context = _ent_type.get_context()
@@ -56,22 +56,14 @@ def irp():
     return send_from_directory('entity_statements', 'irp.jws')
 
 
-def get_rph():
+def get_rp():
     return current_app.server["openid_relying_party"]
 
 
 # @entity.route('/<string:op_hash>/.well-known/openid-federation')
 @entity.route('/.well-known/openid-federation')
 def wkof():
-    _rph = get_rph()
-    if _rph.issuer2rp == {}:
-        cli = _rph.init_client('dummy')
-    else:
-        # Any client will do
-        cli = _rph.issuer2rp[list(_rph.issuer2rp.keys())[0]]
-
-    _metadata = current_app.server.get_metadata(cli)
-    # _metadata.update(cli.get_metadata())
+    _metadata = current_app.server.get_metadata('')
 
     _fed_entity = current_app.server["federation_entity"]
 
@@ -83,7 +75,7 @@ def wkof():
     else:
         args = {}
 
-    _ec = create_entity_configuration(iss=_fed_entity.entity_id,
+    _ec = create_entity_configuration(iss=_fed_entity.context.entity_id,
                                       key_jar=_fed_entity.get_attribute('keyjar'),
                                       metadata=_metadata,
                                       authority_hints=_fed_entity.get_authority_hints(),
@@ -105,27 +97,27 @@ def rp():
 
     if link:
         try:
-            result = get_rph().begin(link)
+            result = get_rp().begin(link)
         except Exception as err:
             logger.exception("RP begin")
             return make_response('Something went wrong:{}'.format(err), 400)
         else:
             return redirect(result, 303)
     else:
-        _providers = list(get_rph().client_configs.keys())
+        _providers = list(get_rp().client_configs.keys())
         return render_template('rpe_opbyuid.html', providers=_providers)
 
 
 def get_rp(op_hash):
     try:
-        _iss = get_rph().hash2issuer[op_hash]
+        _iss = get_rp().hash2issuer[op_hash]
     except KeyError:
         logger.error('Unkown issuer: {} not among {}'.format(
-            op_hash, list(get_rph().hash2issuer.keys())))
+            op_hash, list(get_rp().hash2issuer.keys())))
         return make_response("Unknown hash: {}".format(op_hash), 400)
     else:
         try:
-            rp = get_rph().issuer2rp[_iss]
+            rp = get_rp().issuer2rp[_iss]
         except KeyError:
             return make_response("Couldn't find client for {}".format(_iss), 400)
 
@@ -133,7 +125,7 @@ def get_rp(op_hash):
 
 
 def guess_rp(state):
-    for _iss, _rp in get_rph().issuer2rp.items():
+    for _iss, _rp in get_rp().issuer2rp.items():
         _context = _rp.upstream_get("context")
         if _context.state.get_iss(request.args['state']):
             return _iss, _rp

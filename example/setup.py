@@ -51,7 +51,7 @@ for ent, info in ENTITY.items():
         for anch in info["trust_anchors"]:
             _fed_entity = get_federation_entity(fed_entity[anch])
             _ent_id = _fed_entity.entity_id
-            trust_anchor[ent][_ent_id] = _fed_entity.keyjar.export_jwks()
+            trust_anchor[ent][_ent_id] = _fed_entity.context.keyjar.export_jwks()
 
 trust_anchors = {}
 for ent, info in trust_anchor.items():

@@ -1,4 +1,4 @@
-idpyoidc>=5.0.0
+idpyoidc>=6.0.0
 cryptojwt>=1.8.4
 git+https://github.com/IdentityPython/idpy-oidc.git@issuer_metadata#egg=idpyoidc
 git+https://github.com/SUNET/openid4v.git#egg=openid4v

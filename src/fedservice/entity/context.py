@@ -6,11 +6,15 @@ from typing import Union
 
 from cryptojwt import KeyJar
 from idpyoidc.client.client_auth import client_auth_setup
+from idpyoidc.client.service_context import CLI_REG_MAP
+from idpyoidc.client.service_context import PROVIDER_INFO_MAP
 from idpyoidc.configure import Configuration
 from idpyoidc.impexp import ImpExp
+from idpyoidc.server.util import init_keyjar
 from idpyoidc.transform import preferred_to_registered
 
 from fedservice.entity.claims import FederationEntityClaims
+from fedservice.entity.function import get_federation_entity_keyjar
 from fedservice.entity_statement.create import create_entity_configuration
 from fedservice.entity_statement.create import create_explicit_registration_request
 from fedservice.entity_statement.create import create_explicit_registration_response
@@ -46,6 +50,7 @@ class FederationContext(ImpExp):
                  trusted_roots: Optional[Union[str, dict, Callable]] = None,
                  authority_hints: Optional[Union[list, str, Callable]] = None,
                  keyjar: Optional[KeyJar] = None,
+                 key_conf: Optional[dict] = None,
                  preference: Optional[dict] = None,
                  trust_mark_issuers: Optional[dict] = None,
                  trust_mark_owners: Optional[dict] = None,
@@ -59,6 +64,7 @@ class FederationContext(ImpExp):
 
         self.config = config
         self.upstream_get = upstream_get
+
         self.entity_id = entity_id or config.get("entity_id",
                                                  self.upstream_get("attribute", "entity_id"))
         self.default_lifetime = default_lifetime or config.get("default_lifetime", 0)
@@ -94,16 +100,15 @@ class FederationContext(ImpExp):
 
         if preference:
             config['preference'] = preference
-        _keyjar = self.claims.load_conf(config, supports=self.supports(), keyjar=keyjar,
-                                        metadata_class=self.metadata_class)
 
-        if self.upstream_get:
-            _unit = self.upstream_get('unit')
-            _unit.keyjar = _keyjar
-        else:
-            self.keyjar = _keyjar
+        self.keyjar = init_keyjar(config, keyjar=keyjar, key_config=key_conf, issuer_id=self.entity_id, **kwargs)
 
-        self.setup_client_authn_methods()
+        self.claims.load_conf(config, supports=self.supports(), metadata_class=self.metadata_class)
+
+        for iss, jwks in self.trusted_roots.items():
+            self.keyjar.import_jwks(jwks, iss)
+
+        self.setup_client_authn_methods(config, self)
 
         # For backward compatibility
         self.kid = {"sig": {}, "enc": {}}
@@ -111,8 +116,8 @@ class FederationContext(ImpExp):
     def supports(self):
         return self.claims._supports
 
-    def setup_client_authn_methods(self):
-        self.client_authn_methods = client_auth_setup(self.config.get("client_authn_methods"))
+    def setup_client_authn_methods(self, config, context):
+        self.client_authn_methods = client_auth_setup(config.get("client_authn_methods"))
 
     def _collect_claims(self, iss, key_jar=None, metadata=None, metadata_policy=None,
                         authority_hints=None, lifetime=0, jwks=None, **kwargs):
@@ -129,7 +134,7 @@ class FederationContext(ImpExp):
                 kwargs["jwks"] = {'keys': kwargs["keys"]}
                 del kwargs["keys"]
 
-        kwargs['key_jar'] = key_jar or self.upstream_get("attribute", "keyjar")
+        kwargs['key_jar'] = key_jar or self.keyjar
 
         if not lifetime:
             kwargs['lifetime'] = self.default_lifetime
@@ -249,6 +254,30 @@ class FederationContext(ImpExp):
         else:
             raise ValueError("trust_mark_issuers")
 
+    def _get_crypt(self, typ, attr):
+        _item_typ = CLI_REG_MAP.get(typ)
+        _alg = ''
+        if _item_typ:
+            _alg = self.claims.get_usage(_item_typ[attr])
+            if not _alg:
+                _alg = self.claims.get_preference(_item_typ[attr])
+
+        _provider_info = {}
+        if not _alg and _provider_info:
+            _item_typ = PROVIDER_INFO_MAP.get(typ)
+            if _item_typ:
+                _alg = _provider_info.get(_item_typ[attr])
+
+        return _alg
+
+    def get_sign_alg(self, typ):
+        """
+
+        :param typ: ['id_token', 'userinfo', 'request_object']
+        :return: signing algorithm
+        """
+        return self._get_crypt(typ, 'sign')
+
 
 class FederationServerContext(FederationContext):
 
@@ -270,7 +299,7 @@ class FederationServerContext(FederationContext):
 
         _sstm = config.get("self_signed_trust_marks")
         if _sstm:
-            _keyjar = upstream_get('attribute', "keyjar")
+            _keyjar = get_federation_entity_keyjar(self)
             self.signed_trust_marks = self.create_entity_configuration(iss=self.entity_id,
                                                                        # sub=self.entity_id,
                                                                        keyjar=_keyjar,
@@ -278,3 +307,49 @@ class FederationServerContext(FederationContext):
 
         self.trust_marks = trust_marks
         self.jti_db = {}
+
+    def _get_crypt(self, typ, attr):
+        _item_typ = CLI_REG_MAP.get(typ)
+        _alg = ''
+        if _item_typ:
+            _alg = self.claims.get_usage(_item_typ[attr])
+            if not _alg:
+                _alg = self.claims.get_preference(_item_typ[attr])
+
+        _provider_info = {}
+        if not _alg and _provider_info:
+            _item_typ = PROVIDER_INFO_MAP.get(typ)
+            if _item_typ:
+                _alg = _provider_info.get(_item_typ[attr])
+
+        return _alg
+
+    def get_sign_alg(self, typ):
+        """
+
+        :param typ: ['id_token', 'userinfo', 'request_object']
+        :return: signing algorithm
+        """
+        return self._get_crypt(typ, 'sign')
+
+    def get_enc_alg_enc(self, typ):
+        """
+
+        :param typ:
+        :return:
+        """
+
+        res = {}
+        for attr in ["enc", "alg"]:
+            res[attr] = self._get_crypt(typ, attr)
+
+        return res
+
+    def get_client_id(self):
+        return self.entity_id
+
+
+class EntityContext(object):
+
+    def __init__(self, entity_id, *args, **kargs):
+        self.entity_id = entity_id

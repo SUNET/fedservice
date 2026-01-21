@@ -85,7 +85,7 @@
         ]
       },
       "openid_relying_party": {
-        "class": "idpyoidc.client.rp_handler.RPHandler",
+        "class": "idpyoidc.client.oidc.RP",
         "kwargs": {
           "config": {
             "client_class": "fedservice.appclient.stand_alone_client_entity.StandAloneClientEntity",

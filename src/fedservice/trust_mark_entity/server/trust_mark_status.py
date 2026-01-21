@@ -45,8 +45,8 @@ class TrustMarkStatus(Endpoint):
             _mark = _trust_mark_issuer.unpack_trust_mark(request['trust_mark'])
             if _trust_mark_issuer.find(_mark['trust_mark_type'], _mark['sub']):
                 msg = {'status': "active", 'trust_mark': request["trust_mark"]}
-                packer = JWT(key_jar=_federation_entity.keyjar,
-                             iss=_federation_entity.entity_id,
+                packer = JWT(key_jar=_federation_entity.context.keyjar,
+                             iss=_federation_entity.context.entity_id,
                              lifetime=300,
                              sign_alg=DEFAULT_SIGNING_ALGORITHM)
 

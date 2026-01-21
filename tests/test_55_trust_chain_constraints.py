@@ -115,7 +115,7 @@ class TestConstraints(object):
 
     def test_intermediate(self):
         _endpoint = self.ta.server.get_endpoint('fetch')
-        _req = _endpoint.parse_request({'iss': self.ta.entity_id, 'sub': self.im.entity_id})
+        _req = _endpoint.parse_request({'iss': self.ta.context.entity_id, 'sub': self.im.context.entity_id})
         _jws = factory(_endpoint.process_request(_req)["response_msg"])
         _payload = _jws.jwt.payload()
         assert _payload
@@ -141,7 +141,7 @@ class TestConstraints(object):
 
     def test_leaf(self):
         _endpoint = self.im.server.get_endpoint('fetch')
-        _req = _endpoint.parse_request({'sub': self.leaf.entity_id})
+        _req = _endpoint.parse_request({'sub': self.leaf.context.entity_id})
         _jws = factory(_endpoint.process_request(_req)["response_msg"])
         _payload = _jws.jwt.payload()
         assert _payload
@@ -168,7 +168,7 @@ class TestConstraints(object):
 
     def test_rp(self):
         _endpoint = self.im.server.get_endpoint('fetch')
-        _req = _endpoint.parse_request({'sub': self.rp.entity_id})
+        _req = _endpoint.parse_request({'sub': self.rp['openid_relying_party'].context[''].entity_id})
         _jws = factory(_endpoint.process_request(_req)["response_msg"])
         _payload = _jws.jwt.payload()
         assert _payload

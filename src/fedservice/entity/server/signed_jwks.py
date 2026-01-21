@@ -22,9 +22,9 @@ class SignedJWKS(Endpoint):
 
     def process_request(self, request=None, **kwargs):
         _federation_entity = get_federation_entity(self)
-        _payload = _federation_entity.keyjar.export_jwks()
+        _payload = _federation_entity.context.keyjar.export_jwks()
         _payload['sub'] = _federation_entity.entity_id
         _payload['iat'] = utc_time_sans_frac()
-        _jwt = JWT(key_jar=_federation_entity.keyjar, iss=_federation_entity.entity_id)
+        _jwt = JWT(key_jar=_federation_entity.context.keyjar, iss=_federation_entity.entity_id)
         _jws = _jwt.pack(payload=_payload, jws_headers={"typ": self.content_type})
         return {'response_msg': _jws}

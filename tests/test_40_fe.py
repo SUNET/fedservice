@@ -41,7 +41,7 @@ class TestFederationEntity(object):
                         "organization_uri": "https://leaf.example.com",
                         "contacts": "operations@leaf.example.com"
                     },
-                    "key_config": {"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
+                    "key_config": {"key_defs": KEYDEFS},
                     "authority_hints": ['https://ntnu.no'],
                     "endpoint": ["entity_configuration", "fetch", "list", "resolve"],
                     "trust_mark_entity": {

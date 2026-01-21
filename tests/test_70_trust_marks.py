@@ -7,6 +7,7 @@ from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
 
 from fedservice.defaults import LEAF_ENDPOINTS
+from fedservice.entity import get_federation_entity_keyjar
 from fedservice.entity.function import get_verified_trust_chains
 from fedservice.message import TrustMark
 from tests import create_trust_chain_messages
@@ -171,14 +172,15 @@ class TestTrustMarkEndpoints():
         _audience = _server_endpoint.full_path
 
         req_info = _client_service.get_request_parameters(
-            request_args={"trust_mark_type": TRUST_MARK_TYPE, "sub": self.federation_entity.entity_id},
+            context=self.federation_entity.context,
+            request_args={"trust_mark_type": TRUST_MARK_TYPE, "sub": self.federation_entity.context.entity_id},
             endpoint=_audience,
             audience=_audience,
             algorithm="ES256")
 
-        _client_jwks = _client_service.upstream_get("attribute", "keyjar").export_jwks()
-        _kj = _server_endpoint.upstream_get("attribute", "keyjar")
-        _kj = import_jwks(_kj, _client_jwks, self.federation_entity.entity_id)
+        _client_jwks = get_federation_entity_keyjar(_client_service).export_jwks()
+        _kj = get_federation_entity_keyjar(_server_endpoint)
+        _kj = import_jwks(_kj, _client_jwks, self.federation_entity.context.entity_id)
         _query = req_info["url"].split("?")[1]
         _req = Message().from_urlencoded(_query)
 

@@ -75,7 +75,7 @@ class PushedAuthorization(Authorization):
             return None
 
         # If there is a signed_jwks_uri, jwks_uri or jwks in the metadata import the keys
-        import_client_keys(_metadata, self.upstream_get('attribute', 'keyjar'), entity_id)
+        import_client_keys(_metadata, self.context.keyjar, entity_id)
 
         req = _msg(**_metadata)
         req['client_id'] = entity_id

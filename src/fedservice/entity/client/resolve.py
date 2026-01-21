@@ -54,7 +54,7 @@ class Resolve(FederationService):
 
         return {"url": _req.request(endpoint), 'method': self.http_method}
 
-    def post_parse_response(self, response, **kwargs):
+    def post_parse_response(self, context, response, **kwargs):
         """
         Will verify the trust chain and calculate an expiration date for the whole response
 

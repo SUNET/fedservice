@@ -28,7 +28,7 @@ if __name__ == '__main__':
                                                                             "entity_statement"),
                                                trust_anchors=trust_anchors)
     if args.insecure:
-        federation_entity.keyjar.httpc_params = {"verify": False}
+        federation_entity.context.keyjar.httpc_params = {"verify": False}
         federation_entity.client.httpc_params = {"verify": False}
 
     # Need to find the listing endpoint

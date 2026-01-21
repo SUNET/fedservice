@@ -5,6 +5,8 @@ from typing import Union
 from cryptojwt import JWT
 from cryptojwt.jws.jws import factory
 from cryptojwt.jwt import utc_time_sans_frac
+
+from fedservice.entity import get_federation_entity_keyjar
 from fedservice.entity.function import verify_trust_chains
 from idpyoidc.client.configure import Configuration
 from idpyoidc.message import oauth2
@@ -63,12 +65,12 @@ class SignedJWKS(FederationService):
         if _jws.jwt.headers['typ'] != self.response_body_type:
             raise ValueError('Wrong JWT type')
 
-        _verifier = JWT(key_jar=self.upstream_get('attribute', 'keyjar'))
+        _verifier = JWT(key_jar=get_federation_entity_keyjar(self))
         _jwks = _verifier.unpack(info)
         return _jwks
 
     def update_service_context(self, resp, key="", **kwargs):
-        _keyjar = self.upstream_get("attribute", "keyjar")
+        _keyjar = get_federation_entity_keyjar(self)
         # If there are inactivated keys remove them
         _now = utc_time_sans_frac()
         _issuer = _keyjar.return_issuer(resp['iss'])

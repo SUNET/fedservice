@@ -1,4 +1,5 @@
 import os
+import sys
 
 from cryptojwt.utils import importer
 from idpyoidc.server.util import execute
@@ -6,6 +7,13 @@ from idpyoidc.server.util import execute
 from fedservice.entity import FederationEntity
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(BASEDIR)
+import entities.entity
+
+def full_path(local_file):
+    return os.path.join(BASEDIR, local_file)
+
+
 FEDERATION = {
     "https://ta.example.org": {
         "federation_entity": {
@@ -35,11 +43,8 @@ def execute_function(function, **kwargs):
 
 
 def make_entity(**kwargs):
-    try:
-        entity = execute_function(f'entities.entity.main', **kwargs)
-    except ModuleNotFoundError:
-        entity = execute_function(f'tests.entities.entity.main', **kwargs)
-
+    function = entities.entity.main
+    entity = execute_function(function, **kwargs)
     return entity
 
 
@@ -51,7 +56,7 @@ def get_subordinate_info(entity):
         fed_ent = entity["federation_entity"]
         entity_types = list(entity.keys())
 
-    jwks = fed_ent.keyjar.export_jwks()
+    jwks = fed_ent.context.keyjar.export_jwks()
     return {"jwks": jwks, "entity_types": entity_types, "authority_hints": fed_ent.context.authority_hints}
 
 
@@ -61,7 +66,7 @@ def get_trust_anchor_info(entity):
     else:
         fed_ent = entity["federation_entity"]
 
-    jwks = fed_ent.keyjar.export_jwks()
+    jwks = fed_ent.context.keyjar.export_jwks()
     return {"jwks": jwks}
 
 

@@ -142,8 +142,11 @@ class ServerEntity(ServerUnit):
             cookie_handler=cookie_handler,
             httpc=httpc,
             claims_class=OPClaims(),
-            keyjar=self.keyjar
+            keyjar=keyjar
         )
+
+        for endpoint_name, item in self.endpoint.items():
+            item.context = self.context
 
         _token_endp = self.endpoint.get("token")
         if _token_endp:

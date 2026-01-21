@@ -79,7 +79,7 @@ class Resolve(Endpoint):
             ResolveResponse,
             iss=_federation_entity.entity_id,
             sub=request["sub"],
-            key_jar=_federation_entity.get_attribute('keyjar'),
+            key_jar=_federation_entity.context.keyjar,
             metadata=metadata,
             trust_chain=trust_chain,
             **args)

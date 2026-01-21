@@ -18,6 +18,7 @@ from idpyoidc.message import Message
 from requests.exceptions import ConnectionError
 
 from fedservice.defaults import DEFAULT_SIGNING_ALGORITHM
+from fedservice.entity import get_federation_entity_keyjar
 from fedservice.entity.function import Function
 from fedservice.entity.function import get_endpoint
 from fedservice.entity.function import tree2chains
@@ -90,11 +91,9 @@ class TrustChainCollector(Function):
         self.config_cache = ESCache(allowed_delta=allowed_delta)
         self.entity_statement_cache = ESCache(allowed_delta=allowed_delta)
         # should not have a Key Jar of its own
-        if keyjar:
-            self.keyjar = keyjar
-        else:
-            self.keyjar = None
-            keyjar = upstream_get("attribute", "keyjar")
+        if not keyjar:
+            keyjar = get_federation_entity_keyjar(self)
+
         for id, keys in trust_anchors.items():
             keyjar = import_jwks(keyjar, keys, id)
 

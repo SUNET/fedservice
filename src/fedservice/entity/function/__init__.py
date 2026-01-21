@@ -339,3 +339,7 @@ def pick_trust_anchors(unit, server_entity_id) -> Optional[List[str]]:
             if chains:
                 return [ta]  # Only need one
     return None
+
+def get_federation_entity_keyjar(item):
+    _fed_entity = get_federation_entity(item)
+    return _fed_entity.context.keyjar

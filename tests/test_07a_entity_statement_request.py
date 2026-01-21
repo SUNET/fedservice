@@ -1,7 +1,8 @@
 import os
+from urllib.parse import parse_qs
+from urllib.parse import urlparse
 
 import pytest
-import responses
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 
 from fedservice.defaults import COMBINED_DEFAULT_OAUTH2_SERVICES
@@ -9,6 +10,7 @@ from fedservice.defaults import DEFAULT_OAUTH2_FED_SERVICES
 from fedservice.defaults import federation_endpoints
 from fedservice.defaults import federation_services
 from fedservice.entity.utils import get_federation_entity
+from fedservice.message import SubordinateStatement
 from tests import CRYPT_CONFIG
 from tests.build_federation import build_federation
 
@@ -39,13 +41,15 @@ FEDERATION_CONFIG = {
                 "contacts": "operations@ta.example.org"
             },
             "endpoint": ["entity_configuration", "list", "fetch", "resolve"],
+            'key_config': {"key_defs": DEFAULT_KEY_DEFS},
         }
     },
     OC_ID: {
         "federation_entity": {
             "trust_anchors": [TA_ID],
             "services": OC_SERVICES,
-            "authority_hints": [IM_ID]
+            "authority_hints": [IM_ID],
+            'key_config': {"key_defs": DEFAULT_KEY_DEFS},
         },
         "oauth_client": {
             "services": COMBINED_DEFAULT_OAUTH2_SERVICES,
@@ -70,7 +74,8 @@ FEDERATION_CONFIG = {
         "federation_entity": {
             "trust_anchors": [TA_ID],
             "subordinates": [OC_ID],
-            "authority_hints": [TA_ID]
+            "authority_hints": [TA_ID],
+            'key_config': {"key_defs": DEFAULT_KEY_DEFS},
         }
     }
 }
@@ -92,19 +97,40 @@ class TestFederationStatement(object):
         self.oc = federation[OC_ID]
         self.im = federation[IM_ID]
 
-    def test_1(self):
-        _service = self.oc["federation_entity"].get_service("entity_statement")
+    def test_entity_configuration(self):
+        _service = self.oc["federation_entity"].get_service("entity_configuration")
+
+        args = _service.get_request_parameters(issuer=TA_ID)
+        assert set(args.keys()) == {"url", "method"}
+        assert args["method"] == "GET"
+        assert args["url"] == 'https://ta.example.org/.well-known/openid-federation'
+
+    def test_subordinate_statement(self):
+        _service = self.oc["federation_entity"].get_service("entity_configuration")
+
+        args = _service.get_request_parameters(issuer=TA_ID)
+
         _endpoint = get_federation_entity(self.ta).server.get_endpoint('entity_configuration')
+        _context = _endpoint.upstream_get("context")
         _entcnf = _endpoint.process_request({})["response"]
+        response = _service.parse_response(_context, _entcnf)
 
-        with responses.RequestsMock() as rsps:
-            rsps.add("GET", _endpoint.full_path, body=_entcnf,
-                     adding_headers={"Content-Type": "application/json"}, status=200)
-
-            args = _service.get_request_parameters(issuer=TA_ID, subject=IM_ID)
+        #  .......
+        _service = self.oc["federation_entity"].get_service("entity_statement")
+        args = _service.get_request_parameters(issuer=TA_ID, subject=IM_ID)
         assert set(args.keys()) == {"url", "method"}
         assert args["method"] == "GET"
         assert args["url"] == 'https://ta.example.org/fetch?sub=https%3A%2F%2Fim.example.org'
+
+        _endpoint = get_federation_entity(self.ta).server.get_endpoint('fetch')
+        parse_res = urlparse(args.get("url"))
+        args = {k: v[0] for k, v in parse_qs(parse_res.query).items()}
+        _response = _endpoint.process_request(args)
+
+        resp = _service.parse_response(_service.upstream_get("context"), _response['response_msg'])
+        assert isinstance(resp, SubordinateStatement)
+        assert resp['sub'] == 'https://im.example.org'
+        assert resp['iss'] == 'https://ta.example.org'
 
     def test_2(self):
         _service = self.oc["federation_entity"].get_service("entity_statement")

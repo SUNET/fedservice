@@ -33,7 +33,7 @@ def test_federation_entity_metadata():
             "organization_uri": "https://leaf.example.com",
             "contacts": "operations@leaf.example.com"
         },
-        key_config={"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
+        key_config={"key_defs": KEYDEFS},
         authority_hints=['https://ntnu.no'],
         endpoint=["entity_configuration"],
         trust_marks=TRUST_MARKS
@@ -64,7 +64,7 @@ def test_federation_combo_metadata():
                     "organization_uri": "https://leaf.example.com",
                     "contacts": "operations@leaf.example.com"
                 },
-                "key_config": {"uri_path": "static/fed_jwks.json", "key_defs": KEYDEFS},
+                "key_config": {"key_defs": KEYDEFS},
                 "authority_hints": ['https://ntnu.no'],
                 "endpoint": ["entity_configuration"],
                 "trust_marks": TRUST_MARKS,
@@ -73,7 +73,7 @@ def test_federation_combo_metadata():
                 'class': ClientEntity,
                 'kwargs': {
                     # OIDC core keys
-                    "key_conf": {"uri_path": "static/jwks.json", "key_defs": DEFAULT_KEY_DEFS},
+                    "key_conf": {"key_defs": DEFAULT_KEY_DEFS},
                     'config': {
                         'client_id': RP_ID,
                         'client_secret': 'a longesh password',

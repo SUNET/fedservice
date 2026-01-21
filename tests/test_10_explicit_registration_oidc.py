@@ -24,8 +24,8 @@ class TestRpService(object):
         self.rp = federation[TA_OP_RP.RP_ID]
         self.op = federation[TA_OP_RP.OP_ID]
 
-        _context = self.rp["openid_relying_party"].context
-        _context.issuer = self.op.entity_id
+        _context = self.rp["openid_relying_party"].context['']
+        _context.issuer = self.op['federation_entity'].context.entity_id
         _response_types = _context.get_preference(
             "response_types_supported", _context.supports().get("response_types_supported", [])
         )
@@ -47,21 +47,22 @@ class TestRpService(object):
                          status=200)
 
             _trust_chains = get_verified_trust_chains(self.rp,
-                                                      self.op["federation_entity"].entity_id)
+                                                      self.op["federation_entity"].context.entity_id)
 
-        self.rp["openid_relying_party"].context.server_metadata = _trust_chains[0].metadata
-        self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
+        self.rp["openid_relying_party"].context[''].server_metadata = _trust_chains[0].metadata
+        _fe_context = self.rp["federation_entity"].client.context
+        _fe_context.server_metadata = _trust_chains[0].metadata
 
         # construct the client registration request
-        req_args = {"entity_id": self.rp["federation_entity"].entity_id}
-        jws = self.registration_service.construct(request_args=req_args)
+        req_args = {"entity_id": _fe_context.entity_id}
+        jws = self.registration_service.construct(_fe_context, request_args=req_args)
         assert jws
 
         _sc = self.registration_service.upstream_get("context")
         self.registration_service.endpoint = _sc.get_metadata_claim("federation_registration_endpoint")
 
         # construct the information needed to send the request
-        _info = self.registration_service.get_request_parameters(request_body_type="jose", method="POST")
+        _info = self.registration_service.get_request_parameters(_fe_context, request_body_type="jose", method="POST")
 
         assert set(_info.keys()) == {"method", "url", "body", "headers", "request"}
         assert _info["method"] == "POST"
@@ -73,21 +74,27 @@ class TestRpService(object):
         payload = _jwt.jwt.payload()
         assert set(payload.keys()) == {"sub", "iss", "metadata", "jwks", "exp",
                                        "iat", "authority_hints"}
-        assert set(payload["metadata"]["openid_relying_party"].keys()) == {
-            'application_type',
-            'client_registration_types',
-            'default_max_age',
-            'grant_types',
-            'id_token_signed_response_alg',
-            'jwks',
-            'redirect_uris',
-            'request_object_signing_alg',
-            'response_modes',
-            'response_types',
-            'subject_type',
-            'token_endpoint_auth_method',
-            'token_endpoint_auth_signing_alg',
-            'userinfo_signed_response_alg'}
+        assert set(payload["metadata"]["openid_relying_party"].keys()) == {'application_type',
+                                                                           'callback_uris',
+                                                                           'client_id',
+                                                                           'client_registration_types',
+                                                                           'client_secret',
+                                                                           'default_max_age',
+                                                                           'encrypt_request_object_supported',
+                                                                           'encrypt_userinfo_supported',
+                                                                           'grant_types',
+                                                                           'id_token_signed_response_alg',
+                                                                           'jwks',
+                                                                           'redirect_uris',
+                                                                           'request_object_signing_alg',
+                                                                           'request_parameter_supported',
+                                                                           'response_modes',
+                                                                           'response_types',
+                                                                           'scope',
+                                                                           'subject_type',
+                                                                           'token_endpoint_auth_method',
+                                                                           'token_endpoint_auth_signing_alg',
+                                                                           'userinfo_signed_response_alg'}
 
     def test_parse_registration_response(self):
         # Collect trust chain OP->TA
@@ -99,10 +106,11 @@ class TestRpService(object):
                          status=200)
 
             _trust_chains = get_verified_trust_chains(self.rp,
-                                                      self.op["federation_entity"].entity_id)
+                                                      self.op["federation_entity"].context.entity_id)
         # Store it in a number of places
-        self.rp["openid_relying_party"].context.server_metadata = _trust_chains[0].metadata
-        self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
+        self.rp["openid_relying_party"].context[''].server_metadata = _trust_chains[0].metadata
+        _fe_context = self.rp["federation_entity"].client.context
+        _fe_context.server_metadata = _trust_chains[0].metadata
 
         _sc = self.registration_service.upstream_get("context")
         self.registration_service.endpoint = _sc.get_metadata_claim(
@@ -111,12 +119,12 @@ class TestRpService(object):
         # construct the client registration request
         _rp_fe = self.rp["federation_entity"]
         req_args = {"entity_id": _rp_fe.context.entity_id}
-        jws = self.registration_service.construct(request_args=req_args)
+        jws = self.registration_service.construct(_fe_context, request_args=req_args)
         assert jws
 
         # construct the information needed to send the request
         _info = self.registration_service.get_request_parameters(
-            request_body_type="jose", method="POST")
+            _fe_context, request_body_type="jose", method="POST")
 
         # >>>>> The OP as federation entity <<<<<<<<<<
 
@@ -150,6 +158,7 @@ class TestRpService(object):
         assert set(metadata.keys()) == {'openid_relying_party'}
 
         assert set(metadata["openid_relying_party"].keys()) == {'application_type',
+                                                                'callback_uris',
                                                                 'client_id',
                                                                 'client_id_issued_at',
                                                                 'client_registration_types',
@@ -161,8 +170,10 @@ class TestRpService(object):
                                                                 'jwks',
                                                                 'redirect_uris',
                                                                 'request_object_signing_alg',
+                                                                'request_parameter_supported',
                                                                 'response_modes',
                                                                 'response_types',
+                                                                'scope',
                                                                 'subject_type',
                                                                 'token_endpoint_auth_method',
                                                                 'token_endpoint_auth_signing_alg',
@@ -172,11 +183,12 @@ class TestRpService(object):
 
         self.registration_service.update_service_context(response)
         # There is a no client secret
-        assert self.rp["openid_relying_party"].context.claims.get_usage("client_secret")
-        _keys = self.rp["openid_relying_party"].context.keyjar.get_signing_key(key_type="oct")
+        _context = self.rp["openid_relying_party"].context['']
+        assert _context.claims.get_usage("client_secret")
+        _keys = _context.keyjar.get_signing_key(key_type="oct")
         assert len(_keys) == 1
 
-        assert self.rp["openid_relying_party"].context.claims.get_usage("scope") == ["openid", "profile"]
+        assert _context.claims.get_usage("scope") == ["openid", "profile"]
 
         # Create a authorization request
         req_args = {
@@ -184,9 +196,9 @@ class TestRpService(object):
             "nonce": "nonce",
         }
 
-        self.rp["openid_relying_party"].get_context().cstate.set("ABCDE", {"iss": "issuer"})
+        _context.cstate.set("ABCDE", {"iss": "issuer"})
 
-        msg = self.rp["openid_relying_party"].get_service("authorization").construct(request_args=req_args)
+        msg = self.rp["openid_relying_party"].get_service("authorization").construct(_context, request_args=req_args)
         assert isinstance(msg, AuthorizationRequest)
 
         _jws = factory(jws)
@@ -203,9 +215,10 @@ class TestRpService(object):
                          status=200)
 
             _trust_chains = get_verified_trust_chains(self.rp,
-                                                      self.op["federation_entity"].entity_id)
+                                                      self.op["federation_entity"].context.entity_id)
         # Store it in a number of places
-        self.rp["openid_relying_party"].context.server_metadata = _trust_chains[0].metadata
+        rp_context = self.rp["openid_relying_party"].context['']
+        rp_context.server_metadata = _trust_chains[0].metadata
         self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
 
         _sc = self.registration_service.upstream_get("context")
@@ -215,12 +228,12 @@ class TestRpService(object):
         # construct the client registration request
         _rp_fe = self.rp["federation_entity"]
         req_args = {"entity_id": _rp_fe.context.entity_id}
-        jws = self.registration_service.construct(request_args=req_args)
+        jws = self.registration_service.construct(_rp_fe.context, request_args=req_args)
         assert jws
 
         # construct the information needed to send the request
-        _info = self.registration_service.get_request_parameters(
-            request_body_type="jose", method="POST")
+        _info = self.registration_service.get_request_parameters(_rp_fe.context,
+                                                                 request_body_type="jose", method="POST")
 
         # >>>>> The OP as federation entity <<<<<<<<<<
 

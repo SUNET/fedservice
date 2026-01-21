@@ -1,22 +1,23 @@
 import logging
 from typing import Callable
+from typing import List
 from typing import Optional
 
 from cryptojwt import JWT
 from cryptojwt.jwt import utc_time_sans_frac
-from cryptojwt.key_jar import init_key_jar
 from idpyoidc.node import Unit
 from idpyoidc.server import do_endpoints
 from idpyoidc.server.client_authn import CLIENT_AUTHN_METHOD
 from idpyoidc.server.endpoint_context import init_service
 
+from fedservice.entity.function import get_federation_entity_keyjar
 from fedservice.entity.utils import get_federation_entity
 from fedservice.message import TrustMark
 from fedservice.trust_mark_entity import SimpleDB
 from fedservice.trust_mark_entity.context import TrustMarkContext
 
-
 logger = logging.getLogger(__name__)
+
 
 def create_trust_mark(keyjar, entity_id, **kwargs):
     packer = JWT(key_jar=keyjar, iss=entity_id)
@@ -54,21 +55,20 @@ class TrustMarkEntity(Unit):
         else:
             self.issued = SimpleDB()
 
-        _key_conf = kwargs.get("key_conf", None)
-        if _key_conf:
-            self.keyjar = init_key_jar(**_key_conf)
-        else:
-            self.keyjar = None
+        # Using the federation keys
 
+        self.context = TrustMarkContext(upstream_get=self.upstream_get)
         auth_set = {}
         for name, endp in self.endpoint.items():
             if endp.client_authn_method:
                 for _meth in endp.client_authn_method:
-                    auth_set[_meth] = CLIENT_AUTHN_METHOD[_meth](self.unit_get)
+                    auth_set[_meth] = CLIENT_AUTHN_METHOD[_meth](upstream_get=self.unit_get, context=self.context)
 
-        self.context = TrustMarkContext(client_authn_methods=auth_set)
+        self.context.client_authn_methods = auth_set
+        for endpoint_name, item in self.endpoint.items():
+            item.context = self.context
 
-    def create_trust_mark(self, id: [str], sub: [str], **kwargs) -> str:
+    def create_trust_mark(self, id: List[str], sub: List[str], **kwargs) -> str:
         """
 
         :param id: Trust Mark identifier
@@ -92,7 +92,7 @@ class TrustMarkEntity(Unit):
         self.issued.add(content)
 
         _federation_entity = get_federation_entity(self)
-        packer = JWT(key_jar=_federation_entity.keyjar, iss=_federation_entity.entity_id)
+        packer = JWT(key_jar=_federation_entity.context.keyjar, iss=_federation_entity.context.entity_id)
         return packer.pack(payload=content, jws_headers={"typ": self.payload_type})
 
     def dump_trust_marks(self):
@@ -102,9 +102,9 @@ class TrustMarkEntity(Unit):
         return self.issued.loads(marks)
 
     def unpack_trust_mark(self, token, entity_id: Optional[str] = ""):
-        keyjar = self.upstream_get('attribute', 'keyjar')
+        keyjar = get_federation_entity_keyjar(self)
         _jwt = JWT(key_jar=keyjar, allowed_sign_algs=["RS256"])
-        _jwt.msg_cls=TrustMark
+        _jwt.msg_cls = TrustMark
         _tm = _jwt.unpack(token)
 
         if entity_id:
@@ -115,8 +115,9 @@ class TrustMarkEntity(Unit):
         return _tm
 
     def self_signed_trust_mark(self, **kwargs):
-        _entity_id = self.upstream_get("attribute", 'entity_id')
-        _keyjar = self.upstream_get('attribute', 'keyjar')
+        federation_entity = get_federation_entity(self)
+        _entity_id = federation_entity.context.entity_id
+        _keyjar = federation_entity.context.keyjar
 
         packer = JWT(key_jar=_keyjar, iss=_entity_id)
         if 'sub' not in kwargs:
@@ -172,7 +173,7 @@ class SelfSignedTrustMarkEntity(Unit):
         self.trust_mark_types = trust_mark_types or []
         self.trust_mark_specification = trust_mark_specification or {}
         self.issued = []
-        self.tm_lifetime = 86400*30
+        self.tm_lifetime = 86400 * 30
 
     def __call__(self, id: [str], **kwargs) -> str:
         """
@@ -183,7 +184,9 @@ class SelfSignedTrustMarkEntity(Unit):
         :return: Trust Mark
         """
         _now = utc_time_sans_frac()
-        sub = self.upstream_get('attribute', 'entity_id')
+        _federation_entity = get_federation_entity(self)
+
+        sub = _federation_entity.context.entity_id
         _add = {'iat': _now, 'trust_mark_type': id, 'sub': sub}
         lifetime = self.tm_lifetime
         if lifetime:
@@ -198,11 +201,9 @@ class SelfSignedTrustMarkEntity(Unit):
             content.update(kwargs)
         self.issued.append(content)
 
-        _federation_entity = get_federation_entity(self)
-        packer = JWT(key_jar=_federation_entity.keyjar, iss=_federation_entity.entity_id)
+        packer = JWT(key_jar=_federation_entity.context.keyjar, iss=_federation_entity.context.entity_id)
         _trust_mark = packer.pack(payload=content)
         entity = self.upstream_get("unit")
         entity.context.trust_marks.append(_trust_mark)
 
         return _trust_mark
-

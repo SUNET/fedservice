@@ -30,7 +30,7 @@ class EntityConfiguration(Endpoint):
     def process_request(self, request=None, **kwargs):
         _server = self.upstream_get("unit")
         _fed_entity = get_federation_entity(self)
-        _entity_id = _fed_entity.get_attribute('entity_id')
+        _entity_id = _fed_entity.context.entity_id
 
         if _fed_entity.upstream_get:
             _metadata = _fed_entity.upstream_get("metadata")
@@ -56,7 +56,7 @@ class EntityConfiguration(Endpoint):
                 args[key] = _val
 
         _ec = create_entity_configuration(iss=_entity_id,
-                                          key_jar=_fed_entity.get_attribute('keyjar'),
+                                          key_jar=_fed_entity.context.keyjar,
                                           metadata=_metadata,
                                           authority_hints=_server.upstream_get('authority_hints'),
                                           **args

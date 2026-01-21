@@ -13,7 +13,7 @@ from fedservice.utils import make_federation_entity
 
 def get_trust_anchor_info(trust_anchor) -> dict:
     federation_entity = make_federation_entity(entity_id="https://localhost", trust_anchors={})
-    # federation_entity.keyjar.httpc_params = {"verify": False}
+    # federation_entity.context.keyjar.httpc_params = {"verify": False}
 
     _collector = federation_entity.get_function("trust_chain_collector")
 
@@ -34,7 +34,7 @@ def get_trust_anchor_info(trust_anchor) -> dict:
 def get_trust_chains(entity_id, trust_anchors):
     federation_entity = make_federation_entity(entity_id="https://localhost",
                                                trust_anchors=trust_anchors)
-    #federation_entity.keyjar.httpc_params = {"verify": False}
+    #federation_entity.context.keyjar.httpc_params = {"verify": False}
 
     _ta = list(trust_anchors.keys())[0]
     chains, leaf_ec = collect_trust_chains(federation_entity, entity_id=entity_id, stop_at=_ta)

@@ -1,12 +1,13 @@
 import pytest
 from cryptojwt.jws.jws import factory
 from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
+from idpyoidc.client.oidc.rp import RP
 
-from fedservice.appclient import ClientEntity
 from fedservice.build_entity import FederationEntityBuilder
 from fedservice.combo import FederationCombo
 from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
 from fedservice.entity import FederationEntity
+from fedservice.entity import get_federation_entity_keyjar
 
 KEYSPEC = [
     {"type": "RSA", "use": ["sig"]},
@@ -67,8 +68,9 @@ class TestClaimsEntity():
             'endpoint_auth_signing_alg_values_supported'}
 
         # stored under 2 IDs
-        assert len(self.entity.keyjar) == 2
-        assert set(self.entity.keyjar.owners()) == {'', 'https://anchor.example.com'}
+        _keyjar = get_federation_entity_keyjar(self.entity)
+        assert len(_keyjar) == 2
+        assert set(_keyjar.owners()) == {'', 'https://anchor.example.com'}
 
 
 class TestClaimsFRP():
@@ -101,7 +103,7 @@ class TestClaimsFRP():
                 'kwargs': ENT.conf
             },
             "openid_relying_party": {
-                'class': ClientEntity,
+                'class': RP,
                 'kwargs': {
                     'config': {
                         'client_id': ENTITY_ID,
@@ -126,35 +128,47 @@ class TestClaimsFRP():
     def test(self):
         _pref = self.combo.get_metadata()
         assert set(_pref.keys()) == {'federation_entity', "openid_relying_party"}
-        assert set(_pref["federation_entity"].keys()) == {'contacts', 'federation_fetch_endpoint',
+        assert set(_pref["federation_entity"].keys()) == {'contacts',
+                                                          'federation_fetch_endpoint',
                                                           'federation_list_endpoint',
-                                                          'organization_name', 'organization_uri',
+                                                          'organization_name',
+                                                          'organization_uri',
                                                           'endpoint_auth_signing_alg_values_supported'}
         _keys = [k for k, v in _pref["openid_relying_party"].items() if v != []]
         assert set(_keys) == {'application_type',
+                              'callback_uris',
+                              'client_id',
                               'client_registration_types',
+                              'client_secret',
                               'default_max_age',
+                              'encrypt_request_object_supported',
+                              'encrypt_userinfo_supported',
                               'grant_types',
                               'id_token_signed_response_alg',
-                              'jwks_uri',
-                              'keywords',
+                              'jwks',
                               'redirect_uris',
                               'request_object_signing_alg',
+                              'request_parameter_supported',
                               'response_modes',
                               'response_types',
+                              'scope',
                               'subject_type',
                               'token_endpoint_auth_method',
                               'token_endpoint_auth_signing_alg',
                               'userinfo_signed_response_alg'}
 
-        # IN this case the Combo has no keys, The federation entity and the openid relying party has
+        # In this case the Combo has no keys, The federation entity and the openid relaying party has
         # separate key jars. Same initial key owner IDs in both key jars.
-        assert self.combo.keyjar is None
-        for _name, _item in self.combo._part.items():
-            assert set(_item.keyjar.owners()) == {'', 'https://anchor.example.com'}
+        _fe_item = self.combo["federation_entity"]
+        # federation entity doesn't have own keys by default
+        assert _fe_item.context.keyjar.owners()
 
-        _resp = self.combo._part['federation_entity'].get_endpoint(
-            'entity_configuration').process_request()
+        _item = self.combo["openid_relying_party"]
+        assert _item.context[''].keyjar.owners()
+        for ent, info in _item.context.items():
+            assert info.keyjar.owners()
+
+        _resp = self.combo._part['federation_entity'].get_endpoint('entity_configuration').process_request()
         _ec = _resp['response']
         assert _ec
         _jws = factory(_ec)

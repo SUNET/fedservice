@@ -35,6 +35,7 @@ class TrustMark(Endpoint):
             kwargs["client_authn_method"] = ["none"]
         Endpoint.__init__(self, upstream_get, **kwargs)
         self.auth_signing_alg_values = auth_signing_alg_values or []
+        self.context = None
 
     def process_request(self,
                         request: Optional[dict] = None,
@@ -57,6 +58,6 @@ class TrustMark(Endpoint):
             **kwargs
     ) -> dict:
         if "http_response" in response_args:
-            return response_args["response"]
+            return response_args["http_response"]
         if "response" in response_args:
             return response_args["response"]

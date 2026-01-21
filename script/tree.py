@@ -65,10 +65,10 @@ if __name__ == '__main__':
     federation_entity.function.trust_chain_collector.trust_anchors = {
         args.root_entity_id: entity_configuration["jwks"]
     }
-    federation_entity.keyjar.import_jwks(entity_configuration["jwks"], args.root_entity_id, )
+    federation_entity.context.keyjar.import_jwks(entity_configuration["jwks"], args.root_entity_id, )
 
     if args.insecure:
-        federation_entity.keyjar.httpc_params = {"verify": False}
+        federation_entity.context.keyjar.httpc_params = {"verify": False}
 
     res = do_subordinates(federation_entity, entity_id=args.root_entity_id)
 

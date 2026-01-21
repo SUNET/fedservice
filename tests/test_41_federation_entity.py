@@ -77,7 +77,7 @@ class TestClient(object):
 
     def test_entity_configuration_request(self):
         _serv = self.leaf.get_service('entity_configuration')
-        _res = _serv.get_request_parameters(request_args={"entity_id": self.ta_fed.entity_id})
+        _res = _serv.get_request_parameters(request_args={"entity_id": self.ta_fed.context.entity_id})
         assert _res == {
             'method': 'GET',
             'url': 'https://ta.example.org/.well-known/openid-federation'
@@ -90,8 +90,8 @@ class TestClient(object):
 
     def test_entity_statement_request(self):
         _serv = self.leaf.get_service('entity_statement')
-        _res = _serv.get_request_parameters(fetch_endpoint=f"{self.ta_fed.entity_id}/fetch",
-                                            subject=self.leaf.entity_id)
+        _res = _serv.get_request_parameters(fetch_endpoint=f"{self.ta_fed.context.entity_id}/fetch",
+                                            subject=self.leaf.context.entity_id)
         assert _res == {
             'method': 'GET',
             'url': 'https://ta.example.org/fetch?sub=https%3A%2F%2Frp.example.org'
@@ -100,8 +100,8 @@ class TestClient(object):
     def test_resolve_request(self):
         _serv = self.leaf.get_service('resolve')
         _res = _serv.get_request_parameters(
-            request_args={"sub": self.leaf.entity_id, "anchor": self.ta_fed.entity_id},
-            endpoint=f'{self.ta_fed.entity_id}/.well-known/openid-federation')
+            request_args={"sub": self.leaf.context.entity_id, "anchor": self.ta_fed.context.entity_id},
+            endpoint=f'{self.ta_fed.context.entity_id}/.well-known/openid-federation')
 
         assert _res == {
             'method': 'GET',
@@ -186,7 +186,7 @@ class TestServer():
 
     def test_fetch(self):
         _endpoint = self.ta.get_endpoint('fetch')
-        _req = _endpoint.parse_request({"sub": self.intermediate.entity_id})
+        _req = _endpoint.parse_request({"sub": self.intermediate.context.entity_id})
         _resp_args = _endpoint.process_request(_req)
         assert _resp_args
 
@@ -194,15 +194,15 @@ class TestServer():
         payload = _jws.jwt.payload()
         entity_statement = EntityStatement(**payload)
         entity_statement.verify()
-        assert entity_statement['iss'] == self.ta.entity_id
-        assert entity_statement['sub'] == self.intermediate.entity_id
+        assert entity_statement['iss'] == self.ta.context.entity_id
+        assert entity_statement['sub'] == self.intermediate.context.entity_id
 
     def test_list(self):
         _endpoint = self.ta.get_endpoint('list')
         _req = _endpoint.parse_request({})
         _resp_args = _endpoint.process_request(_req)
         assert _resp_args
-        assert _resp_args['response_msg'] == f'["{self.intermediate.entity_id}"]'
+        assert _resp_args['response_msg'] == f'["{self.intermediate.context.entity_id}"]'
 
     def test_resolve(self):
         _msgs = create_trust_chain_messages(self.leaf, self.intermediate, self.ta)
@@ -215,7 +215,7 @@ class TestServer():
             _endpoint = self.ta.get_endpoint('resolve')
             _req = _endpoint.parse_request({
                 "sub": self.leaf.entity_id,
-                "anchor": self.ta.entity_id
+                "anchor": self.ta.context.entity_id
             })
             _resp_args = _endpoint.process_request(_req)
 
@@ -368,7 +368,7 @@ class TestFunction:
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             _trust_chains = get_verified_trust_chains(self.leaf,
-                                                      self.leaf["federation_entity"].entity_id)
+                                                      self.leaf["federation_entity"].context.entity_id)
 
         federation_context = self.leaf["federation_entity"].context
         save_trust_chains(federation_context, _trust_chains)

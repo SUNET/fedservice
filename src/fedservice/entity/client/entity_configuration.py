@@ -79,7 +79,7 @@ class EntityConfiguration(FederationService):
         if request_args:
             _issuer = request_args.get('entity_id', request_args.get("iss", ""))
         else:
-            _issuer = kwargs.get("entity_id", kwargs.get("iss", ""))
+            _issuer = kwargs.get("entity_id", '') or kwargs.get("iss", '') or kwargs.get("issuer", "")
 
         if not _issuer:
             _root = topmost_unit(self)
@@ -88,11 +88,9 @@ class EntityConfiguration(FederationService):
             else:
                 for key, _unit in _root.items():
                     if key == "federation_entity":
-                        pass
-                    else:
                         _context = getattr(_unit, "context", None)
                         if _context:
-                            _issuer = _unit.context.get("issuer", None)
+                            _issuer = getattr(_unit.context, "issuer", None)
                             if _issuer:
                                 break
 
@@ -111,7 +109,7 @@ class EntityConfiguration(FederationService):
 
         return _info
 
-    def post_parse_response(self, response, **kwargs):
+    def post_parse_response(self, context, response, **kwargs):
         """
         Cache response
 

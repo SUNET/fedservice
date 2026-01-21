@@ -168,7 +168,7 @@ class TestTrustMarkDelegation():
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.fe.function.trust_mark_verifier(
-                trust_mark=_trust_mark, trust_anchor=self.ta.entity_id)
+                trust_mark=_trust_mark, trust_anchor=self.ta.context.entity_id)
 
         assert verified_trust_mark
 
@@ -208,7 +208,7 @@ class TestTrustMarkDelegation():
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.fe.function.trust_mark_verifier(
-                trust_mark=_trust_mark, trust_anchor=self.ta.entity_id)
+                trust_mark=_trust_mark, trust_anchor=self.ta.context.entity_id)
 
         assert verified_trust_mark
 
@@ -233,6 +233,6 @@ class TestTrustMarkDelegation():
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.fe.function.trust_mark_verifier(
-                trust_mark=_trust_mark, trust_anchor=self.ta.entity_id)
+                trust_mark=_trust_mark, trust_anchor=self.ta.context.entity_id)
 
         assert verified_trust_mark is None

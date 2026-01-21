@@ -176,9 +176,9 @@ def wkof():
     _ctx = _fe.context
     iss = _ctx.entity_id
     _statement = create_entity_configuration(
-        iss=iss, key_jar=_fe.keyjar, metadata=metadata, authority_hints=_fe.get_authority_hints(),
+        iss=iss, key_jar=_ctx.keyjar, metadata=metadata, authority_hints=_fe.get_authority_hints(),
         lifetime=_ctx.default_lifetime, include_jwks=True)
 
     response = make_response(_statement)
-    response.headers['Content-Type'] = 'application/jose; charset=UTF-8'
+    response.headers['Content-Type'] = 'application/entity-statement+jwt; charset=UTF-8'
     return response

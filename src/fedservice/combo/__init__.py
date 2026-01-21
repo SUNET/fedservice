@@ -5,7 +5,7 @@ from typing import Union
 
 from cryptojwt import KeyJar
 from idpyoidc.client.entity_metadata import EntityMetadata
-from idpyoidc.client.rp_handler import RPHandler
+from idpyoidc.client.oidc.rp import RP
 from idpyoidc.configure import Configuration
 from idpyoidc.message import Message
 from idpyoidc.node import Unit
@@ -30,7 +30,7 @@ class Combo(Unit):
             httpc_params = self._get_httpc_params(config)
 
         Unit.__init__(self, config=config, httpc=httpc, issuer_id=self.entity_id, keyjar=keyjar,
-                      httpc_params=httpc_params)
+                      httpc_params=httpc_params, entity_id=self.entity_id)
         self._part = {}
         for key, spec in config.items():
             if isinstance(spec, dict) and 'class' in spec:
@@ -106,17 +106,15 @@ class FederationCombo(Combo):
             return _hp
         return config["federation_entity"].get("httpc_params")
 
-    def get_metadata(self, client=None):
-        logger.debug(f"FederationCombo:get_metadata, client:{client}")
+    def get_metadata(self, server_entity_id=''):
+        logger.debug(f"FederationCombo:get_metadata, server_entity_id:{server_entity_id}")
         res = {}
         for federation_type, item in self._part.items():
             logger.debug(f"federation_type:{federation_type}, item:{item}")
-            if isinstance(item, RPHandler):  # Special treatment
-                if client:
-                    _res = client.get_metadata()
-                    res.update(_res)
-            elif getattr(item, "get_metadata", None):
-                res.update(item.get_metadata(entity_type=federation_type))
+            if isinstance(item, RP):  # Special treatment
+                item = item.context[server_entity_id]
+            res.update(item.get_metadata(entity_type=federation_type))
+
         logger.debug(f"metadata = {res}")
         return res
 
@@ -141,16 +139,13 @@ class FederationCombo(Combo):
             _fed_entity = self.get_federation_entity()
             return _fed_entity.keyjar
 
-    def get_keyjar(self):
-        if self.keyjar:
-            return self.keyjar
-        else:
-            return self.get_federation_entity().keyjar
 
-    def apply_metadata(self, trust_chain_metadata: Union[dict, Message]):
+    def apply_metadata(self, trust_chain_metadata: Union[dict, Message], server_entity_id: str = ''):
         _info = {k: EntityMetadata(v) for k, v in trust_chain_metadata.items()}
         for guise in self._part.keys():
             _context = getattr(self[guise], 'context', None)
             if _context:
+                if isinstance(_context, dict):
+                    _context = _context[server_entity_id]
                 _context.server_metadata = _info
         return

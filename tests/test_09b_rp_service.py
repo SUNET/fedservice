@@ -34,7 +34,7 @@ class TestRpService(object):
         rp_fe = self.foodle["federation_entity"]
         _ec = rp_fe.get_service("entity_configuration")
         op = self.ntnu_op["federation_entity"]
-        _info = _ec.get_request_parameters(entity_id=op.entity_id)
+        _info = _ec.get_request_parameters(entity_id=op.context.entity_id)
         assert set(_info.keys()) == {'method', 'url'}
         p = urlparse(_info['url'])
         assert p.scheme == 'https'
@@ -52,20 +52,22 @@ class TestRpService(object):
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             trust_chains = get_verified_trust_chains(self.foodle["federation_entity"],
-                                                     self.ntnu_op["federation_entity"].entity_id)
+                                                     self.ntnu_op["federation_entity"].context.entity_id)
 
         assert len(trust_chains) == 1
         trust_chain = trust_chains[0]
         assert trust_chain.anchor == 'https://feide.no'
 
-        self.foodle["openid_relying_party"].context.issuer = self.ntnu_op["federation_entity"].entity_id
+        # Only the default context exists
+        _context = self.foodle["openid_relying_party"].context['']
+
+        _context.issuer = self.ntnu_op["federation_entity"].context.entity_id
         self.foodle.apply_metadata(trust_chain.metadata)
         # _pi_service = self.foodle["openid_relying_party"].get_service("provider_info")
         # _pi_service.update_service_context(trust_chain.metadata["openid_provider"])
         # _context = _pi_service.upstream_get("context")
         # _context.server_metadata = EntityMetadata(trust_chain.metadata)
 
-        _context = self.foodle["openid_relying_party"].context
         _context.map_supported_to_preferred(info=_context.server_metadata['openid_provider'])
         assert set(
             [k for k, v in _context.prefers().items() if v]) == {'application_type',
@@ -73,10 +75,7 @@ class TestRpService(object):
                                                                  'client_registration_types',
                                                                  'default_max_age',
                                                                  'grant_types_supported',
-                                                                 'grant_types',
                                                                  'id_token_signing_alg_values_supported',
-                                                                 'id_token_signed_response_alg',
-                                                                 'jwks',
                                                                  'redirect_uris',
                                                                  'request_object_signing_alg_values_supported',
                                                                  'request_parameter_supported',
@@ -84,7 +83,6 @@ class TestRpService(object):
                                                                  'response_types_supported',
                                                                  'scopes_supported',
                                                                  'subject_types_supported',
-                                                                 'token_endpoint_auth_method',
                                                                  'token_endpoint_auth_methods_supported',
                                                                  'token_endpoint_auth_signing_alg_values_supported',
                                                                  'userinfo_signing_alg_values_supported'}

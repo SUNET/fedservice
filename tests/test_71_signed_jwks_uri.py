@@ -209,7 +209,7 @@ class TestFederationStatement(object):
         # Verify that the old keys has been inactivated
         # while the new ones has been added.
 
-        keys = self.op['federation_entity'].keyjar.get_signing_key(issuer_id=jwks_resp['iss'])
+        keys = self.op['federation_entity'].context.keyjar.get_signing_key(issuer_id=jwks_resp['iss'])
         assert len(keys) == 4
 
         inactive = []

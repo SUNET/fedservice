@@ -45,6 +45,7 @@ class FederationServiceContext(FederationContext):
                  trust_mark_owners: Optional[dict] = None,
                  trusted_roots: Optional[dict] = None,
                  metadata: Optional[dict] = None,
+                 key_conf: Optional[dict] = None,
                  ):
 
         if config is None:
@@ -59,14 +60,14 @@ class FederationServiceContext(FederationContext):
                                    trust_marks=trust_marks,
                                    trust_mark_issuers=trust_mark_issuers,
                                    trust_mark_owners=trust_mark_owners,
-                                   tr_priority=priority
+                                   trusted_roots=trusted_roots,
+                                   tr_priority=priority,
+                                   key_conf=key_conf,
                                    )
 
-        self.trust_mark_issuer = None
+        # self.trust_mark_issuer = None
         self.signed_trust_marks = []
-        _key_jar = self.upstream_get("attribute", "keyjar")
-        for iss, jwks in self.trusted_roots.items():
-            _key_jar = import_jwks(_key_jar, jwks, iss)
+
         self.server_metadata = {}
 
     def _get_crypt(self, typ, attr):
@@ -106,15 +107,11 @@ class FederationServiceContext(FederationContext):
 
         return res
 
-    def get_keyjar(self):
-        val = getattr(self, 'keyjar', None)
-        if not val:
-            return self.upstream_get('attribute', 'keyjar')
-        else:
-            return val
-
     def get_client_id(self):
-        return self.claims.get_usage("client_id")
+        if self.entity_id:
+            return self.entity_id
+        else:
+            return self.claims.get_usage("client_id")
 
     def get_metadata_claim(self, claim, entity_type: Optional[List[str]] = ""):
         if entity_type:
@@ -173,9 +170,10 @@ class FederationClientEntity(ClientUnit):
                                                 upstream_get=self.unit_get,
                                                 metadata=metadata,
                                                 trust_marks=trust_marks,
-                                                priority=priority)
+                                                priority=priority,
+                                                entity_id=entity_id)
 
-        self.setup_client_authn_methods(config)
+        self.setup_client_authn_methods(config, self.context)
 
     def get_attribute(self, attr, *args):
         val = getattr(self, attr)
@@ -196,16 +194,19 @@ class FederationClientEntity(ClientUnit):
     def get_services(self, *args):
         return self.service.values()
 
-    def get_context(self, *args):
-        return self.context
+    def get_context(self, server_entity_id='', *arg):
+        if isinstance(self.context, dict):
+            return self.context[server_entity_id]
+        else:
+            return self.context
 
-    def setup_client_authn_methods(self, config):
+    def setup_client_authn_methods(self, config, context):
         if config and "client_authn_methods" in config:
-            self.context.client_authn_methods = client_auth_setup(
+             context.client_authn_methods = client_auth_setup(
                 config.get("client_authn_methods")
             )
         else:
-            self.context.client_authn_methods = {}
+            context.client_authn_methods = {}
 
     def set_client_id(self, client_id):
         self.context.client_id = client_id
@@ -446,7 +447,7 @@ class FederationClient(FederationClientEntity):
             logger.debug(f"Successful response: {reqresp.text}")
 
             try:
-                return service.parse_response(reqresp.text, value_type, state, **kwargs)
+                return service.parse_response(self.context, reqresp.text, value_type, state, **kwargs)
             except Exception as err:
                 logger.error(err)
                 raise

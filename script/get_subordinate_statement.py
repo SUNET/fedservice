@@ -31,7 +31,7 @@ if __name__ == '__main__':
     federation_entity = make_federation_entity(entity_id="https://localhost",
                                                trust_anchors=trust_anchors)
     if args.insecure:
-        federation_entity.keyjar.httpc_params = {"verify": False}
+        federation_entity.context.keyjar.httpc_params = {"verify": False}
 
     _collector = federation_entity.get_function("trust_chain_collector")
 

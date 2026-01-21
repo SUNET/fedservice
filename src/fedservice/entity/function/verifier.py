@@ -7,6 +7,7 @@ from cryptojwt import KeyBundle
 from cryptojwt.exception import MissingKey
 from cryptojwt.jws.jws import factory
 
+from fedservice.entity import get_federation_entity_keyjar
 from fedservice.entity.function import Function
 from fedservice.entity.utils import get_federation_entity
 from fedservice.entity_statement.constraints import meets_restrictions
@@ -63,7 +64,7 @@ class TrustChainVerifier(Function):
         verified_entity_statement = []
 
         n = len(entity_statement_list) - 1
-        _keyjar = self.upstream_get("attribute", "keyjar")
+        _keyjar = get_federation_entity_keyjar(self)
         for entity_statement in entity_statement_list:
             _jwt = factory(entity_statement)
             if _jwt:

@@ -62,7 +62,7 @@ class TestSubordinatePersistenceFileSystem(object):
         self.rp = federation[RP_ID]
 
         _info = {
-            "jwks": self.rp["federation_entity"].keyjar.export_jwks(),
+            "jwks": self.rp["federation_entity"].context.keyjar.export_jwks(),
             'authority_hints': [TA_ID]
         }
 
@@ -75,7 +75,7 @@ class TestSubordinatePersistenceFileSystem(object):
         _req = _endpoint.parse_request({})
         _resp_args = _endpoint.process_request(_req)
         assert _resp_args
-        assert _resp_args['response_msg'] == f'["{self.rp["federation_entity"].entity_id}"]'
+        assert _resp_args['response_msg'] == f'["{self.rp.entity_id}"]'
         response = _endpoint.do_response(response_msg=_resp_args["response_msg"], request=_req)
         assert response
         assert response["response"] == '["https://rp.example.com"]'
