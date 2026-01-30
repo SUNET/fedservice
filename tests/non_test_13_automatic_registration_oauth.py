@@ -38,7 +38,7 @@ AS_ENDPOINTS = federation_endpoints("entity_configuration", "fetch")
 FEDERATION_CONFIG = {
     TA_ID: {
         "entity_type": "trust_anchor",
-        "subordinates": [IM_ID, AS_ID],
+        "subordinate": [IM_ID, AS_ID],
         "kwargs": {
             "preference": {
                 "organization_name": "The example federation operator",

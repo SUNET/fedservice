@@ -1,8 +1,8 @@
 import pytest
 from cryptojwt.jws.jws import factory
 from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
-from idpyoidc.client.oidc.rp import RP
 
+from fedservice.appclient import ClientEntity
 from fedservice.build_entity import FederationEntityBuilder
 from fedservice.combo import FederationCombo
 from fedservice.defaults import DEFAULT_OIDC_FED_SERVICES
@@ -103,7 +103,7 @@ class TestClaimsFRP():
                 'kwargs': ENT.conf
             },
             "openid_relying_party": {
-                'class': RP,
+                'class': ClientEntity,
                 'kwargs': {
                     'config': {
                         'client_id': ENTITY_ID,
@@ -136,22 +136,15 @@ class TestClaimsFRP():
                                                           'endpoint_auth_signing_alg_values_supported'}
         _keys = [k for k, v in _pref["openid_relying_party"].items() if v != []]
         assert set(_keys) == {'application_type',
-                              'callback_uris',
-                              'client_id',
                               'client_registration_types',
-                              'client_secret',
                               'default_max_age',
-                              'encrypt_request_object_supported',
-                              'encrypt_userinfo_supported',
                               'grant_types',
                               'id_token_signed_response_alg',
                               'jwks',
                               'redirect_uris',
                               'request_object_signing_alg',
-                              'request_parameter_supported',
                               'response_modes',
                               'response_types',
-                              'scope',
                               'subject_type',
                               'token_endpoint_auth_method',
                               'token_endpoint_auth_signing_alg',

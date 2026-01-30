@@ -96,7 +96,7 @@ class TestAutomatic(object):
 
         # create the authorization request
 
-        _auth_service = self.rp["openid_relying_party"].get_service("authorization")
+        _auth_service = self.rp["openid_relying_party"].get_service(_rp_context, "authorization")
         authn_request = _auth_service.construct(_rp_context, request_args=req_args)
 
         # ------------------------------
@@ -166,11 +166,11 @@ class TestAutomatic(object):
                                             'https://ta.example.org/fetch']]
 
         # create authorization request with request object
-        _auth_service = self.rp["openid_relying_party"].get_service("authorization")
+        _auth_service = self.rp["openid_relying_party"].get_service(_rp_context, "authorization")
         authn_request = _auth_service.construct(
             _rp_context,
             request_args={"response_type": "code", "state": rndstr(), "trust_chain": trust_chain,
-                          "redirect_uri":_rp_context.claims.get_preference("redirect_uris")[0]})
+                          "redirect_uri": _rp_context.claims.get_preference("redirect_uris")[0]})
 
         assert "request" in authn_request
         _req_args = get_payload(authn_request["request"])

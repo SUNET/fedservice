@@ -30,7 +30,7 @@ OAUTH2_SERVER_ENDPOINTS["access_token"] = {
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [RP_ID, OP_ID],
+            "subordinate": [RP_ID, OP_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",

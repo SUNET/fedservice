@@ -7,7 +7,7 @@
         "organization_uri": "https://ta.example.org",
         "contacts": "operations@ta.example.org"
       },
-      "subordinates": ["https://int.example.org"]
+      "subordinate": ["https://int.example.org"]
     }
   },
   "https://int.example.org": {
@@ -15,7 +15,7 @@
     "kwargs": {
       "trust_anchors": ["https://ta.example.org"],
       "authority_hints": ["https://ta.example.org"],
-      "subordinates": ["https://rp.example.org"]
+      "subordinate": ["https://rp.example.org"]
     }
   },
   "https://rp.example.org": {

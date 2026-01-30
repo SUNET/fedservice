@@ -80,13 +80,12 @@ class TrustChainCollector(Function):
 
     def __init__(self,
                  upstream_get: Callable,
-                 trust_anchors: dict,
-                 allowed_delta: int = 300,
+                 trust_anchor: Optional[dict] = None,
+                 allowed_delta: Optional[int] = 300,
                  keyjar: Optional[KeyJar] = None,
                  **kwargs
                  ):
         Function.__init__(self, upstream_get)
-        self.trust_anchors = trust_anchors
         self.allowed_delta = allowed_delta
         self.config_cache = ESCache(allowed_delta=allowed_delta)
         self.entity_statement_cache = ESCache(allowed_delta=allowed_delta)
@@ -94,8 +93,9 @@ class TrustChainCollector(Function):
         if not keyjar:
             keyjar = get_federation_entity_keyjar(self)
 
-        for id, keys in trust_anchors.items():
-            keyjar = import_jwks(keyjar, keys, id)
+        if trust_anchor:
+            for id, keys in trust_anchor.items():
+                keyjar = import_jwks(keyjar, keys, id)
 
     def _get_service(self, service):
         federation_entity = get_federation_entity(self)
@@ -113,31 +113,6 @@ class TrustChainCollector(Function):
         response = federation_entity.get_document(url, "GET")
         return response
 
-        # _httpc_params = _keyjar.httpc_params
-        # logger.debug(f"keyjar.httpc_params: {_httpc_params}")
-        # if not _httpc_params:
-        #     federation_entity = get_federation_entity(self)
-        #     _httpc_params = federation_entity.httpc_params
-        #     logger.debug(f"federation_entity.httpc_params: {_httpc_params}")
-        #
-        # logger.debug(f"Using HTTPC Params: {_httpc_params}")
-        # try:
-        #     response = self.upstream_get('attribute', 'httpc')("GET", url, **_httpc_params)
-        # except ConnectionError as err:
-        #     logger.error(f'Could not connect to {url}:{err}')
-        #     raise
-        #
-        # if response.status_code == 200:
-        #     if 'application/entity-statement+jwt' not in response.headers['Content-Type']:
-        #         logger.warning(f"Wrong Content-Type: {response.headers['Content-Type']}")
-        #     return response.text
-        # elif response.status_code == 404:
-        #     raise MissingPage(f"No such page: '{url}'")
-        # else:
-        #     logger.error(f"status_code: {response.status_code} on get {url}")
-        #     if response.text:
-        #         logger.info(f"Error description: {response.text}")
-        #     raise FailedConfigurationRetrieval()
 
     def read_entity_configuration(self, entity_id):
         """
@@ -212,13 +187,14 @@ class TrustChainCollector(Function):
         entity_config, signed_entity_config = self._get_cached_entity_configuration(entity_id)
 
         if not signed_entity_config:
+            _fe = get_federation_entity(self)
+
             # Read leaf Entity Configuration from the URL
             signed_entity_config = self.read_entity_configuration(entity_id)
             if not signed_entity_config:
                 logger.warning(f"Could not find any entity configuration for {entity_id}")
                 return None
-            _trust_anchors = self.upstream_get("attribute", "trust_anchors")
-            _ec = verify_entity_statement(signed_entity_config, entity_id, trust_anchors=_trust_anchors)
+            _ec = verify_entity_statement(signed_entity_config, entity_id)
             entity_config = _ec.to_dict()
             # entity_config = verify_self_signed_signature(signed_entity_config)
             # logger.debug(f'Verified self signed statement: {entity_config.to_json()}')
@@ -353,7 +329,8 @@ class TrustChainCollector(Function):
         subordinate_statement = self.get_subordinate_statement(entity, authority)
 
         # Should I stop when I reach the first trust anchor ?
-        if entity == authority and entity in self.trust_anchors:
+        _fe = get_federation_entity(self)
+        if entity == authority and entity in _fe.context.trust_anchor:
             return None
 
         _superiors.append(authority)
@@ -470,7 +447,8 @@ class TrustChainCollector(Function):
             raise ValueError("Missing keyjar")
 
         _keyjar = import_jwks(_keyjar, jwks, entity_id)
-        self.trust_anchors[entity_id] = jwks
+        _fe = get_federation_entity(self)
+        _fe.context.trust_anchor[entity_id] = jwks
 
     def get_chain(self, iss_path, trust_anchor, with_ta_ec: Optional[bool] = False):
         """

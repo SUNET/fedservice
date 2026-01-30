@@ -20,29 +20,32 @@ class TrustChainVerifier(Function):
 
     def __init__(self, upstream_get: Callable, trust_anchor: Optional[List[str]] = None):
         Function.__init__(self, upstream_get)
-        self.trust_anchor = trust_anchor or []
 
     def trusted_anchor(self, entity_statement) -> bool:
         _jwt = factory(entity_statement)
         payload = _jwt.jwt.payload()
-        if self.trust_anchor:
-            return payload['iss'] in self.trust_anchor
-        elif self.upstream_get:
-            _federation = get_federation_entity(self)
-            return payload["iss"] in _federation.function.trust_chain_collector.trust_anchors
-        return False
+        _fe = get_federation_entity(self)
+        _resp = False
+        if _fe.context.trust_anchor:
+            _resp = payload['iss'] in _fe.context.trust_anchor
+        if not _resp: # If I'm a Trust Anchor
+            if _fe.server.subordinate: # possible TA
+                _resp = payload['iss'] == _fe.entity_id
+        return _resp
 
     def verify_trust_chain(self, entity_statement_list: List) -> Optional[List]:
         """
-        Verifies the trust chain. Works its way down from the Trust Anchor to the leaf.
+        Verifies trust chains.
+        Works its way up from the leaf verifying a trust chain when hitting a trusted anchor.
 
         :param entity_statement_list: List of entity statements. The entity's self-signed statement last.
         :return: List of lists of verified entity statements
         """
-        logger.debug("Find verified trust chains")
+        _nr_lists = len(entity_statement_list)
+        logger.debug(f"Find verified trust chains among {_nr_lists} lists")
         res = []
 
-        for i in range(len(entity_statement_list) - 1, -1, -1):
+        for i in range(_nr_lists - 1, -1, -1):
             if self.trusted_anchor(entity_statement_list[i]):
                 # Trust chain ending in a trust anchor I know.
                 verified_trust_chain = self._verify_trust_chain(entity_statement_list[i:])

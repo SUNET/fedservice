@@ -21,7 +21,7 @@ RP_ID = "https://rp.example.com"
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": {
+            "subordinate": {
                 'class': 'idpyoidc.storage.abfile.AbstractFileSystem',
                 'kwargs': {
                     'fdir': full_path('subordinate')

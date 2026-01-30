@@ -96,7 +96,8 @@ def test_federation_combo_metadata():
     metadata = entity.get_metadata()
     assert set(metadata.keys()) == {"openid_relying_party", "federation_entity"}
     assert entity["federation_entity"].context.trust_marks
-    srv = entity["openid_relying_party"].get_service('registration')
+    _context = entity["openid_relying_party"].context['']
+    srv = entity["openid_relying_party"].get_service(_context,'registration')
     key_jar = entity['federation_entity'].keyjar
     jws = srv.create_entity_statement(entity.entity_id, key_jar=key_jar)
     assert jws

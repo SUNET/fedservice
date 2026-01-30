@@ -18,7 +18,7 @@ def get_verified_trust_anchor_statement(federation_entity, entity_id: str):
 def get_verified_endpoint(unit, entity_id: str, endpoint_name: str) -> Optional[str]:
     _federation_entity = get_federation_entity(unit)
 
-    if entity_id in _federation_entity.trust_anchors:
+    if entity_id in _federation_entity.context.trust_anchor:
         res = get_verified_trust_anchor_statement(_federation_entity, entity_id)
         try:
             endpoint = res["metadata"]["federation_entity"].get(endpoint_name)

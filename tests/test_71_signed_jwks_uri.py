@@ -120,7 +120,7 @@ RP_FED_ENDPOINTS = {
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [OP_ID, RP_ID],
+            "subordinate": [OP_ID, RP_ID],
             "endpoint": TA_ENDPOINTS,
             "preference": {
                 "organization_name": "The example federation operator",

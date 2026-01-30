@@ -236,7 +236,7 @@ def main(entity_id: str, **kwargs):
                 fe_args = _cpy
                 fe_args.update(val)
                 # remove now, will be added later
-                for key in ['subordinates', 'trust_anchors']:
+                for key in ['subordinate', 'trust_anchors']:
                     if key in fe_args:
                         del fe_args[key]
             elif attr in ['oauth_client', 'openid_relying_party']:

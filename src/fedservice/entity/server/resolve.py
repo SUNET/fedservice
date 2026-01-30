@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from typing import Union
 
+from fedservice.entity.function import get_verified_trust_chains
 from idpyoidc.message import Message
 from idpyoidc.message import oidc
 from idpyoidc.server.endpoint import Endpoint
@@ -32,12 +33,7 @@ class Resolve(Endpoint):
         _trust_anchor = request['anchor']
 
         # verified trust chains with policy adjusted metadata
-        _chains, signed_entity_configuration = collect_trust_chains(_federation_entity,
-                                                                    entity_id=request['sub'],
-                                                                    stop_at=_trust_anchor)
-        _trust_chains = verify_trust_chains(_federation_entity, _chains,
-                                            signed_entity_configuration)
-        _trust_chains = apply_policies(_federation_entity, _trust_chains)
+        _trust_chains = get_verified_trust_chains(_federation_entity, entity_id=request['sub'], stop_at=_trust_anchor)
 
         _chosen_chain = None
         for trust_chain in _trust_chains:
@@ -61,7 +57,7 @@ class Resolve(Endpoint):
             if _verified_mark:
                 verified_trust_marks.append({
                     "trust_mark_type": _verified_mark["trust_mark_type"],
-                    "trust_mark": _trust_mark
+                    "trust_mark": _trust_mark['trust_mark']
                 })
 
         trust_chain = _federation_entity.function.trust_chain_collector.get_chain(

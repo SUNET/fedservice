@@ -56,9 +56,9 @@ class Registration(registration.Registration):
         if not _trust_chains:
             raise NoTrustedChains(f"No trust chains for {payload['sub']}")
 
-        save_trust_chains(self.upstream_get("context"), _trust_chains)
+        save_trust_chains(_federation_entity.context, _trust_chains)
         trust_chain = _federation_entity.pick_trust_chain(_trust_chains)
-        _federation_entity.trust_chain_anchor = trust_chain.anchor
+        _federation_entity.context.trust_chain_anchor[payload['sub']] = trust_chain.anchor
 
         req = RegistrationRequest(**payload["metadata"][opponent_entity_type])
         req["client_id"] = payload['sub']

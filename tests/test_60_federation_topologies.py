@@ -15,7 +15,7 @@ INTERMEDIATE_ID = "https://intermediate.example.org"
 FEDERATION_CONFIG = {
     TA1_ID: {
         "federation_entity": {
-            "subordinates": [TA2_ID],
+            "subordinate": [TA2_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -26,7 +26,7 @@ FEDERATION_CONFIG = {
     },
     TA2_ID: {
         "federation_entity": {
-            "subordinates": [INTERMEDIATE_ID],
+            "subordinate": [INTERMEDIATE_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -39,7 +39,7 @@ FEDERATION_CONFIG = {
     INTERMEDIATE_ID: {
         "federation_entity": {
             "trust_anchors": [TA2_ID, TA1_ID],
-            "subordinates": [LEAF_ID],
+            "subordinate": [LEAF_ID],
             "authority_hints": [TA2_ID],
             "endpoint": ['entity_configuration', 'list', 'fetch'],
         }

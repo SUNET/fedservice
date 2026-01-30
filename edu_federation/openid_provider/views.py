@@ -1,9 +1,9 @@
 import json
-import os
 import sys
 import traceback
 from urllib.parse import urlparse
 
+import werkzeug
 from cryptojwt import as_unicode
 from flask import Blueprint
 from flask import current_app
@@ -16,8 +16,6 @@ from idpyoidc.message import Message
 from idpyoidc.message.oauth2 import ResponseMessage
 from idpyoidc.message.oidc import AccessTokenRequest
 from idpyoidc.message.oidc import AuthorizationRequest
-import werkzeug
-
 from idpyoidc.server.exception import FailedAuthentication
 from idpyoidc.server.exception import InvalidClient
 from idpyoidc.server.exception import UnknownClient
@@ -43,6 +41,7 @@ def add_cookie(resp, cookie_spec):
             _add_cookie(resp, _spec)
     elif isinstance(cookie_spec, dict):
         _add_cookie(resp, cookie_spec)
+
 
 @entity.route('/static/<path:path>')
 def send_js(path):
@@ -210,7 +209,7 @@ IGNORE = ["cookie", "user-agent"]
 
 def service_endpoint(endpoint):
     _log = current_app.logger
-    _log.info('At the "{}" endpoint'.format(endpoint.name))
+    _log.info(20*"*"+f'{endpoint.name}'+20*'*')
 
     http_info = {
         "headers": {k: v for k, v in request.headers.items(lower=True) if k not in IGNORE},

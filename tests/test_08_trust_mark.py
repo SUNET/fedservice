@@ -27,7 +27,7 @@ TRUST_MARK_ISSUER_ID = "https://tmi.example.com"
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [TRUST_MARK_ISSUER_ID],
+            "subordinate": [TRUST_MARK_ISSUER_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -194,7 +194,7 @@ class TestSignedTrustMark():
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.tmi.function.trust_mark_verifier(
-                trust_mark=_trust_mark,
+                trust_mark={'trust_mark':_trust_mark, 'trust_mark_type': "https://refeds.org/sirtfi"},
                 trust_anchor=self.ta.context.entity_id)
 
         assert verified_trust_mark

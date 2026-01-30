@@ -26,7 +26,7 @@ for ent, info in ENTITY.items():
     else:
         fed_entity[ent] = _ent
 
-subordinates = {}
+subordinate = {}
 trust_anchor = {}
 
 for ent, info in ENTITY.items():
@@ -35,10 +35,10 @@ for ent, info in ENTITY.items():
         authorities = []
         for auth in info["authority_hints"]:
             authorities.append(fed_entity[auth].entity_id)
-            if auth not in subordinates:
-                subordinates[auth] = {}
+            if auth not in subordinate:
+                subordinate[auth] = {}
             _ent_id = get_federation_entity(fed_entity[ent]).entity_id
-            subordinates[auth][_ent_id] = {
+            subordinate[auth][_ent_id] = {
                 'jwks': get_federation_entity(fed_entity[ent]).keyjar.export_jwks(),
                 'authority_hints': [fed_entity[auth].entity_id]
             }
@@ -62,12 +62,12 @@ print(f"Trust Anchors: {trust_anchors}")
 with open("trust_anchors.json", "w") as fp:
     fp.write(json.dumps(trust_anchors))
 
-for auth, val in subordinates.items():
+for auth, val in subordinate.items():
     file_name = f"{ENTITY[auth]['dir']}/{auth}_subordinates.json"
     with open(file_name, "w") as fp:
         fp.write(json.dumps(val))
 
-    print(f"*** subordinates@{auth} ***")
+    print(f"*** subordinate@{auth} ***")
     for sub, info in val.items():
         print(f"--- {sub} ---")
         print(info)

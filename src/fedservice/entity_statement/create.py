@@ -13,12 +13,15 @@ from fedservice.message import SubordinateStatement
 logger = logging.getLogger(__name__)
 
 
-def create_entity_statement(cls, iss, key_jar,
+def create_entity_statement(cls,
+                            iss,
+                            key_jar,
                             sub: Optional[str] = None,
                             lifetime: Optional[int] = 86400,
                             include_jwks: Optional[bool] = True,
                             signing_alg: Optional[str] = "RS256",
-                            jws_header_param: Optional[dict] = None, **kwargs):
+                            jws_header_param: Optional[dict] = None,
+                            **kwargs):
     """
 
     :param cls: Type of Entity Statement

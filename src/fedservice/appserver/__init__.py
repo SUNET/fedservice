@@ -94,10 +94,11 @@ class ServerEntity(ServerUnit):
                 config[attr] = _val
 
         self.server_type = server_type or config.get("server_type", "")
+        self.entity_type = entity_type or config.get("entity_type", "")
         if not self.server_type:
-            if entity_type == "oauth_authorization_server":
+            if  self.entity_type == "oauth_authorization_server":
                 self.server_type = "oauth2"
-            elif entity_type == "openid_provider":
+            elif  self.entity_type == "openid_provider":
                 self.server_type = "oidc"
 
         if metadata_schema:
@@ -152,10 +153,10 @@ class ServerEntity(ServerUnit):
         if _token_endp:
             _token_endp.allow_refresh = allow_refresh_token(self.context)
 
-        self.context.claims_interface = init_service(config["claims_interface"], self.unit_get)
+        self.context.claims_interface = init_service(config["claims_interface"], self.unit_get, context=self.context)
 
         self.context.provider_info = self.context.claims.get_server_metadata(
-            endpoints=self.endpoint.values(),
+            endpoints=list(self.endpoint.values()),
             metadata_schema=self.metadata_schema,
         )
         self.context.provider_info["issuer"] = self.context.entity_id

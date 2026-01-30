@@ -2,6 +2,7 @@ import logging
 import time
 from datetime import datetime
 from typing import Callable
+from urllib.parse import parse_qs
 
 import werkzeug
 from flask import Blueprint
@@ -15,12 +16,22 @@ from flask.helpers import send_from_directory
 from idpyoidc.client.exception import OidcServiceError
 from idpyoidc.client.oidc.rp import RP
 
+from fedservice import get_payload
+from fedservice.appclient import ClientEntity
 from fedservice.entity_statement.create import create_entity_configuration
 
 logger = logging.getLogger(__name__)
 
 entity = Blueprint('oidc_rp', __name__, url_prefix='')
 
+def compact(qsdict):
+    res = {}
+    for key, val in qsdict.items():
+        if len(val) == 1:
+            res[key] = val[0]
+        else:
+            res[key] = val
+    return res
 
 @entity.route('/static/<path:filename>')
 def send_js(filename):
@@ -47,8 +58,8 @@ def keys(guise):
 
 @entity.route('/')
 def index():
-    _providers = current_app.server["openid_relying_party"].client_configs.keys()
-    return render_template('rpe_opbyuid.html', providers=_providers)
+    _providers = current_app.server["openid_relying_party"].context.keys()
+    return render_template('opbyuid.html', providers=_providers)
 
 
 @entity.route('/irp')
@@ -69,14 +80,21 @@ def wkof():
 
     if _fed_entity.context.trust_marks:
         if isinstance(_fed_entity.context.trust_marks, Callable):
-            args = {"trust_marks": _fed_entity.context.trust_marks()}
+            trust_marks = _fed_entity.context.trust_marks()
         else:
-            args = {"trust_marks": _fed_entity.context.trust_marks}
+            trust_marks = _fed_entity.context.trust_marks
+
+        _tm_array = []
+        for tm in trust_marks:
+            _load = get_payload(tm)
+            _tm_array.append({'trust_mark_type': _load['trust_mark_type'],
+                              'trust_mark': tm})
+        args = {"trust_marks": _tm_array}
     else:
         args = {}
 
     _ec = create_entity_configuration(iss=_fed_entity.context.entity_id,
-                                      key_jar=_fed_entity.get_attribute('keyjar'),
+                                      key_jar=_fed_entity.context.keyjar,
                                       metadata=_metadata,
                                       authority_hints=_fed_entity.get_authority_hints(),
                                       lifetime=_fed_entity.context.default_lifetime,
@@ -85,8 +103,29 @@ def wkof():
                                       )
 
     response = make_response(_ec)
-    response.headers['Content-Type'] = 'application/jose; charset=UTF-8'
+    response.headers['Content-Type'] = "application/entity-statement+jwt"
     return response
+
+
+def get_relying_party() -> ClientEntity:
+    """
+    :return: ClientEntity instance
+    """
+    return current_app.server['openid_relying_party']
+
+
+def get_federation_entity() -> ClientEntity:
+    """
+    :return: ClientEntity instance
+    """
+    return current_app.server['federation_entity']
+
+
+def get_entity() -> ClientEntity:
+    """
+    :return: ClientEntity instance
+    """
+    return current_app.server
 
 
 @entity.route('/rp')
@@ -95,58 +134,39 @@ def rp():
     if not link:
         link = request.args.get('entity_id')
 
+    _entity = get_relying_party()
     if link:
         try:
-            result = get_rp().begin(link)
+            result = _entity.begin(link)
         except Exception as err:
             logger.exception("RP begin")
             return make_response('Something went wrong:{}'.format(err), 400)
         else:
             return redirect(result, 303)
     else:
-        _providers = list(get_rp().client_configs.keys())
+        _providers = list(_entity.context.keys())
         return render_template('rpe_opbyuid.html', providers=_providers)
 
-
-def get_rp(op_hash):
-    try:
-        _iss = get_rp().hash2issuer[op_hash]
-    except KeyError:
-        logger.error('Unkown issuer: {} not among {}'.format(
-            op_hash, list(get_rp().hash2issuer.keys())))
-        return make_response("Unknown hash: {}".format(op_hash), 400)
-    else:
-        try:
-            rp = get_rp().issuer2rp[_iss]
-        except KeyError:
-            return make_response("Couldn't find client for {}".format(_iss), 400)
-
-    return rp
-
-
-def guess_rp(state):
-    for _iss, _rp in get_rp().issuer2rp.items():
-        _context = _rp.upstream_get("context")
-        if _context.state.get_iss(request.args['state']):
-            return _iss, _rp
-    return None, None
+def get_rp():
+    return current_app.server["openid_relying_party"]
 
 
 def timestamp2local(timestamp):
-    utc = datetime.utcfromtimestamp(timestamp)
+    utc = datetime.fromtimestamp(timestamp)
     epoch = time.mktime(utc.timetuple())
-    offset = datetime.fromtimestamp(epoch) - datetime.utcfromtimestamp(epoch)
+    offset = datetime.fromtimestamp(epoch) - datetime.fromtimestamp(epoch)
     return utc + offset
 
 
-def finalize(op_identifier, request_args):
-    rp = get_rp(op_identifier)
+def finalize(request_args):
+    rp = get_rp()
 
     if hasattr(rp, 'status_code') and rp.status_code != 200:
         logger.error(rp.response[0].decode())
         return rp.response[0], rp.status_code
 
-    _context = rp.get_context()
+    _context = rp.state2context(request_args)
+
     session['client_id'] = _context.get('client_id')
     session['state'] = request_args.get('state')
 
@@ -160,6 +180,7 @@ def finalize(op_identifier, request_args):
     logger.debug('Issuer: {}'.format(iss))
 
     try:
+        # res = rp.finalize_auth(request_args)
         res = rp.finalize(request_args)
     except OidcServiceError as excp:
         # replay attack prevention, is that code was already used before
@@ -168,7 +189,6 @@ def finalize(op_identifier, request_args):
         raise excp
 
     if 'userinfo' in res:
-        _context = rp.get_context()
         endpoint = {}
         for k, v in _context.provider_info.items():
             if k.endswith('_endpoint'):
@@ -191,13 +211,13 @@ def finalize(op_identifier, request_args):
         kwargs['logout_url'] = "{}/logout".format(_context.base_url)
 
         _fe = current_app.server["federation_entity"]
-        op = rp.context.provider_info["issuer"]
-        trust_anchor = list(_fe.context.trust_chain[op].keys())[0]
-        trust_chain = _fe.context.trust_chain[op]
-        trust_path = trust_chain.iss_path
-        trust_path_expires = timestamp2local(trust_chain.exp)
-        trust_marks = trust_chain.verified_chain[1].get("trust_marks", [])
-        return render_template('rpe_opresult.html', endpoint=endpoints,
+        op = _context.provider_info["issuer"]
+        trust_anchor = _fe.context.trust_chain_anchor[op]
+        trust_chain_instance = _fe.context.trust_chain_instance[op][trust_anchor]
+        trust_path = trust_chain_instance.iss_path
+        trust_path_expires = timestamp2local(trust_chain_instance.exp)
+        trust_marks = trust_chain_instance.verified_chain[1].get("trust_marks", [])
+        return render_template('opresult.html', endpoint=rp.context.endpoint,
                                userinfo=res['userinfo'],
                                access_token=res['token'],
                                id_token=res["id_token"],
@@ -205,13 +225,32 @@ def finalize(op_identifier, request_args):
                                trust_path_expires=trust_path_expires,
                                trust_marks=trust_marks,
                                **kwargs)
-    else:
+    elif "error" in res:
         return make_response(res['error'], 400)
+    else:
+        _fe = current_app.server["federation_entity"]
+        op = _context.provider_info["issuer"]
+        trust_anchor = _fe.context.trust_chain_anchor[op]
+        trust_chain_instance = _fe.context.trust_chain_instance[op][trust_anchor]
+        trust_path = trust_chain_instance.iss_path
+        trust_path_expires = timestamp2local(trust_chain_instance.exp)
+        trust_marks = trust_chain_instance.verified_chain[1].get("trust_marks", [])
+        return render_template('opresult2.html',
+                               service=_context.get_services().keys(),
+                               trust_anchor=trust_anchor,
+                               trust_path=trust_path,
+                               trust_path_expires=trust_path_expires,
+                               trust_marks=trust_marks)
 
 
-@entity.route('/authz_cb/<entity_id>')
-def authz_cb(entity_id):
-    return finalize(entity_id, request.args)
+@entity.route('/authz_cb')
+def authz_cb():
+    return finalize(request.args)
+
+@entity.route('/authz_tok_cb')
+def authz_tok_cb(**kwargs):
+    logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
+    return render_template('repost_fragment.html')
 
 
 @entity.errorhandler(werkzeug.exceptions.BadRequest)
@@ -219,12 +258,13 @@ def handle_bad_request(e):
     return 'bad request!', 400
 
 
-@entity.route('/repost_fragment')
-def repost_fragment():
-    return 'repost_fragment'
-
-
 @entity.route('/ihf_cb')
 def ihf_cb(self, op_hash='', **kwargs):
     logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
     return render_template('repost_fragment.html')
+
+@entity.route('/repost_fragment')
+def repost_fragment():
+    args = compact(parse_qs(request.args['url_fragment']))
+    # op_identifier = request.args['op_identifier']
+    return finalize(args)

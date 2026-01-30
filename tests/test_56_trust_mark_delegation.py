@@ -27,7 +27,7 @@ FE_ID = "https://fe.example.org"
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [TMI_ID, FE_ID],
+            "subordinate": [TMI_ID, FE_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -168,7 +168,8 @@ class TestTrustMarkDelegation():
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.fe.function.trust_mark_verifier(
-                trust_mark=_trust_mark, trust_anchor=self.ta.context.entity_id)
+                trust_mark={'trust_mark': _trust_mark, 'trust_mark_type': SIRTIFI_TRUST_MARK_TYPE},
+                trust_anchor=self.ta.context.entity_id)
 
         assert verified_trust_mark
 
@@ -208,7 +209,8 @@ class TestTrustMarkDelegation():
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.fe.function.trust_mark_verifier(
-                trust_mark=_trust_mark, trust_anchor=self.ta.context.entity_id)
+                trust_mark={'trust_mark': _trust_mark, "trust_mark_type": SIRTIFI_TRUST_MARK_TYPE},
+                trust_anchor=self.ta.context.entity_id)
 
         assert verified_trust_mark
 
@@ -233,6 +235,7 @@ class TestTrustMarkDelegation():
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.fe.function.trust_mark_verifier(
-                trust_mark=_trust_mark, trust_anchor=self.ta.context.entity_id)
+                trust_mark={'trust_mark': _trust_mark, "trust_mark_type": SIRTIFI_TRUST_MARK_TYPE},
+                trust_anchor=self.ta.context.entity_id)
 
         assert verified_trust_mark is None

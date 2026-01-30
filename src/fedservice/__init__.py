@@ -11,19 +11,19 @@ from fedservice.entity_statement.statement import chains2dict
 
 def save_trust_chains(federation_context, trust_chains):
     _tc_dict = chains2dict(trust_chains)
-    if getattr(federation_context, "trust_chain", None) is None:
-        federation_context.trust_chain = {}
+    # if getattr(federation_context, "trust_chain_instance", None) is None:
+    #     federation_context.trust_chain = {}
 
     for ta, tc in _tc_dict.items():
         _ent = tc.iss_path[0]
-        if _ent not in federation_context.trust_chain:
-            federation_context.trust_chain[_ent] = {ta: tc}
+        if _ent not in federation_context.trust_chain_instance:
+            federation_context.trust_chain_instance[_ent] = {ta: tc}
         else:
-            federation_context.trust_chain[_ent].update({ta: tc})
+            federation_context.trust_chain_instance[_ent].update({ta: tc})
 
 
 def get_trust_chain(federation_context, entity_id: str, trust_anchor: Optional[str] = ""):
-    trust_info = federation_context.trust_chain.get(entity_id, "")
+    trust_info = federation_context.trust_chain_instance.get(entity_id, "")
     if not trust_info:
         return None
 

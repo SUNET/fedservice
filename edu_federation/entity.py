@@ -43,7 +43,7 @@ def init_app(dir_name, **kwargs) -> Flask:
 if __name__ == "__main__":
     print(sys.argv)
     directory_name = sys.argv[1]
-    template_dir = os.path.join(dir_path, 'templates')
+    template_dir = os.path.join(dir_path, f'{directory_name}/templates')
     app = init_app(directory_name, template_folder=template_dir)
     if "logging" in app.cnf:
         configure_logging(config=app.cnf["logging"])
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     _cert = "{}/{}".format(dir_path, lower_or_upper(_web_conf, "server_cert"))
 
     print('Listening on {}:{}'.format(_web_conf.get('domain'), _web_conf.get('port')))
-    _trust_anchors = {k:v for k,v in app.federation_entity.function.trust_chain_collector.trust_anchors.items()}
+    _trust_anchors = {k:v for k,v in app.federation_entity.context.trust_anchor.items()}
     print(f"Trust Anchors: {_trust_anchors}")
     # app.rph.federation_entity.collector.web_cert_path = _cert
     app.run(host=_web_conf.get('domain'), port=_web_conf.get('port'),

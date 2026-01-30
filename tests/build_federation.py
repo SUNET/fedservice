@@ -17,7 +17,7 @@ def full_path(local_file):
 FEDERATION = {
     "https://ta.example.org": {
         "federation_entity": {
-            "subordinates": ["https://rp.example.org"],
+            "subordinate": ["https://rp.example.org"],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.com",
@@ -75,20 +75,20 @@ def build_federation(federation_conf):
     for entity_id, specification in federation_conf.items():
         entity[entity_id] = make_entity(entity_id=entity_id, **specification)
 
-    # add subordinates
+    # add subordinate
     for entity_id, ent in entity.items():
         if isinstance(ent, FederationEntity):
             fed_ent = ent
         else:
             fed_ent = ent["federation_entity"]
 
-        subordinates = federation_conf[entity_id]['federation_entity'].get("subordinates", None)
-        if subordinates:
-            if isinstance(subordinates, list):
-                for sub in subordinates:
+        subordinate = federation_conf[entity_id]['federation_entity'].get("subordinate", None)
+        if subordinate:
+            if isinstance(subordinate, list):
+                for sub in subordinate:
                     fed_ent.server.subordinate[sub] = get_subordinate_info(entity[sub])
             else:
-                fed_ent.server.subordinate = execute(subordinates)
+                fed_ent.server.subordinate = execute(subordinate)
 
         trust_anchor = federation_conf[entity_id]['federation_entity'].get("trust_anchors", None)
         if trust_anchor:

@@ -34,7 +34,7 @@ AS_ENDPOINTS = federation_endpoints("entity_configuration", "fetch")
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [IM_ID],
+            "subordinate": [IM_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -73,7 +73,7 @@ FEDERATION_CONFIG = {
     IM_ID: {
         "federation_entity": {
             "trust_anchors": [TA_ID],
-            "subordinates": [OC_ID],
+            "subordinate": [OC_ID],
             "authority_hints": [TA_ID],
             'key_config': {"key_defs": DEFAULT_KEY_DEFS},
         }

@@ -31,7 +31,7 @@ ROOT_DIR = os.path.join(BASE_PATH, "base_data")
 # FEDERATION_CONFIG = {
 #     TA_ID: {
 #         "entity_type": "trust_anchor",
-#         "subordinates": [IM_ID, AS_ID],
+#         "subordinate": [IM_ID, AS_ID],
 #         "kwargs": {
 #             "preference": {
 #                 "organization_name": "The example federation operator",
@@ -184,7 +184,7 @@ ROOT_DIR = os.path.join(BASE_PATH, "base_data")
 #     IM_ID: {
 #         "entity_type": "federation_entity",
 #         "trust_anchors": [TA_ID],
-#         "subordinates": [OC_ID],
+#         "subordinate": [OC_ID],
 #         "kwargs": {
 #             "authority_hints": [TA_ID]
 #         }
@@ -244,7 +244,7 @@ class TestAutomatic(object):
         # create the authorization request
 
         request_args = AuthorizationRequest(response_type="code", state=rndstr(), client_id=_rp_context.entity_id)
-        _auth_service = self.rp['openid_relying_party'].get_service("authorization")
+        _auth_service = self.rp['openid_relying_party'].get_service(_rp_context, "authorization")
 
         # There is a side effect here. The function is really badly named.
         # client_assertion and client_assertion_type are added to the request

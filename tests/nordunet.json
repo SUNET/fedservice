@@ -5,7 +5,7 @@
         "organization_name": "The FEIDE federation",
         "federation_fetch_endpoint": "https://feide.no/fetch"
       },
-      "subordinates": [
+      "subordinate": [
         "https://ntnu.no"
       ],
       "endpoint": ["fetch", "entity_configuration"]
@@ -16,7 +16,7 @@
       "trust_anchors": [
         "https://feide.no"
       ],
-      "subordinates": [
+      "subordinate": [
         "https://foodle.uninett.no",
         "https://op.ntnu.no"
       ],
@@ -60,7 +60,7 @@
       "preference": {
         "organization_name": "The SWAMID federation"
       },
-      "subordinates": [
+      "subordinate": [
         "https://umu.se"
       ]
     }
@@ -70,7 +70,7 @@
       "trust_anchors": [
         "https://swamid.se"
       ],
-      "subordinates": [
+      "subordinate": [
         "https://op.umu.se"
       ],
       "authority_hints": [

@@ -18,7 +18,7 @@ TM_ID = "https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf"
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [IM_ID, TRUST_MARK_ISSUER_ID],
+            "subordinate": [IM_ID, TRUST_MARK_ISSUER_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -33,7 +33,7 @@ FEDERATION_CONFIG = {
     IM_ID: {
         "federation_entity": {
             "trust_anchors": [TA_ID],
-            "subordinates": [RP_ID],
+            "subordinate": [RP_ID],
             "authority_hints": [TA_ID],
         }
     },
@@ -140,6 +140,8 @@ class TestComboCollect(object):
                          adding_headers={"Content-Type": "application/json"}, status=200)
 
             verified_trust_mark = self.rp["federation_entity"].function.trust_mark_verifier(
-                trust_mark=_trust_mark, trust_anchor=self.ta.context.entity_id)
+                trust_mark={'trust_mark': _trust_mark,
+                            'trust_mark_type': "https://refeds.org/sirtfi"},
+                trust_anchor=self.ta.context.entity_id)
 
-        assert verified_trust_mark
+            assert verified_trust_mark

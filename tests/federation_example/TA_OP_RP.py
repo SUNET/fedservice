@@ -33,7 +33,7 @@ OIDC_SERVICE.update(DEFAULT_OIDC_FED_SERVICES)
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [RP_ID, OP_ID],
+            "subordinate": [RP_ID, OP_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -52,8 +52,6 @@ FEDERATION_CONFIG = {
         },
         "openid_relying_party": {
             "services": OIDC_SERVICE,
-            "client_id": RP_ID,
-            "client_secret": "a longesh password",
             "key_config": {"key_defs": DEFAULT_KEY_DEFS},
             "preference": {
                 "grant_types": ["authorization_code", "implicit", "refresh_token"],

@@ -8,7 +8,7 @@ DIRECTORIES = {
     "identity": ["trust_anchor", "trust_mark_issuer", "openid_provider", "relying_party_explicit"]
 }
 
-PERS_DIRECTORIES = ["subordinates", "trust_mark_issuers", "trust_anchors"]
+PERS_DIRECTORIES = ["subordinate", "trust_mark_issuers", "trust_anchors"]
 def rm_persistence(directory):
     for _file in os.listdir(directory):
         _full_name = os.path.join(directory, _file)

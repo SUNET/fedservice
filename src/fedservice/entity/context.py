@@ -77,6 +77,10 @@ class FederationContext(ImpExp):
         self.trusted_roots = trusted_roots or config.get('trusted_roots', {})
 
         self.trust_chain = {}
+        self.trust_chain_instance = {}
+        self.trust_chain_anchor = {}
+        self.trust_anchor = {}
+
         # self.issuer = self.entity_id
 
         self.claims = FederationEntityClaims(prefer=preference)

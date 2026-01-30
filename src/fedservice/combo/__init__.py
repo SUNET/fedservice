@@ -112,8 +112,11 @@ class FederationCombo(Combo):
         for federation_type, item in self._part.items():
             logger.debug(f"federation_type:{federation_type}, item:{item}")
             if isinstance(item, RP):  # Special treatment
+                argv = {'schema': item.metadata_class}
                 item = item.context[server_entity_id]
-            res.update(item.get_metadata(entity_type=federation_type))
+            else:
+                argv = {}
+            res.update(item.get_metadata(entity_type=federation_type, **argv))
 
         logger.debug(f"metadata = {res}")
         return res

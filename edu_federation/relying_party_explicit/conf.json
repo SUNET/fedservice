@@ -84,10 +84,10 @@
         ]
       },
       "openid_relying_party": {
-        "class": "idpyoidc.client.oidc.rp.RP",
+        "class": "fedservice.appclient.ClientEntity",
         "kwargs": {
           "config": {
-            "client_class": "fedservice.appclient.stand_alone_client_entity.StandAloneClientEntity",
+            "client_class": "fedservice.appclient.ClientEntity",
             "base_url": "https://127.0.0.1:4010",
             "entity_id": "https://127.0.0.1:4010",
             "client_type": "oidc",
@@ -121,9 +121,7 @@
                 "ops@example.com"
               ],
               "response_types_supported": [
-                "code",
-                "code id_token",
-                "id_token"
+                "code"
               ],
               "scope": [
                 "openid",

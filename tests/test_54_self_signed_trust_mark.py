@@ -11,7 +11,7 @@ REFEDS_PERSONALIZED = "https://refeds.org/category/personalized/op"
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [LEAF_ID],
+            "subordinate": [LEAF_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",

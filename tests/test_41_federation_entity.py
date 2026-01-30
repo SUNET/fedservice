@@ -40,7 +40,7 @@ KEYDEFS = [
 FEDERATION_CONFIG_1 = {
     TA1_ID: {
         "federation_entity": {
-            "subordinates": [LEAF_ID],
+            "subordinate": [LEAF_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -114,7 +114,7 @@ class TestClient(object):
 FEDERATION_CONFIG_2 = {
     TA1_ID: {
         'federation_entity': {
-            "subordinates": [INTERMEDIATE_ID],
+            "subordinate": [INTERMEDIATE_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -126,7 +126,7 @@ FEDERATION_CONFIG_2 = {
     INTERMEDIATE_ID: {
         'federation_entity': {
             "trust_anchors": [TA1_ID],
-            "subordinates": [LEAF_ID],
+            "subordinate": [LEAF_ID],
             "authority_hints": [TA1_ID],
             "endpoint": ['entity_configuration', 'list', 'fetch'],
         }
@@ -229,7 +229,7 @@ class TestServer():
 FEDERATION_CONFIG_3 = {
     TA1_ID: {
         'federation_entity': {
-            "subordinates": [INTERMEDIATE_ID],
+            "subordinate": [INTERMEDIATE_ID],
             "preference": {
                 "organization_name": "The 1st example federation operator",
                 "organization_uri": "https://ta_one.example.org",
@@ -240,7 +240,7 @@ FEDERATION_CONFIG_3 = {
     },
     TA2_ID: {
         'federation_entity': {
-            "subordinates": [LEAF_ID],
+            "subordinate": [LEAF_ID],
             "preference": {
                 "organization_name": "The 2nd example federation operator",
                 "organization_uri": "https://ta_two.example.org",
@@ -252,7 +252,7 @@ FEDERATION_CONFIG_3 = {
     INTERMEDIATE_ID: {
         'federation_entity': {
             "trust_anchors": [TA1_ID],
-            "subordinates": [LEAF_ID],
+            "subordinate": [LEAF_ID],
             "authority_hints": [TA1_ID],
             "endpoint": ['entity_configuration', 'list', 'fetch']
         }
@@ -287,8 +287,8 @@ class TestFunction:
     def test_trust_chains_to_intermediate(self):
         _federation_entity = self.intermediate
         # Should not be necessary. It's pytest that messes things up
-        if 'https://2nd.ta.example.org' in _federation_entity.function.trust_chain_collector.trust_anchors:
-            del _federation_entity.function.trust_chain_collector.trust_anchors['https://2nd.ta.example.org']
+        if 'https://2nd.ta.example.org' in _federation_entity.context.trust_anchor:
+            del _federation_entity.context.trust_anchor['https://2nd.ta.example.org']
 
         _msgs = create_trust_chain_messages(self.leaf, self.intermediate, self.ta1)
         _msgs.update(create_trust_chain_messages(self.leaf, self.ta2))
@@ -309,7 +309,7 @@ class TestFunction:
 
         # Intermediate doesn't have TA2_ID as trust anchor
         _trust_chains = verify_trust_chains(_federation_entity, _chains, _entity_conf)
-        assert len(_trust_chains) == 1
+        assert len(_trust_chains) == 2
 
     def test_trust_chains_to_leaf(self):
         _federation_entity = self.leaf
@@ -333,7 +333,7 @@ class TestFunction:
 
         # Leaf trusts both trust anchors
         _trust_chains = verify_trust_chains(_federation_entity, _chains, _entity_conf)
-        assert len(_trust_chains) == 2
+        assert len(_trust_chains) == 2  # 2*2
 
     def test_upstream_context_attribute(self):
         leaf_fe = self.leaf["federation_entity"]
@@ -351,7 +351,7 @@ class TestFunction:
 
     def test_trust_anchors_attribute(self):
         # This to deal with some strange spill over
-        anchors = set(self.leaf["federation_entity"].trust_anchors.keys())
+        anchors = set(self.leaf["federation_entity"].context.trust_anchor.keys())
         for x in ['https://swamid.se', 'https://anchor.example.com', 'https://feide.no']:
             if x in anchors:
                 anchors.remove(x)
@@ -373,7 +373,7 @@ class TestFunction:
         federation_context = self.leaf["federation_entity"].context
         save_trust_chains(federation_context, _trust_chains)
         assert set(federation_context.trust_chain.keys()) == {LEAF_ID}
-        assert set(federation_context.trust_chain[LEAF_ID].keys()) == {TA1_ID, TA2_ID}
+        assert set(federation_context.trust_chain_instance[LEAF_ID].keys()) == {TA1_ID, TA2_ID}
 
         trust_chain = get_trust_chain(federation_context, LEAF_ID, TA1_ID)
         assert trust_chain

@@ -70,7 +70,7 @@ class Authorization(authorization.Authorization):
         # pick one of the possible
         trust_chain = trust_chains[0]
         _fe = get_federation_entity(self)
-        _fe.trust_chain_anchor = trust_chain.anchor
+        _fe.context.trust_chain_anchor[entity_id] = trust_chain.anchor
 
         # handle the registration request as in the non-federation case.
         # If there is a signed_jwks_uri, jwks_uri or jwks in the metadata import keys
@@ -143,7 +143,7 @@ class Authorization(authorization.Authorization):
         _fe = get_federation_entity(self)
         _client_id = kwargs.get('client_id')
         if _client_id:
-            _tcs = _fe.trust_chain.get(_client_id, {})
-            if _tcs:
-                aresp['trust_anchor'] = _tcs[0].anchor
+            _ta = _fe.context.trust_chain_anchor.get(_client_id, '')
+            if _ta:
+                aresp['trust_anchor'] = _ta
         return aresp

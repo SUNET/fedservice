@@ -202,7 +202,7 @@ IGNORE = ["cookie", "user-agent"]
 
 def service_endpoint(endpoint):
     _log = current_app.logger
-    _log.info('At the "{}" endpoint'.format(endpoint.name))
+    _log.info(20*"*" + f"{endpoint.name}" + 20*"*")
 
     http_info = {
         "headers": {k: v for k, v in request.headers.items(lower=True) if k not in IGNORE},

@@ -6,24 +6,19 @@ from cryptojwt import as_unicode
 from cryptojwt import KeyJar
 from cryptojwt.exception import Expired
 from cryptojwt.jws.jws import factory
-
-from fedservice.entity import get_federation_entity_keyjar
-from fedservice.message import TrustMarkDelegation
-
-from fedservice.message import TrustMark
-
-from fedservice import get_payload
-from fedservice.entity import FederationEntity
 from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
+from idpyoidc.util import keyjar_combination
 
 from fedservice import message
 from fedservice.entity import apply_policies
+from fedservice.entity import FederationEntity
 from fedservice.entity.function import Function
 from fedservice.entity.function import get_verified_trust_chains
-from fedservice.entity.function import verify_signature
 from fedservice.entity.function.trust_anchor import get_verified_trust_anchor_statement
 from fedservice.entity.utils import get_federation_entity
+from fedservice.message import TrustMark
+from fedservice.message import TrustMarkDelegation
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +34,7 @@ class TrustMarkVerifier(Function):
     4) Find a trust chain to the trust mark issuer
     5) Verify the signature of the trust mark
     """
+
     def __init__(self, upstream_get: Optional[Callable] = None,
                  federation_entity: Optional[FederationEntity] = None
                  ):
@@ -50,7 +46,7 @@ class TrustMarkVerifier(Function):
                                                                federation_entity=federation_entity)
 
     def __call__(self,
-                 trust_mark: str,
+                 trust_mark: dict,
                  trust_anchor: str,
                  check_status: Optional[bool] = False,
                  entity_id: Optional[str] = '',
@@ -63,17 +59,19 @@ class TrustMarkVerifier(Function):
         :returns: TrustClaim message instance if OK otherwise None
         """
 
-        _jws = as_unicode(trust_mark)
+        _trust_mark_jws = trust_mark["trust_mark"]
+
+        _jws = as_unicode(_trust_mark_jws)
         _jwt = factory(_jws)
         _msg_type = _jwt.jwt.headers.get("typ")
         if not _msg_type or _msg_type != "trust-mark+jwt":
-            raise ValueError("Wrong message type")
+            raise ValueError("Missing or wrong message type")
 
         payload = _jwt.jwt.payload()
-        _trust_mark = message.TrustMark(**payload)
+        _trust_mark_msg = message.TrustMark(**payload)
         # Verify that everything that should be there, are there
         try:
-            _trust_mark.verify()
+            _trust_mark_msg.verify()
         except Expired:  # Has it expired ?
             return None
         except ValueError:  # Not correct delegation ?
@@ -91,23 +89,24 @@ class TrustMarkVerifier(Function):
         _trust_mark_issuers = trust_anchor_statement.get("trust_mark_issuers")
         if _trust_mark_issuers is None:  # No trust mark issuers are recognized by the trust anchor
             return None
-        _allowed_issuers = _trust_mark_issuers.get(_trust_mark['trust_mark_type'])
+        _allowed_issuers = _trust_mark_issuers.get(_trust_mark_msg['trust_mark_type'])
         if _allowed_issuers is None:
             return None
 
-        if _allowed_issuers == [] or _trust_mark["iss"] in _allowed_issuers:
+        if _allowed_issuers == [] or _trust_mark_msg["iss"] in _allowed_issuers:
             pass
         else:  # The trust mark issuer not trusted by the trust anchor
             logger.warning(
-                f'Trust mark issuer {_trust_mark["iss"]} not trusted by the trust anchor for trust mar id: {_trust_mark["trust_mark_type"]}')
+                f'Trust mark issuer {_trust_mark_msg["iss"]} not trusted by the trust anchor for trust mark id:'
+                f' {_trust_mark_msg["trust_mark_type"]}')
             return None
 
         # Now time to verify the signature of the trust mark
         _trust_chains = []
-        if _trust_mark["iss"] != trust_anchor:
-            _trust_chains = get_verified_trust_chains(_federation_entity, _trust_mark['iss'])
+        if _trust_mark_msg["iss"] != trust_anchor:
+            _trust_chains = get_verified_trust_chains(_federation_entity, _trust_mark_msg['iss'])
             if not _trust_chains:
-                logger.warning(f"Could not find any verifiable trust chains for {_trust_mark['iss']}")
+                logger.warning(f"Could not find any verifiable trust chains for {_trust_mark_msg['iss']}")
                 return None
 
             if trust_anchor not in [_tc.anchor for _tc in _trust_chains]:
@@ -116,12 +115,12 @@ class TrustMarkVerifier(Function):
 
         # Now try to verify the signature on the trust_mark
         # should have the necessary keys
-        _jwt = factory(trust_mark)
-        keyjar = get_federation_entity_keyjar(self)
+        _jwt = factory(_trust_mark_jws)
+        keyjar = keyjar_combination(self)
 
         keys = keyjar.get_jwt_verify_keys(_jwt.jwt)
         if not keys:
-            if _trust_mark["iss"] != trust_anchor:
+            if _trust_mark_msg["iss"] != trust_anchor:
                 keyjar = import_jwks(keyjar,
                                      trust_anchor_statement["jwks"],
                                      trust_anchor_statement["iss"])
@@ -134,23 +133,24 @@ class TrustMarkVerifier(Function):
             keys = keyjar.get_jwt_verify_keys(_jwt.jwt)
 
         try:
-            _mark = _jwt.verify_compact(trust_mark, keys=keys)
+            _mark = _jwt.verify_compact(_trust_mark_jws, keys=keys)
         except Exception as err:
             return None
 
-        _trust_mark = TrustMark(**_mark)
+        _trust_mark_verified = TrustMark(**_mark)
 
         # Must be issued on delegation
         _owners = trust_anchor_statement.get("trust_mark_owners", {})
         if _owners:
             # Check delegation
-            _delegation = self.delegation_verifier(_trust_mark, trust_anchor_statement, _owners)
+            _delegation = self.delegation_verifier(_trust_mark_verified, trust_anchor_statement, _owners)
             if not _delegation:
                 return None
             else:
-                _trust_mark["__delegation"] = _delegation
+                _trust_mark_verified["__delegation"] = _delegation
 
-        return _mark
+        return _trust_mark_verified
+
 
 class TrustMarkDelegationVerifier(Function):
     """

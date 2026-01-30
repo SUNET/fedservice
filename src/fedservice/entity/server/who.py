@@ -47,7 +47,7 @@ class Who(Endpoint):
             list_resp = _federation_entity.do_request(
                 'list', entity_id=self.upstream_get("attribute", "entity_id"))
         elif trust_anchor:
-            # ask the TA for it's subordinates
+            # ask the TA for its subordinates
             # Check that it's a TA I trust
             if trust_anchor not in list(_federation_entity.trust_anchors.keys()):
                 raise NoTrustedClaims("Got a Trust anchor I don't trust")

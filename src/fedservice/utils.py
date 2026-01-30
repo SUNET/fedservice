@@ -7,7 +7,6 @@ from typing import Optional
 from typing import Union
 
 from cryptojwt.jwt import utc_time_sans_frac
-from fedservice.message import EntityConfiguration
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.key_import import import_jwks
 from idpyoidc.server.util import execute
@@ -20,6 +19,7 @@ from fedservice.defaults import federation_functions
 from fedservice.defaults import federation_services
 from fedservice.entity import FederationEntity
 from fedservice.entity.function import get_verified_jwks
+from fedservice.message import EntityConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -119,8 +119,13 @@ def make_federation_entity(entity_id: str, **kwargs):
     return entity
 
 
+def item_conf(item: str, config: dict) -> Optional[dict]:
+    item_conf = config.get(item, config.get('kwargs', {}).get(item, None))
+    return item_conf
+
+
 def args_eval(federation_entity, config):
-    trust_anchors = config.get("trust_anchors")
+    trust_anchors = item_conf("trust_anchors", config)
     if trust_anchors:
         if "class" in trust_anchors and "kwargs" in trust_anchors:
             trust_anchors = execute(trust_anchors)
@@ -128,22 +133,22 @@ def args_eval(federation_entity, config):
         for id, jwk in trust_anchors.items():
             federation_entity.context.keyjar = import_jwks(federation_entity.context.keyjar, jwk, id)
 
-        federation_entity.function.trust_chain_collector.trust_anchors = trust_anchors
+        federation_entity.context.trust_anchor = trust_anchors
 
-    subordinates = config.get("subordinates")
-    if subordinates:
-        if "class" in subordinates and "kwargs" in subordinates:
-            federation_entity.server.subordinates = execute(subordinates)
+    subordinate = item_conf("subordinate", config)
+    if subordinate:
+        if "class" in subordinate and "kwargs" in subordinate:
+            federation_entity.server.subordinate = execute(subordinate)
         else:
-            for id, info in subordinates.items():
-                federation_entity.server.subordinates[id] = info
+            for id, info in subordinate.items():
+                federation_entity.server.subordinate[id] = info
 
-    metadata_policy = config.get("metadata_policy")
+    metadata_policy = item_conf("metadata_policy", config)
     if metadata_policy:
         for id, info in metadata_policy.items():
             federation_entity.server.policy[id] = info
 
-    trust_mark_entity = config.get("trust_mark_entity")
+    trust_mark_entity = item_conf("trust_mark_entity", config)
     if trust_mark_entity:
         _kwargs = trust_mark_entity.get("kwargs", {})
         _kwargs['entity_id'] = federation_entity.context.entity_id
@@ -152,16 +157,19 @@ def args_eval(federation_entity, config):
             federation_entity.server.endpoint[name] = endp
         federation_entity.server.trust_mark_entity = _tme
 
-    self_signed_trust_mark_entity = config.get("self_signed_trust_mark_entity")
+    self_signed_trust_mark_entity = item_conf("self_signed_trust_mark_entity", config)
     if self_signed_trust_mark_entity:
         _kwargs = self_signed_trust_mark_entity.get("kwargs", {})
         _tme = instantiate(self_signed_trust_mark_entity['class'], upstream_get=federation_entity.unit_get,
                            **_kwargs)
         federation_entity.server.self_signed_trust_mark_entity = _tme
 
-    trust_marks = config.get("trust_marks")
+    trust_marks = item_conf("trust_marks", config)
     if trust_marks:
-        federation_entity.context.trust_marks = trust_marks
+        if "class" in trust_marks and "kwargs" in trust_marks:
+            federation_entity.server.trust_marks = execute(trust_marks)
+        else:
+            federation_entity.context.trust_marks = trust_marks
 
     for key in ["trust_mark_issuers", "trust_mark_owners", "trust_anchor_hints"]:
         value = config.get(key)

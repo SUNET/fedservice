@@ -16,7 +16,7 @@ IM_ID = "https://im.example.org"
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [IM_ID, OP_ID],
+            "subordinate": [IM_ID, OP_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -28,7 +28,7 @@ FEDERATION_CONFIG = {
     IM_ID: {
         "federation_entity": {
             "trust_anchors": [TA_ID],
-            "subordinates": [RP_ID],
+            "subordinate": [RP_ID],
             "authority_hints": [TA_ID],
             "endpoint": ['entity_configuration', 'list', 'fetch', 'resolve'],
         }

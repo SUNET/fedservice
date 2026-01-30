@@ -51,7 +51,7 @@ FEDERATION_CONFIG = {
             },
             'key_config': {"key_defs": DEFAULT_KEY_DEFS},
             'endpoint': TA_ENDPOINTS,
-            'subordinates': [TMI_ID, FE_ID]
+            'subordinate': [TMI_ID, FE_ID]
         }
     },
     TMI_ID: {

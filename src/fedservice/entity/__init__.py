@@ -115,15 +115,14 @@ class FederationEntity(Unit):
         if client_authn_methods:
             self.context.client_authn_methods = client_auth_setup(client_authn_methods)
 
-        self.trust_chain = {}
-        self.trust_chain_instance = {}
+        self.add_endpoint_claims_to_prefer(self.server.endpoint.values())
 
-        self.context.provider_info = self.context.claims.get_server_metadata(
-            endpoints=self.server.endpoint.values(),
-            metadata_schema=message.FederationEntity,
-        )
-        self.context.provider_info["issuer"] = self.context.entity_id
-        self.context.metadata = self.context.provider_info
+        # self.context.provider_info = self.context.claims.get_server_metadata(
+        #     endpoints=self.server.endpoint.values(),
+        #     metadata_schema=message.FederationEntity,
+        # )
+        # self.context.provider_info["issuer"] = self.context.entity_id
+        # self.context.metadata = self.context.provider_info
 
         if persistence:
             _storage = execute(persistence["kwargs"]["storage"])
@@ -133,6 +132,9 @@ class FederationEntity(Unit):
                 self.persistence = importer(_class)(**kwargs)
             else:
                 self.persistence = _class(**kwargs)
+
+    def add_endpoint_claims_to_prefer(self, endpoints: list):
+        self.context.claims.prefer.update(self.context.claims.get_endpoint_claims(endpoints))
 
     def get_context(self, *arg):
         return self.context
@@ -304,7 +306,7 @@ class FederationEntity(Unit):
         return _info
 
     def get_trust_chains(self, entity_id):
-        _trust_chains = self.trust_chain_instance.get(entity_id, None)
+        _trust_chains = self.context.trust_chain_instance.get(entity_id, None)
         if _trust_chains is None:
             _trust_chains = get_verified_trust_chains(self, entity_id)
             if _trust_chains:
@@ -315,10 +317,10 @@ class FederationEntity(Unit):
         return _trust_chains
 
     def store_trust_chains(self, entity_id, trust_chains):
-        self.trust_chain_instance[entity_id] = trust_chains
+        self.context.trust_chain_instance[entity_id] = trust_chains
 
     def get_verified_metadata(self, entity_id: str, *args):
-        _trust_chains = self.trust_chain.get(entity_id)
+        _trust_chains = self.context.trust_chain.get(entity_id)
         if _trust_chains is None:
             _trust_chains = get_verified_trust_chains(self, entity_id)
             if _trust_chains:
@@ -424,12 +426,12 @@ class FederationEntity(Unit):
         return verified_trust_mark
 
     @property
-    def trust_anchors(self):
-        return self.get_function("trust_chain_collector").trust_anchors
+    def trust_anchor(self):
+        return self.context.trust_anchor
 
-    @trust_anchors.setter
-    def trust_anchors(self, value):
-        self.get_function("trust_chain_collector").trust_anchors = value
+    @trust_anchor.setter
+    def trust_anchor(self, value):
+        self.context.trust_anchor = value
 
     def add_trust_anchor(self, entity_id, jwks):
         _keyjar = self.context.keyjar
@@ -437,7 +439,7 @@ class FederationEntity(Unit):
             raise ValueError("Missing keyjar")
 
         _keyjar.import_jwks(jwks, entity_id)
-        self.trust_anchors[entity_id] = jwks
+        self.context.trust_anchor[entity_id] = jwks
 
     def supports(self):
         res = {}
@@ -467,7 +469,7 @@ class FederationEntity(Unit):
         if _data and not body:
             body = _data
 
-        _httpc_params = get_federation_entity_keyjar(self).httpc_params
+        _httpc_params = self.httpc_params
         logger.debug(f"keyjar.httpc_params: {_httpc_params}")
         if not _httpc_params:
             _httpc_params = self.httpc_params

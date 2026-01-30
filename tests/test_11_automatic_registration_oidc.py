@@ -67,7 +67,7 @@ class TestAutomatic(object):
         # automatic registration == not explict registration
         # _context.map_supported_to_preferred(info=_trust_chains[0].metadata["openid_relying_party"])
 
-        _auth_service = self.rp["openid_relying_party"].get_service("authorization")
+        _auth_service = self.rp["openid_relying_party"].get_service(_rp_context, "authorization")
         state = rndstr()
         authn_request = _auth_service.construct(_rp_context, request_args={"response_type": "code", "state": state})
 

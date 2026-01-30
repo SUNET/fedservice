@@ -4,9 +4,6 @@ import sys
 import traceback
 
 import werkzeug
-from fedservice.entity_statement.create import create_entity_configuration
-
-from fedservice.entity_statement.create import create_entity_statement
 from flask import Blueprint
 from flask import current_app
 from flask import redirect
@@ -17,6 +14,8 @@ from flask.helpers import send_from_directory
 from idpyoidc.message.oauth2 import ResponseMessage
 from idpyoidc.server.exception import InvalidClient
 from idpyoidc.server.exception import UnknownClient
+
+from fedservice.entity_statement.create import create_entity_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -141,8 +140,10 @@ def service_endpoint(endpoint):
 def index():
     _entity = current_app.federation_entity
     _keys = _entity.server.subordinate.keys()
-    display = {k:_entity.server.subordinate[k] for k in _keys}
-    return render_template('trust_anchor.html', subordinates=display)
+    display = {k: _entity.server.subordinate[k] for k in _keys}
+    my_keys = _entity.context.keyjar.export_jwks()
+    return render_template('trust_anchor.html', subordinates=display, my_keys=my_keys)
+
 
 @entity.route('/static/<path:path>')
 def send_js(path):
@@ -171,6 +172,7 @@ def resolve():
 def pid_query():
     _endpoint = current_app.federation_entity.get_endpoint('pid_query')
     return service_endpoint(_endpoint)
+
 
 @entity.errorhandler(werkzeug.exceptions.BadRequest)
 def handle_bad_request(e):

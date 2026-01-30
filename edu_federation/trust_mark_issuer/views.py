@@ -4,16 +4,18 @@ import sys
 import traceback
 
 import werkzeug
-from fedservice.entity_statement.create import create_entity_configuration
 from flask import Blueprint
 from flask import current_app
 from flask import redirect
+from flask import render_template
 from flask import request
 from flask.helpers import make_response
 from flask.helpers import send_from_directory
 from idpyoidc.message.oauth2 import ResponseMessage
 from idpyoidc.server.exception import InvalidClient
 from idpyoidc.server.exception import UnknownClient
+
+from fedservice.entity_statement.create import create_entity_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +124,7 @@ def service_endpoint(endpoint):
         return redirect(args['redirect_location'])
     if 'http_response' in args:
         resp = make_response(args['http_response'], 200)
-        #resp.headers['content-type'] = endpoint.response_content_type
+        # resp.headers['content-type'] = endpoint.response_content_type
         return resp
 
     response = do_response(endpoint, req_args, **args)
@@ -141,7 +143,7 @@ def fetch():
 
 
 @entity.route('/list')
-def list():
+def entity_list():
     _endpoint = current_app.federation_entity.get_endpoint('list')
     return service_endpoint(_endpoint)
 
@@ -168,6 +170,7 @@ def trust_mark_list():
     _endpoint = current_app.federation_entity.get_endpoint('trust_mark_list')
     return service_endpoint(_endpoint)
 
+
 @entity.route('/.well-known/openid-federation')
 def wkof():
     _entity = current_app.server
@@ -182,3 +185,13 @@ def wkof():
     response = make_response(_statement)
     response.headers['Content-Type'] = 'application/entity-statement+jwt; charset=UTF-8'
     return response
+
+
+@entity.route('/')
+def index():
+    _entity = current_app.federation_entity
+    trust_anchors = _entity.context.trust_anchors.keys()
+    authority_hints = _entity.context.authority_hints()
+    trust_mark_ids = set(_entity.server.trust_mark_entity.trust_mark_specification.keys())
+    return render_template('index.html', trust_anchors=trust_anchors,
+                           trust_mark_ids=list(trust_mark_ids), authority_hints=authority_hints)

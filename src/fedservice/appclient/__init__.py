@@ -5,6 +5,12 @@ from typing import Optional
 from typing import Union
 
 from cryptojwt import KeyJar
+from cryptojwt.key_bundle import keybundle_from_local_file
+from idpyoidc.message.oauth2 import is_error_message
+from idpyoidc.util import keyjar_combination
+
+from fedservice import save_trust_chains
+from fedservice.entity.function import get_verified_trust_chains
 from idpyoidc.client.client_auth import client_auth_setup
 from idpyoidc.client.client_auth import method_to_item
 from idpyoidc.client.defaults import SUCCESSFUL
@@ -17,12 +23,16 @@ from idpyoidc.client.util import get_deserialization_method
 from idpyoidc.configure import Configuration
 from idpyoidc.context import OidcContext
 from idpyoidc.exception import FormatError
+from idpyoidc.key_import import add_kb
+from idpyoidc.key_import import import_jwks_from_file
 from idpyoidc.message import Message
 from idpyoidc.message.oauth2 import ResponseMessage
 
 from fedservice.defaults import COMBINED_DEFAULT_OAUTH2_SERVICES
 from fedservice.defaults import COMBINED_DEFAULT_OIDC_SERVICES
 from fedservice.defaults import DEFAULT_REGISTRATION_TYPE
+from fedservice.entity.utils import get_federation_entity
+from fedservice.exception import NoTrustedChains
 from fedservice.message import OauthClientMetadata
 from fedservice.message import OIDCRPMetadata
 
@@ -37,6 +47,7 @@ ENTITY2CLIENT_TYPE = {
 class ClientEntity(RP):
     name = 'openid_relying_party'
     entity_type = 'openid_relying_party'
+    metadata_class = OIDCRPMetadata
 
     def __init__(
             self,
@@ -63,7 +74,6 @@ class ClientEntity(RP):
             if _val:
                 config[attr] = _val
 
-        self.metadata_class = None
         self.set_type(client_type, entity_type, config)
 
         self.entity_id = entity_id or config.get("entity_id", config.get("client_id", ""))
@@ -131,8 +141,6 @@ class ClientEntity(RP):
 
         if self.client_type == "oauth2":
             self.metadata_class = OauthClientMetadata
-        else:
-            self.metadata_class = OIDCRPMetadata
 
     def setup_client_authn_methods(self, config, context):
         if config and "client_authn_methods" in config:
@@ -150,9 +158,9 @@ class ClientEntity(RP):
         else:
             return self.context
 
-    def get_service(self, service_name, server_entity_id: Optional[str] = '', *arg):
+    def get_service(self, context, service_name, *arg):
         try:
-            return self.context[server_entity_id].service[service_name]
+            return context.service[service_name]
         except KeyError:
             return None
 
@@ -194,16 +202,18 @@ class ClientEntity(RP):
 
     def do_request(
             self,
+            context,
             request_type: str,
             response_body_type: Optional[str] = "",
             request_args: Optional[dict] = None,
             behaviour_args: Optional[dict] = None,
-            server_entity_id: Optional[str] = '',
             **kwargs
     ):
-        _srv = self.get_service(request_type, server_entity_id)
+        # _srv = self.get_service(request_type, server_entity_id)
+        _srv = context.service[request_type]
 
-        _info = _srv.get_request_parameters(request_args=request_args, **kwargs)
+        _info = _srv.get_request_parameters(context, request_args=request_args, **kwargs)
+        _info['server_entity_id'] = context.get("issuer", "")
 
         if not response_body_type:
             response_body_type = _srv.response_body_type
@@ -252,7 +262,9 @@ class ClientEntity(RP):
 
         if resp.status_code < 300:
             if "keyjar" not in kwargs:
-                kwargs["keyjar"] = self.context.keyjar
+                server_entity_id = kwargs.get("server_entity_id", "")
+                kwargs["keyjar"] = keyjar_combination(self, server_entity_id=server_entity_id)
+                # kwargs["keyjar"] = self.context[server_entity_id].keyjar
             if not response_body_type:
                 response_body_type = service.response_body_type
 
@@ -261,6 +273,9 @@ class ClientEntity(RP):
 
             if body:
                 kwargs["request_body"] = body
+        if resp.status_code >= 400:
+            logger.error(f"Exception on request: {resp.text}")
+            return {}
 
         return self.parse_request_response(service, resp, response_body_type, **kwargs)
 
@@ -417,3 +432,176 @@ class ClientEntity(RP):
             logger.error(f"Error response ({reqresp.status_code}): {reqresp.text}")
             raise OidcServiceError(
                 f"HTTP ERROR: {reqresp.text} [{reqresp.status_code}] on {reqresp.url}")
+
+    def do_provider_info(
+            self,
+            rp_context,
+            behaviour_args: Optional[dict] = None,
+    ) -> str:
+        """
+        Get the provider metadata using OpenID Federation.
+
+        :param behaviour_args: Behaviour specific attributes
+        :return: issuer ID
+        """
+        logger.debug(20 * "*" + " do_provider_info@openid.federation " + 20 * "*")
+
+        _federation_entity = get_federation_entity(self)
+
+        _pi = rp_context.get("provider_info", None)
+        if _pi is None or _pi == {}:
+            _pi = self._collect_metadata(_federation_entity, rp_context.issuer)
+        elif len(_pi) == 1 and "issuer" in _pi:
+            rp_context.issuer = _pi["issuer"]
+            _pi = self._collect_metadata(_federation_entity, rp_context.issuer)
+        else:
+            for key, val in _pi.items():
+                # All service endpoint parameters in the provider info has
+                # a name ending in '_endpoint' so I can look specifically
+                # for those
+                if key.endswith("_endpoint"):
+                    for _srv in self.get_services().values():
+                        # Every service has an endpoint_name assigned
+                        # when initiated. This name *MUST* match the
+                        # endpoint names used in the provider info
+                        if _srv.endpoint_name == key:
+                            _srv.endpoint = val
+
+            if "keys" in _pi:
+                _kj = self.get_attribute("keyjar")
+                for typ, _spec in _pi["keys"].items():
+                    if typ == "url":
+                        for _iss, _url in _spec.items():
+                            _kj.add_url(_iss, _url)
+                    elif typ == "file":
+                        for kty, _name in _spec.items():
+                            if kty == "jwks":
+                                _kj = import_jwks_from_file(_kj, _name, rp_context.get("issuer"))
+                            elif kty == "rsa":  # PEM file
+                                _kb = keybundle_from_local_file(_name, "der", ["sig"])
+                                _kj = add_kb(_kj, rp_context.get("issuer"), _kb)
+                    else:
+                        raise ValueError("Unknown provider JWKS type: {}".format(typ))
+
+        rp_context.map_supported_to_preferred(info=_pi)
+
+        try:
+            return rp_context.provider_info["issuer"]
+        except:
+            return rp_context.issuer
+
+    def _import_keys(self, resp, keyjar, issuer):
+        if "jwks_uri" in resp:
+            logger.debug(f"'jwks_uri' in provider info: {resp['jwks_uri']}")
+            _hp = self.upstream_get("attribute","httpc_params")
+            if _hp:
+                if "verify" in _hp and "verify" not in keyjar.httpc_params:
+                    keyjar.httpc_params["verify"] = _hp["verify"]
+            keyjar.load_keys(issuer, jwks_uri=resp["jwks_uri"])
+        elif "jwks" in resp:
+            logger.debug("'jwks' in provider info")
+            keyjar.load_keys(issuer, jwks=resp["jwks"])
+        else:
+            logger.debug("Neither jws or jwks_uri in provider info")
+
+    def _collect_metadata(self, federation_entity, server_entity_id):
+        context = federation_entity.context
+        _trust_chains = get_verified_trust_chains(self, server_entity_id)
+        if _trust_chains:
+            save_trust_chains(context, _trust_chains)
+            trust_chain = federation_entity.pick_trust_chain(_trust_chains)
+            federation_entity.context.trust_chain_anchor[server_entity_id] = trust_chain.anchor
+            #
+            _pi = trust_chain.metadata["openid_provider"]
+            context.trust_chain[_pi["issuer"]] = trust_chain
+
+            combo = federation_entity.upstream_get('unit')
+            rp = combo['openid_relying_party']
+            rp.context[server_entity_id].provider_info = context.metadata = _pi
+            self._import_keys(_pi, context.keyjar, _pi["issuer"])
+            return _pi
+        else:
+            raise NoTrustedChains(server_entity_id)
+
+    def finalize(self, response, behaviour_args: Optional[dict] = None):
+        """
+        The third of the high level methods that a user of this Class should
+        know about.
+        Once the consumer has redirected the user back to the
+        callback URL there might be a number of services that the client should
+        use. Which one those are defined by the client configuration.
+
+        :param behaviour_args: For finetuning
+        :param issuer: Who sent the response
+        :param response: The Authorization response as a dictionary
+        :returns: An dictionary with the following keys:
+            **state** The key under which the session information is
+            stored in the data store and
+            **token** The access token
+            **id_token:: the ID Token
+            **userinfo** The collected user information
+            **session_state** If logout is supported the special session_state claim
+        """
+
+        authorization_response = self.finalize_auth(response)
+        if is_error_message(authorization_response):
+            return {
+                "state": authorization_response["state"],
+                "error": authorization_response["error"],
+            }
+
+        _state = authorization_response["state"]
+        token = self.get_access_and_id_token(
+            authorization_response, state=_state, behaviour_args=behaviour_args
+        )
+        _id_token = token.get("id_token")
+        logger.debug(f"ID Token: {_id_token}")
+
+        rp_context = self.state2context(authorization_response)
+
+        if self.get_service(rp_context, "userinfo") and token["access_token"]:
+            inforesp = self.get_user_info(
+                rp_context,
+                state=authorization_response["state"],
+                access_token=token["access_token"],
+            )
+
+            if isinstance(inforesp, ResponseMessage) and "error" in inforesp:
+                return {"error": "Invalid response %s." % inforesp["error"], "state": _state}
+
+        elif _id_token:  # look for it in the ID Token
+            inforesp = self.userinfo_in_id_token(_id_token)
+        else:
+            inforesp = {}
+
+        logger.debug("UserInfo: %s", inforesp)
+
+        try:
+            _sid_support = rp_context.get("provider_info")["backchannel_logout_session_required"]
+        except KeyError:
+            try:
+                _sid_support = rp_context.get("provider_info")["frontchannel_logout_session_required"]
+            except Exception:
+                _sid_support = False
+
+        if _sid_support and _id_token:
+            try:
+                sid = _id_token["sid"]
+            except KeyError:
+                pass
+            else:
+                rp_context.cstate.bind_key(sid, _state)
+
+        if _id_token:
+            rp_context.cstate.bind_key(_id_token["sub"], _state)
+        else:
+            rp_context.cstate.bind_key(inforesp["sub"], _state)
+
+        return {
+            "userinfo": inforesp,
+            "state": authorization_response["state"],
+            "token": token["access_token"],
+            "id_token": _id_token,
+            "session_state": authorization_response.get("session_state", ""),
+            "issuer": rp_context.issuer,
+        }

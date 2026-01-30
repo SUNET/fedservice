@@ -28,9 +28,10 @@ from fedservice.message import OPMetadata
 logger = logging.getLogger(__name__)
 
 
-def create_entity_configuration(request_args: Optional[dict] = None, service: Optional[Service] = None, **kwargs):
+def create_entity_configuration(request_args: Optional[dict] = None, service: Optional[Service] = None,
+                                server_entity_id: Optional[str] = '', **kwargs):
     _combo = topmost_unit(service)
-    metadata = _combo.get_metadata(server_entity_id=kwargs.get("server_entity_id", ''))
+    metadata = _combo.get_metadata(server_entity_id=server_entity_id)
     federation_entity = get_federation_entity(service)
 
     _federation_keyjar = federation_entity.context.keyjar
@@ -123,7 +124,7 @@ def parse_federation_registration_response(service, resp, **kwargs):
     # Find the part of me that deals with the federation
     federation_entity = get_federation_entity(service)
 
-    _trust_anchors = list(federation_entity.trust_anchors.keys())
+    _trust_anchors = list(federation_entity.context.trust_anchors.keys())
     _sub = kwargs.get("sub") or federation_entity.context.entity_id
 
     entity_config = verify_entity_statement(resp, _sub, trust_anchors=_trust_anchors,
@@ -181,18 +182,22 @@ def shared_update_service_context(service, resp, **kwargs):
             _behaviour_args = kwargs.get("behaviour_args")
             if _behaviour_args:
                 _client = _behaviour_args.get("client")
-                if _client:
-                    _context = _client.context['']
-                    _context.map_preferred_to_registered(_guise_metadata, uri_claims=service.uri_claims)
+            else:
+                _client = item
 
-                    for arg in ["client_id", "client_secret"]:
-                        _val = _context.claims.get_usage(arg)
-                        if _val:
-                            setattr(_context, arg, _val)
+            if _client:
+                _context = _client.context[resp['iss']]
+                _md = _client.metadata_class(**_guise_metadata)
+                _context.map_preferred_to_registered(_guise_metadata, uri_claims=service.uri_claims)
 
-                        if arg == "client_secret" and _val:
-                            _context.keyjar.add_symmetric("", _val)
-                            _context.keyjar.add_symmetric(_context.claims.get_usage("client_id"), _val)
+                for arg in ["client_id", "client_secret"]:
+                    _val = _context.claims.get_usage(arg)
+                    if _val:
+                        setattr(_context, arg, _val)
+
+                    if arg == "client_secret" and _val:
+                        _context.keyjar.add_symmetric("", _val)
+                        _context.keyjar.add_symmetric(_context.claims.get_usage("client_id"), _val)
         else:
             _context = item.get_context()
             _md = service.metadata_cls[guise](**_guise_metadata)
@@ -216,7 +221,8 @@ def post_construct_create_entity_configuration(context,
     :param kwargs:
     :return:
     """
-    return create_entity_configuration(request_args, service, **kwargs)
+    server_entity_id = context.issuer
+    return create_entity_configuration(request_args, service,  server_entity_id=server_entity_id, **kwargs)
 
 
 class Registration(registration.Registration):
@@ -315,7 +321,7 @@ class Registration(registration.Registration):
         # Do I trust the TA the OP chose ?
         _trust_anchor = payload['trust_anchor']
         logger.debug(f"trust_anchor_id: {_trust_anchor}")
-        if _trust_anchor not in _federation_entity.function.trust_chain_collector.trust_anchors:
+        if _trust_anchor not in _federation_entity.context.trust_anchor:
             raise ValueError("Trust anchor I don't trust")
 
         # This is where I should decide to use the metadata verification service or do it
@@ -345,12 +351,13 @@ class Registration(registration.Registration):
 
             _metadata = payload.get("metadata")
             if _metadata:
-                # replace the metadata provided by the client with the metadata received from the AS
+                # replace the metadata collected with the trust chain with the metadata received from the AS/OP
                 _trust_chains[0].verified_chain[-1]['metadata'] = _metadata
                 # If there is metadata_policy defined apply it
                 _trust_chains = apply_policies(_federation_entity, _trust_chains)
 
             _resp = _trust_chains[0].verified_chain[-1]
+            _resp['iss'] = payload['iss']
             _context = self.upstream_get('context')
             _context.registration_response = _resp
             return _resp

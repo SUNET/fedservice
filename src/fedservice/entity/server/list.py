@@ -22,13 +22,13 @@ class List(Endpoint):
         self.extended = extended
 
     def filter(self,
-               subordinates: dict,
+               subordinate: dict,
                entity_type: str = '',
                trust_mark_type: str = '',
                trust_marked=None,
                **kwargs):
         match = []
-        for entity_id, conf in subordinates.items():
+        for entity_id, conf in subordinate.items():
             matched = False
             if entity_type:
                 if entity_type in conf['metadata']:

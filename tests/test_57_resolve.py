@@ -20,7 +20,7 @@ TA_ENDPOINTS = ["list", "fetch", "entity_configuration"]
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [IM_ID, TMI_ID],
+            "subordinate": [IM_ID, TMI_ID],
             "preference": {
                 "organization_name": "The example federation operator",
                 "organization_uri": "https://ta.example.org",
@@ -35,7 +35,7 @@ FEDERATION_CONFIG = {
     IM_ID: {
         "federation_entity": {
             "trust_anchors": [TA_ID],
-            "subordinates": [RP_ID],
+            "subordinate": [RP_ID],
             "authority_hints": [TA_ID],
             "endpoint": ['entity_configuration', 'list', 'fetch']
         }
@@ -121,7 +121,8 @@ class TestComboCollect(object):
         self.tmi = federation[TMI_ID]
 
         trust_mark = self.tmi.server.trust_mark_entity.create_trust_mark(SIRTIFI_TRUST_MARK_TYPE, RP_ID)
-        self.rp["federation_entity"].context.trust_marks = [trust_mark]
+        self.rp["federation_entity"].context.trust_marks = [
+            {'trust_mark': trust_mark, 'trust_mark_type': SIRTIFI_TRUST_MARK_TYPE}]
 
     def test_setup(self):
         assert self.ta

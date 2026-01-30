@@ -29,7 +29,7 @@ OAUTH_FED_SERVICE = federation_services('entity_configuration', "entity_statemen
 FEDERATION_CONFIG = {
     TA_ID: {
         "federation_entity": {
-            "subordinates": [RP_ID, AS_ID],
+            "subordinate": [RP_ID, AS_ID],
             "endpoint": ["entity_configuration", "list", "fetch", "resolve"],
             "preference": {
                 "organization_name": "The example federation operator",

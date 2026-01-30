@@ -511,6 +511,41 @@ class TrustMarkOwners(Message):
                 keyjar = import_jwks(keyjar, _jwks, _sub)
 
 
+def trust_mark_deser(val, sformat="dict"):
+    """Deserializes a JSON object (most likely) into a Trust Mark Response."""
+    if isinstance(val, dict):
+        return [TrustMark(**val)]
+
+    _res = []
+    for v in val:
+        _res.append(TrustMark(**msg_deser(v, sformat)))
+    return _res
+
+
+SINGLE_REQUIRED_TRUST_MARK = (Message, True, msg_ser, trust_mark_deser, False)
+OPTIONAL_LIST_OF_TRUST_MARKS = ([Message], False, msg_list_ser, trust_mark_deser, False)
+
+
+class TrustMarkResponse(ResponseMessage):
+    c_param = {
+        "trust_mark": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_REQUIRED_STRING
+    }
+
+
+def trust_mark_response_deser(val, sformat="json"):
+    """Deserializes a JSON object (most likely) into a Trust Mark Response."""
+    if isinstance(val, dict):
+        return [TrustMarkResponse(**val)]
+
+    _res = []
+    for v in val:
+        _res.append(TrustMarkResponse(**msg_deser(v, sformat)))
+    return _res
+
+
+OPTIONAL_LIST_OF_TRUST_MARK_RESPONSES = ([Message], False, msg_list_ser, trust_mark_response_deser, False)
+
 class EntityStatement(JsonWebToken):
     """The Entity Statement"""
     c_param = JsonWebToken.c_param.copy()
@@ -551,7 +586,7 @@ class EntityConfiguration(EntityStatement):
     c_param = EntityStatement.c_param.copy()
     c_param.update({
         'authority_hints': OPTIONAL_LIST_OF_STRINGS,
-        'trust_marks': OPTIONAL_LIST_OF_STRINGS,
+        'trust_marks': OPTIONAL_LIST_OF_TRUST_MARKS,
         'trust_mark_owners': SINGLE_OPTIONAL_JSON,
         'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
         'trust_anchor_hints': OPTIONAL_LIST_OF_STRINGS
@@ -574,9 +609,11 @@ class EntityConfiguration(EntityStatement):
         _trust_marks = self.get("trust_marks")
         if _trust_marks:
             for _tm in _trust_marks:
-                _payload = _payload_from_jws(_tm)
-                _trust_mark = TrustMark(**_payload)
+                _tm_payload = _payload_from_jws(_tm['trust_mark'])
+                _trust_mark = TrustMark(**_tm_payload)
                 _trust_mark.verify()
+                if _tm['trust_mark_type'] != _trust_mark["trust_mark_type"]:
+                    raise ValueError("Trust mark type mismatch")
 
         # Make sure there is no Entity Configuration claims present
         for claim in ['constraints', 'metadata_policy', 'metadata_policy_crit', 'source_endpoint']:
@@ -715,34 +752,6 @@ class TrustMarkStatusResponse(JsonWebToken):
     }
 
 
-def trust_mark_deser(val, sformat="json"):
-    """Deserializes a JSON object (most likely) into a Trust Mark."""
-    return deserialize_from_one_of(val, TrustMark, sformat)
-
-
-SINGLE_REQUIRED_TRUST_MARK = (Message, True, msg_ser, trust_mark_deser, False)
-OPTIONAL_LIST_OF_TRUST_MARKS = ([Message], False, msg_ser, trust_mark_deser, False)
-
-
-class TrustMarkResponse(ResponseMessage):
-    c_param = {
-        "trust_mark": SINGLE_REQUIRED_STRING,
-        "trust_mark_type": SINGLE_REQUIRED_STRING
-    }
-
-
-def trust_mark_response_deser(val, sformat="json"):
-    """Deserializes a JSON object (most likely) into a Trust Mark Response."""
-    if isinstance(val, dict):
-        return [TrustMarkResponse(**val)]
-
-    _res = []
-    for v in val:
-        _res.append(TrustMarkResponse(**msg_deser(v, sformat)))
-    return _res
-
-
-OPTIONAL_LIST_OF_TRUST_MARK_RESPONSES = ([Message], False, msg_list_ser, trust_mark_response_deser, False)
 
 
 class ResolveRequest(Message):

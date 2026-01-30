@@ -51,10 +51,13 @@ def verify_entity_statement(signed_jwt, sub, skew=DEFAULT_SKEW, msg_type: Option
     else:
         raise ValueError("Entity Statement type not properly set")
 
+    logger.debug(f"verify_entity_statement: {signed_jwt}")
+
     payload = _jws.jwt.payload()
+    logger.debug(f"verify_entity_statement, payload: {payload}")
 
     if payload["sub"] != sub:
-        raise ValueError("Wrong subject in the Entity Statement")
+        raise ValueError(f"Wrong subject in the Entity Statement [{payload['sub']}] != [{sub}]")
 
     jwt_args = {}
     keyjar = kwargs.get("keyjar")
@@ -162,7 +165,7 @@ def collect_trust_chains(unit,
                          authority_hints: Optional[list] = None):
     _federation_entity = get_federation_entity(unit)
 
-    _chains = _federation_entity.trust_chain.get(entity_id)
+    _chains = _federation_entity.context.trust_chain.get(entity_id)
     if _chains:
         # Are they still active ?
         pass
@@ -189,7 +192,7 @@ def collect_trust_chains(unit,
     if tree:
         chains = tree2chains(tree)
         logger.debug("%d chains", len(chains))
-        _federation_entity.trust_chain[entity_id] = chains
+        _federation_entity.context.trust_chain[entity_id] = chains
         return chains, signed_entity_configuration
     elif tree == {}:
         return [], signed_entity_configuration
@@ -264,7 +267,7 @@ def get_verified_trust_chains(unit, entity_id: str, stop_at: Optional[str] = "")
 
 def get_entity_endpoint(unit, entity_id, metadata_type, metadata_parameter):
     _federation_entity = get_federation_entity(unit)
-    if entity_id in _federation_entity.trust_anchors:
+    if entity_id in _federation_entity.context.trust_anchor:
         # Fetch Entity Configuration
         _ec = _federation_entity.client.do_request("entity_configuration", entity_id=entity_id)
         return _ec["metadata"][metadata_type][metadata_parameter]
@@ -330,11 +333,11 @@ def pick_trust_anchors(unit, server_entity_id) -> Optional[List[str]]:
 
     ta_hints = entity_config.get('trust_anchor_hints')
     if ta_hints:
-        usable_ta = set(_collector.trust_anchors.keys()).intersection(set(ta_hints))
+        usable_ta = set(_federation_entity.context.trust_anchor.keys()).intersection(set(ta_hints))
         if usable_ta:
             return list(usable_ta)
     else:  # Try to find a chain from the server to a trusted TA
-        for ta in _collector.trust_anchors.keys():
+        for ta in _federation_entity.context.trust_anchor.keys():
             chains = get_verified_trust_chains(unit, server_entity_id, stop_at=ta)
             if chains:
                 return [ta]  # Only need one
