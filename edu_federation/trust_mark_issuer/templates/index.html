@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Trust Mark Issuer</title>
+</head>
+<body>
+<h1>The Trust Mark Issuer</h1>
+<h2>Trust Anchors</h2>
+<ul>
+{% for id in trust_anchors %}
+    <li>{{ id }}</li>
+{% endfor %}
+</ul>
+<h2>Authority hints</h2>
+<ul>
+{% for id in authority_hints %}
+    <li>{{ id }}</li>
+{% endfor %}
+</ul>
+<h2>Can issue these kinds of trust marks</h2>
+<ol>
+{% for id in trust_mark_ids %}
+    <li>{{ id }}</li>
+{% endfor %}
+</ol>
+</body>
+</html>

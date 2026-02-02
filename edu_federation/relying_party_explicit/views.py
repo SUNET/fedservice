@@ -217,7 +217,8 @@ def finalize(request_args):
         trust_path = trust_chain_instance.iss_path
         trust_path_expires = timestamp2local(trust_chain_instance.exp)
         trust_marks = trust_chain_instance.verified_chain[1].get("trust_marks", [])
-        return render_template('opresult.html', endpoint=rp.context.endpoint,
+        return render_template('opresult.html',
+                               service=_context.get_services().keys(),
                                userinfo=res['userinfo'],
                                access_token=res['token'],
                                id_token=res["id_token"],

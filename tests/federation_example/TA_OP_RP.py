@@ -39,7 +39,7 @@ FEDERATION_CONFIG = {
                 "organization_uri": "https://ta.example.org",
                 "contacts": "operations@ta.example.org",
                 "scopes_supported": ["openid", "profile"],
-                "response_types_supported": ['id_token', 'code', 'code id_token']
+                "response_types_supported": ['code', 'code id_token']
             },
             "endpoint": ["entity_configuration", "list", "fetch", "resolve"],
         }

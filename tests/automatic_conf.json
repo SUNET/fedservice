@@ -1,0 +1,148 @@
+{
+  "entity_id": "https://127.0.0.1:4015",
+  "entity_type": {
+    "federation_entity": {
+      "httpc_params": {
+        "verify": false
+      },
+      "key_config": {
+        "private_path": "relying_party_automatic/private/fed_keys.json",
+        "key_defs": [
+          {
+            "type": "RSA",
+            "key": "",
+            "use": [
+              "sig"
+            ]
+          },
+          {
+            "type": "EC",
+            "crv": "P-256",
+            "use": [
+              "sig"
+            ]
+          }
+        ],
+        "public_path": "relying_party_automatic/static/fed_keys.json",
+        "read_only": false
+      },
+      "authority_hints": "PLACE_HOLDER_AUTHORITY_HINTS",
+      "trust_anchors": "PLACE_HOLDER_TRUST_ANCHORS",
+      "endpoint": [
+        "entity_configuration"
+      ],
+      "services": [
+        "entity_configuration",
+        "entity_statement",
+        "list"
+      ]
+    },
+    "openid_relying_party": {
+      "class": "idpyoidc.client.rp_handler.RPHandler",
+      "kwargs": {
+        "config": {
+          "client_class": "fedservice.appclient.stand_alone_client_entity.StandAloneClientEntity",
+          "base_url": "https://127.0.0.1:4015",
+          "client_type": "oidc",
+          "httpc_params": {
+            "verify": false
+          },
+          "key_conf": {
+            "private_path": "private/expl.rp.jwks.json",
+            "key_defs": [
+              {
+                "type": "RSA",
+                "use": [
+                  "sig"
+                ]
+              },
+              {
+                "type": "EC",
+                "crv": "P-256",
+                "use": [
+                  "sig"
+                ]
+              }
+            ],
+            "public_path": "relying_party_automatic/static/rp_keys.json",
+            "read_only": false,
+            "uri_path": "jwks/openid_relying_party"
+          },
+          "preference": {
+            "application_name": "rphandler",
+            "application_type": "web",
+            "contacts": [
+              "ops@example.com"
+            ],
+            "response_types_supported": [
+              "code",
+              "code id_token",
+              "id_token"
+            ],
+            "scope": [
+              "openid",
+              "profile",
+              "email",
+              "address",
+              "phone"
+            ],
+            "token_endpoint_auth_method": [
+              "private_key_jwt"
+            ],
+            "client_registration_types": [
+              "automatic"
+            ]
+          },
+          "services": {
+            "authorization": {
+              "class": "fedservice.appclient.oidc.authorization.Authorization",
+              "kwargs": {}
+            },
+            "accesstoken": {
+              "class": "idpyoidc.client.oidc.access_token.AccessToken",
+              "kwargs": {}
+            },
+            "userinfo": {
+              "class": "idpyoidc.client.oidc.userinfo.UserInfo",
+              "kwargs": {}
+            }
+          },
+          "client_configs": {
+            "": {
+              "client_type": "oidc",
+              "client_authn_methods": [
+                "private_key_jwt"
+              ],
+              "preference": {
+                "client_registration_types": [
+                  "automatic"
+                ],
+                "application_type": "web",
+                "response_types_supported": [
+                  "code",
+                  "id_token",
+                  "code id_token"
+                ],
+                "token_endpoint_auth_methods_supported": [
+                  "private_key_jwt"
+                ],
+                "scopes_supported": [
+                  "openid"
+                ]
+              },
+              "add_ons": {
+                "pkce": {
+                  "function": "idpyoidc.client.oauth2.add_on.pkce.add_support",
+                  "kwargs": {
+                    "code_challenge_length": 64,
+                    "code_challenge_method": "S256"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

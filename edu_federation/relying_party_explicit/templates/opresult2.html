@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+
+
+<html>
+<head>
+    <title>idpyoidc RP</title>
+</head>
+<body>
+<h1>Actors</h1>
+<table>
+    <tr>
+        <th>Entity type</th>
+        <th>Entity ID</th>
+    </tr>
+    <tr>
+        <td>Trust Anchor</td>
+        <td>https://127.0.0.1:7003</td>
+    </tr>
+    <tr>
+        <td>Trust Mark Issuer</td>
+        <td>https://127.0.0.1:6000</td>
+    </tr>
+    <tr>
+        <td>OpenID Provider</td>
+        <td>https://127.0.0.1:4004</td>
+    </tr>
+    <tr>
+        <td>Relying Party</td>
+        <td>https://127.0.0.1:4002</td>
+    </tr>
+</table>
+<h1>Log in result</h1>
+<h2>You have successfully logged in!</h2>
+<h4>OpenID Provider Endpoints</h4>
+<ul>
+{% for srv in service %}
+    <li>{{ srv }}</li>
+{% endfor %}
+</ul>
+<h3>Federation Entity information</h3>
+<h4>Trust Anchor</h4>
+{{ trust_anchor }}
+<h4>Trust Path</h4>
+{{ trust_path }}
+<h4>Trust path expires</h4>
+{{ trust_path_expires }}
+<h4>Trust marks</h4>
+{{ trust_marks }}
+</body>
+</html>

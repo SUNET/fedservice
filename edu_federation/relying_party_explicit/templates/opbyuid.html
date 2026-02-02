@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Federation aware Relying Party</title>
+</head>
+<body>
+<h1>OIDC based Identity Federation</h1>
+<h1>Federation Actors</h1>
+<table>
+    <tr>
+        <th>Entity type</th>
+        <th>Entity ID</th>
+    </tr>
+    <tr>
+        <td>Trust Anchor</td>
+        <td>https://127.0.0.1:7010</td>
+    </tr>
+    <tr>
+        <td>Trust Mark Issuer</td>
+        <td>https://127.0.0.1:6010</td>
+    </tr>
+    <tr>
+        <td>OpenID Provider</td>
+        <td>https://127.0.0.1:4020</td>
+    </tr>
+    <tr>
+        <td>Relying Party (automatic registration) </td>
+        <td>https://127.0.0.1:4015</td>
+    </tr>
+    <tr>
+        <td>Relying Party (explicit registration) </td>
+        <td>https://127.0.0.1:4010</td>
+    </tr>
+</table>
+<form action="rp" method="get">
+  <h2>Start sign in flow:</h2>
+  <h3>By entering the entity ID of an OpenID Connect Provider:</h3>
+  <input type="text" id="entity_id" name="entity_id" class="form-control" placeholder="ENTITY_ID" autofocus>
+</form>
+</body>
+</html>
+

@@ -1,0 +1,180 @@
+{
+  "entity_id": "https://127.0.0.1:6002",
+  "federation_entity": {
+    "preference": {
+      "organization_name": "The OP operator",
+      "organization_uri": "https://op.example.com",
+      "contacts": "operations@op.example.com"
+    },
+    "authority_hints": [
+      "https://127.0.0.1:6000"
+    ]
+  },
+  "openid_provider": {
+    "class": "fedservice.op.ServerEntity",
+    "kwargs": {
+      "config": {
+        "issuer": "https://127.0.0.1:6002",
+        "preference": {
+          "subject_types_supported": [
+            "public",
+            "pairwise",
+            "ephemeral"
+          ],
+          "grant_types_supported": [
+            "authorization_code",
+            "implicit",
+            "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            "refresh_token"
+          ]
+        },
+        "token_handler_args": {
+          "jwks_def": {
+            "private_path": "private/token_jwks.json",
+            "read_only": false,
+            "key_defs": [
+              {
+                "type": "oct",
+                "bytes": "24",
+                "use": [
+                  "enc"
+                ],
+                "kid": "code"
+              }
+            ]
+          },
+          "code": {
+            "lifetime": 600,
+            "kwargs": {
+              "crypt_conf": {
+                "kwargs": {
+                  "keys": {
+                    "key_defs": [
+                      {
+                        "type": "OCT",
+                        "use": [
+                          "enc"
+                        ],
+                        "kid": "password"
+                      },
+                      {
+                        "type": "OCT",
+                        "use": [
+                          "enc"
+                        ],
+                        "kid": "salt"
+                      }
+                    ]
+                  },
+                  "iterations": 1
+                }
+              }
+            }
+          }
+        },
+        "keys": {
+          "key_defs": [
+            {
+              "type": "RSA",
+              "key": "",
+              "use": [
+                "sig"
+              ]
+            },
+            {
+              "type": "EC",
+              "crv": "P-256",
+              "use": [
+                "sig"
+              ]
+            }
+          ],
+          "uri_path": "static/jwks.json"
+        },
+        "endpoint": {
+          "registration": {
+            "path": "registration",
+            "class": "fedservice.op.registration.Registration",
+            "kwargs": {
+              "client_auth_method": null
+            }
+          },
+          "authorization": {
+            "path": "authorization",
+            "class": "fedservice.op.authorization.Authorization",
+            "kwargs": {
+              "response_types_supported": [
+                [
+                  "code"
+                ],
+                [
+                  "id_token"
+                ],
+                [
+                  "code",
+                  "id_token"
+                ]
+              ],
+              "response_modes_supported": [
+                "query",
+                "fragment",
+                "form_post"
+              ],
+              "claim_types_supported": [
+                "normal",
+                "aggregated",
+                "distributed"
+              ],
+              "claims_parameter_supported": true,
+              "request_parameter_supported": true,
+              "request_uri_parameter_supported": true
+            }
+          },
+          "token": {
+            "path": "token",
+            "class": "idpyoidc.server.oidc.token.Token",
+            "kwargs": {
+              "client_authn_method": [
+                "client_secret_post",
+                "client_secret_basic",
+                "client_secret_jwt",
+                "private_key_jwt"
+              ]
+            }
+          },
+          "userinfo": {
+            "path": "userinfo",
+            "class": "idpyoidc.server.oidc.userinfo.UserInfo",
+            "kwargs": {}
+          }
+        },
+        "template_dir": "template",
+        "session_params": {
+          "encrypter": {
+            "kwargs": {
+              "keys": {
+                "key_defs": [
+                  {
+                    "type": "OCT",
+                    "use": [
+                      "enc"
+                    ],
+                    "kid": "password"
+                  },
+                  {
+                    "type": "OCT",
+                    "use": [
+                      "enc"
+                    ],
+                    "kid": "salt"
+                  }
+                ]
+              },
+              "iterations": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

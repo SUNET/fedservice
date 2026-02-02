@@ -31,7 +31,12 @@ logger = logging.getLogger(__name__)
 def create_entity_configuration(request_args: Optional[dict] = None, service: Optional[Service] = None,
                                 server_entity_id: Optional[str] = '', **kwargs):
     _combo = topmost_unit(service)
+
     metadata = _combo.get_metadata(server_entity_id=server_entity_id)
+    entity_types = [k for k in _combo.keys() if k != "federation_entity"]
+    # Assumes there is only one part in the entity except for the federation entity
+    metadata[entity_types[0]].update({k:v for k,v in request_args.items() if k != "entity_id"})
+
     federation_entity = get_federation_entity(service)
 
     _federation_keyjar = federation_entity.context.keyjar
@@ -258,7 +263,7 @@ class Registration(registration.Registration):
         else:
             return request, {}
 
-    def update_service_context(self, resp: Union[Message, dict], **kwargs):
+    def update_service_context(self, context, resp: Union[Message, dict], **kwargs):
         shared_update_service_context(service=self, resp=resp, **kwargs)
 
     def create_entity_statement(self, request_args: Optional[dict] = None, **kwargs):
@@ -283,7 +288,7 @@ class Registration(registration.Registration):
         _jws = _context.create_entity_configuration(iss=_federation_entity.context.entity_id, **kwargs)
         return _jws
 
-    def parse_response(self, info, sformat="", state="", **kwargs):
+    def parse_response(self, context, info, sformat="", state="", **kwargs):
         resp = self.parse_federation_registration_response(info, **kwargs)
         logger.debug(f"Registration response: {resp}")
         if not resp:

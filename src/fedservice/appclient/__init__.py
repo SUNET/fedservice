@@ -225,7 +225,7 @@ class ClientEntity(RP):
         except:
             _state = ""
         return self.service_request(
-            _srv, response_body_type=response_body_type, state=_state, **_info
+            context, _srv, response_body_type=response_body_type, state=_state, **_info
         )
 
     def set_client_id(self, client_id, *args):
@@ -233,6 +233,7 @@ class ClientEntity(RP):
 
     def get_response(
             self,
+            context,
             service: Service,
             url: str,
             method: Optional[str] = "GET",
@@ -277,10 +278,11 @@ class ClientEntity(RP):
             logger.error(f"Exception on request: {resp.text}")
             return {}
 
-        return self.parse_request_response(service, resp, response_body_type, **kwargs)
+        return self.parse_request_response(context, service, resp, response_body_type, **kwargs)
 
     def service_request(
             self,
+            context,
             service: Service,
             url: str,
             method: Optional[str] = "GET",
@@ -309,9 +311,9 @@ class ClientEntity(RP):
 
         logger.debug(REQUEST_INFO.format(url, method, body, headers))
 
-        # returns list of trust chains
+        # returns
         response = self.get_response(
-            service, url, method, body, response_body_type, headers, **kwargs
+            context, service, url, method, body, response_body_type, headers, **kwargs
         )
 
         if "error" in response:
@@ -322,7 +324,7 @@ class ClientEntity(RP):
             except KeyError:
                 pass
 
-            service.update_service_context(response, **kwargs)
+            service.update_service_context(context, response, **kwargs)
         return response
 
     def _parse_unsigned_reponse(self, response, deser_method):
@@ -335,18 +337,18 @@ class ClientEntity(RP):
 
         return err_resp
 
-    def _parse_signed_response(self, service, response, deser_method, state, **kwargs):
-        return service.parse_response(response, deser_method, state, **kwargs)
+    def _parse_signed_response(self, context, service, response, deser_method, state, **kwargs):
+        return service.parse_response(context, response, deser_method, state, **kwargs)
 
-    def _parse_response(self, service, response, body_type, state, **kwargs):
+    def _parse_response(self, context, service, response, body_type, state, **kwargs):
         try:
-            return self._parse_signed_response(service, response, body_type, state, **kwargs)
+            return self._parse_signed_response(context, service, response, body_type, state, **kwargs)
         except Exception:
             _resp = self._parse_unsigned_reponse(response, body_type)
             logger.warning('Unsigned response')
             return _resp
 
-    def parse_request_response(self, service, reqresp, response_body_type="", state="", **kwargs):
+    def parse_request_response(self, context, service, reqresp, response_body_type="", state="", **kwargs):
         """
         Deal with a self.http response. The response are expected to
         follow a special pattern, having the attributes:
@@ -383,7 +385,7 @@ class ClientEntity(RP):
             logger.debug(f"Successful response: {reqresp.text}")
 
             try:
-                return self._parse_signed_response(service, reqresp.text, body_type, state,
+                return self._parse_signed_response(context, service, reqresp.text, body_type, state,
                                                    **kwargs)
             except Exception as err:
                 logger.error(err)
@@ -402,13 +404,14 @@ class ClientEntity(RP):
                 content_type = "application/json"
 
             try:
-                err_resp = self._parse_response(service, reqresp.text, content_type, state,
+                err_resp = self._parse_response(context, service, reqresp.text, content_type, state,
                                                 **kwargs)
             except (FormatError, ValueError):
                 if content_type != response_body_type:
                     logger.warning(f'Response with wrong content-type: {content_type}')
                     try:
-                        err_resp = self._parse_response(service,
+                        err_resp = self._parse_response(context,
+                                                        service,
                                                         response=reqresp.text,
                                                         body_type=response_body_type,
                                                         state=state,
@@ -493,7 +496,7 @@ class ClientEntity(RP):
     def _import_keys(self, resp, keyjar, issuer):
         if "jwks_uri" in resp:
             logger.debug(f"'jwks_uri' in provider info: {resp['jwks_uri']}")
-            _hp = self.upstream_get("attribute","httpc_params")
+            _hp = self.httpc_params
             if _hp:
                 if "verify" in _hp and "verify" not in keyjar.httpc_params:
                     keyjar.httpc_params["verify"] = _hp["verify"]
@@ -518,7 +521,7 @@ class ClientEntity(RP):
             combo = federation_entity.upstream_get('unit')
             rp = combo['openid_relying_party']
             rp.context[server_entity_id].provider_info = context.metadata = _pi
-            self._import_keys(_pi, context.keyjar, _pi["issuer"])
+            self._import_keys(_pi, rp.context[server_entity_id].keyjar, _pi["issuer"])
             return _pi
         else:
             raise NoTrustedChains(server_entity_id)
@@ -551,13 +554,15 @@ class ClientEntity(RP):
             }
 
         _state = authorization_response["state"]
+
+        rp_context = self.state2context(authorization_response)
+
         token = self.get_access_and_id_token(
-            authorization_response, state=_state, behaviour_args=behaviour_args
+            rp_context, authorization_response, state=_state, behaviour_args=behaviour_args
         )
         _id_token = token.get("id_token")
         logger.debug(f"ID Token: {_id_token}")
 
-        rp_context = self.state2context(authorization_response)
 
         if self.get_service(rp_context, "userinfo") and token["access_token"]:
             inforesp = self.get_user_info(

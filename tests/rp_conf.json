@@ -1,0 +1,72 @@
+{
+  "entity_id": "https://127.0.0.1:6001",
+  "federation_entity": {
+    "preference": {
+      "organization_name": "The RP",
+      "organization_uri": "https://rp.example.com",
+      "contacts": "operations@rp.example.com"
+    },
+    "authority_hints": [
+      "https://127.0.0.1:6000"
+    ]
+  },
+  "openid_relying_party": {
+    "class": "fedservice.rp.ClientEntity",
+    "kwargs": {
+      "config": {
+        "redirect_uris": [
+          "https://example.com/cli/authz_cb"
+        ],
+        "keys": {
+          "uri_path": "static/jwks.json",
+          "key_defs": [
+            {
+              "type": "RSA",
+              "key": "",
+              "use": [
+                "sig"
+              ]
+            },
+            {
+              "type": "EC",
+              "crv": "P-256",
+              "use": [
+                "sig"
+              ]
+            }
+          ]
+        },
+        "preference": {
+          "grant_types": [
+            "authorization_code",
+            "implicit",
+            "refresh_token"
+          ],
+          "id_token_signed_response_alg": "ES256",
+          "token_endpoint_auth_method": "client_secret_basic",
+          "token_endpoint_auth_signing_alg": "ES256"
+        }
+      },
+      "services": {
+        "discovery": {
+          "class": "fedservice.rp.provider_info_discovery.ProviderInfoDiscovery"
+        },
+        "registration": {
+          "class": "fedservice.rp.registration.Registration"
+        },
+        "authorization": {
+          "class": "idpyoidc.client.oidc.authorization.Authorization"
+        },
+        "access_token": {
+          "class": "idpyoidc.client.oidc.access_token.AccessToken"
+        },
+        "refresh_access_token": {
+          "class": "idpyoidc.client.oidc.refresh_access_token.RefreshAccessToken"
+        },
+        "userinfo": {
+          "class": "idpyoidc.client.oidc.userinfo.UserInfo"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Trust Anchor</title>
+</head>
+<body>
+<h1>I am the trust anchor of this federation</h1>
+<h2>My keys</h2>
+{{ my_keys }}
+<h2>These are my underlings:</h2>
+{% for id, conf in subordinates.items() %}
+    <dt>{{ id }}</dt>
+    <dd>{{ conf }}</dd>
+{% endfor %}
+</body>
+</html>

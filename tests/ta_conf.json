@@ -1,0 +1,28 @@
+{
+  "federation_entity": {
+    "entity_id": "https://127.0.0.1:6000",
+    "preference": {
+      "organization_name": "The example federation operator",
+      "organization_uri": "https://ta.example.com",
+      "contacts": "operations@ta.example.com"
+    },
+    "key_conf": {
+      "key_defs": [
+        {
+          "type": "RSA",
+          "key": "",
+          "use": [
+            "sig"
+          ]
+        },
+        {
+          "type": "EC",
+          "crv": "P-256",
+          "use": [
+            "sig"
+          ]
+        }
+      ]
+    }
+  }
+}

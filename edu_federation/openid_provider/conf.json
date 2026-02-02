@@ -118,6 +118,7 @@
                 "refresh_token"
               ]
             },
+            "jwks_uri": "jwks/openid_provider",
             "template_dir": "openid_provider/templates",
             "token_handler_args": {
               "jwks_def": {
