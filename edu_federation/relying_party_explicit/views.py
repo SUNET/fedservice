@@ -1,10 +1,9 @@
+from datetime import datetime
 import logging
 import time
-from datetime import datetime
 from typing import Callable
 from urllib.parse import parse_qs
 
-import werkzeug
 from flask import Blueprint
 from flask import current_app
 from flask import redirect
@@ -15,6 +14,7 @@ from flask.helpers import make_response
 from flask.helpers import send_from_directory
 from idpyoidc.client.exception import OidcServiceError
 from idpyoidc.client.oidc.rp import RP
+import werkzeug
 
 from fedservice import get_payload
 from fedservice.appclient import ClientEntity
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 entity = Blueprint('oidc_rp', __name__, url_prefix='')
 
+
 def compact(qsdict):
     res = {}
     for key, val in qsdict.items():
@@ -32,6 +33,7 @@ def compact(qsdict):
         else:
             res[key] = val
     return res
+
 
 @entity.route('/static/<path:filename>')
 def send_js(filename):
@@ -147,9 +149,6 @@ def rp():
         _providers = list(_entity.context.keys())
         return render_template('rpe_opbyuid.html', providers=_providers)
 
-def get_rp():
-    return current_app.server["openid_relying_party"]
-
 
 def timestamp2local(timestamp):
     utc = datetime.fromtimestamp(timestamp)
@@ -248,6 +247,7 @@ def finalize(request_args):
 def authz_cb():
     return finalize(request.args)
 
+
 @entity.route('/authz_tok_cb')
 def authz_tok_cb(**kwargs):
     logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
@@ -263,6 +263,7 @@ def handle_bad_request(e):
 def ihf_cb(self, op_hash='', **kwargs):
     logger.debug('implicit_hybrid_flow kwargs: {}'.format(kwargs))
     return render_template('repost_fragment.html')
+
 
 @entity.route('/repost_fragment')
 def repost_fragment():

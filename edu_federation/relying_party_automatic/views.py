@@ -1,10 +1,8 @@
+from datetime import datetime
 import logging
 import time
-from datetime import datetime
 from typing import Callable
 
-import werkzeug
-from fedservice.message import EntityConfiguration
 from flask import Blueprint
 from flask import current_app
 from flask import redirect
@@ -14,9 +12,10 @@ from flask import session
 from flask.helpers import make_response
 from flask.helpers import send_from_directory
 from idpyoidc.client.exception import OidcServiceError
-from idpyoidc.client.rp_handler import RPHandler
+import werkzeug
 
-from fedservice.entity_statement.create import create_entity_statement
+from fedservice.appclient import ClientEntity
+from fedservice.entity_statement.create import create_entity_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +33,8 @@ def keys(guise):
         _ent_type = current_app.server[guise]
         logger.debug(f"Returning keys for {guise}")
         logger.debug(f"_ent_type: {_ent_type}")
-        if isinstance(_ent_type, RPHandler):
-            logger.debug(f"<<RPHandler>>")
-            _json = _ent_type.keyjar.export_jwks_as_json()
-        else:
-            _context = _ent_type.get_context()
-            _json = _context.keyjar.export_jwks_as_json()
+        _context = _ent_type.get_context()
+        _json = _context.keyjar.export_jwks_as_json()
         logger.debug(f"keys: {_json}")
         return _json
 
@@ -48,8 +43,7 @@ def keys(guise):
 
 @entity.route('/')
 def index():
-    _providers = current_app.server["openid_relying_party"].client_configs.keys()
-    return render_template('rpe_opbyuid.html', providers=_providers)
+    return render_template('opbyuid.html')
 
 
 @entity.route('/irp')
@@ -57,46 +51,50 @@ def irp():
     return send_from_directory('entity_statements', 'irp.jws')
 
 
-def get_rph():
+def get_rp():
     return current_app.server["openid_relying_party"]
 
 
 # @entity.route('/<string:op_hash>/.well-known/openid-federation')
 @entity.route('/.well-known/openid-federation')
 def wkof():
-    _rph = get_rph()
-    if _rph.issuer2rp == {}:
-        cli = _rph.init_client('dummy')
-    else:
-        # Any client will do
-        cli = _rph.issuer2rp[list(_rph.issuer2rp.keys())[0]]
-
-    _metadata = current_app.server.get_metadata(cli)
-    #_metadata.update(cli.get_metadata())
+    _metadata = current_app.server.get_metadata('')
 
     _fed_entity = current_app.server["federation_entity"]
 
     if _fed_entity.context.trust_marks:
         if isinstance(_fed_entity.context.trust_marks, Callable):
-            args = {"trust_marks": _fed_entity.context.trust_marks()}
+            trust_marks = _fed_entity.context.trust_marks()
         else:
-            args = {"trust_marks": _fed_entity.context.trust_marks}
+            trust_marks = _fed_entity.context.trust_marks
+
+        _tm_array = []
+        for tm in trust_marks:
+            _load = get_payload(tm)
+            _tm_array.append({'trust_mark_type': _load['trust_mark_type'],
+                              'trust_mark': tm})
+        args = {"trust_marks": _tm_array}
     else:
         args = {}
 
-    _ec = create_entity_statement(EntityConfiguration,
-                                  iss=_fed_entity.context.entity_id,
-                                  sub=_fed_entity.context.entity_id,
-                                  key_jar=_fed_entity.context.keyjar,
-                                  metadata=_metadata,
-                                  authority_hints=_fed_entity.get_authority_hints(),
-                                  **args
-                                  )
+    _ec = create_entity_configuration(iss=_fed_entity.context.entity_id,
+                                      key_jar=_fed_entity.context.keyjar,
+                                      metadata=_metadata,
+                                      authority_hints=_fed_entity.get_authority_hints(),
+                                      lifetime=_fed_entity.context.default_lifetime,
+                                      include_jwks=True,
+                                      **args
+                                      )
 
     response = make_response(_ec)
-    response.headers['Content-Type'] = 'application/jose; charset=UTF-8'
+    response.headers['Content-Type'] = "application/entity-statement+jwt"
     return response
 
+def get_relying_party() -> ClientEntity:
+    """
+    :return: ClientEntity instance
+    """
+    return current_app.server['openid_relying_party']
 
 @entity.route('/rp')
 def rp():
@@ -104,41 +102,18 @@ def rp():
     if not link:
         link = request.args.get('entity_id')
 
+    _entity = get_relying_party()
     if link:
         try:
-            result = get_rph().begin(link)
+            result = _entity.begin(link)
         except Exception as err:
             logger.exception("RP begin")
             return make_response('Something went wrong:{}'.format(err), 400)
         else:
             return redirect(result, 303)
     else:
-        _providers = list(get_rph().client_configs.keys())
+        _providers = list(_entity.context.keys())
         return render_template('rpe_opbyuid.html', providers=_providers)
-
-
-def get_rp(op_hash):
-    try:
-        _iss = get_rph().hash2issuer[op_hash]
-    except KeyError:
-        logger.error('Unkown issuer: {} not among {}'.format(
-            op_hash, list(get_rph().hash2issuer.keys())))
-        return make_response("Unknown hash: {}".format(op_hash), 400)
-    else:
-        try:
-            rp = get_rph().issuer2rp[_iss]
-        except KeyError:
-            return make_response("Couldn't find client for {}".format(_iss), 400)
-
-    return rp
-
-
-def guess_rp(state):
-    for _iss, _rp in get_rph().issuer2rp.items():
-        _context = _rp.upstream_get("context")
-        if _context.state.get_iss(request.args['state']):
-            return _iss, _rp
-    return None, None
 
 
 def timestamp2local(timestamp):
@@ -149,13 +124,14 @@ def timestamp2local(timestamp):
 
 
 def finalize(op_identifier, request_args):
-    rp = get_rp(op_identifier)
+    rp = get_rp()
 
     if hasattr(rp, 'status_code') and rp.status_code != 200:
         logger.error(rp.response[0].decode())
         return rp.response[0], rp.status_code
 
-    _context = rp.get_context()
+    _context = rp.state2context(request_args)
+
     session['client_id'] = _context.get('client_id')
     session['state'] = request_args.get('state')
 

@@ -52,8 +52,7 @@
             }
           ],
           "public_path": "relying_party_automatic/static/fed_keys.json",
-          "read_only": false,
-          "uri_path": "jwks/federation_entity"
+          "read_only": false
         },
         "authority_hints": {
           "class": "idpyoidc.storage.listfile.ReadOnlyListFile",
@@ -85,12 +84,14 @@
         ]
       },
       "openid_relying_party": {
-        "class": "idpyoidc.client.oidc.RP",
+        "class": "fedservice.appclient.ClientEntity",
         "kwargs": {
           "config": {
-            "client_class": "fedservice.appclient.stand_alone_client_entity.StandAloneClientEntity",
+            "client_class": "fedservice.appclient.ClientEntity",
             "base_url": "https://127.0.0.1:4015",
+            "entity_id": "https://127.0.0.1:4015",
             "client_type": "oidc",
+            "entity_type": "openid_relying_party",
             "httpc_params": {
               "verify": false
             },
@@ -112,8 +113,7 @@
                 }
               ],
               "public_path": "relying_party_automatic/static/rp_keys.json",
-              "read_only": false,
-              "uri_path": "jwks/openid_relying_party"
+              "read_only": false
             },
             "preference": {
               "application_name": "rphandler",
@@ -122,9 +122,7 @@
                 "ops@example.com"
               ],
               "response_types_supported": [
-                "code",
-                "code id_token",
-                "id_token"
+                "code"
               ],
               "scope": [
                 "openid",
@@ -152,36 +150,6 @@
               "userinfo": {
                 "class": "idpyoidc.client.oidc.userinfo.UserInfo",
                 "kwargs": {}
-              }
-            },
-            "client_configs": {
-              "": {
-                "client_type": "oidc",
-                "client_authn_methods": ["private_key_jwt"],
-                "preference": {
-                  "client_registration_types": [
-                    "automatic"
-                  ],
-                  "application_type": "web",
-                  "response_types_supported": [
-                    "code",
-                    "id_token",
-                    "code id_token"
-                  ],
-                  "token_endpoint_auth_methods_supported": ["private_key_jwt"],
-                  "scopes_supported": [
-                    "openid"
-                  ]
-                },
-                "add_ons": {
-                  "pkce": {
-                    "function": "idpyoidc.client.oauth2.add_on.pkce.add_support",
-                    "kwargs": {
-                      "code_challenge_length": 64,
-                      "code_challenge_method": "S256"
-                    }
-                  }
-                }
               }
             }
           }
