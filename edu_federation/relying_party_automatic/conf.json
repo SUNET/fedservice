@@ -115,6 +115,11 @@
               "public_path": "relying_party_automatic/static/rp_keys.json",
               "read_only": false
             },
+            "client_authn_methods": [
+              "private_key_jwt",
+              "request_param",
+              "client_secret_jwt"
+            ],
             "preference": {
               "application_name": "rphandler",
               "application_type": "web",

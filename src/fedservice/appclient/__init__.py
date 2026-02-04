@@ -6,11 +6,6 @@ from typing import Union
 
 from cryptojwt import KeyJar
 from cryptojwt.key_bundle import keybundle_from_local_file
-from idpyoidc.message.oauth2 import is_error_message
-from idpyoidc.util import keyjar_combination
-
-from fedservice import save_trust_chains
-from fedservice.entity.function import get_verified_trust_chains
 from idpyoidc.client.client_auth import client_auth_setup
 from idpyoidc.client.client_auth import method_to_item
 from idpyoidc.client.defaults import SUCCESSFUL
@@ -26,11 +21,16 @@ from idpyoidc.exception import FormatError
 from idpyoidc.key_import import add_kb
 from idpyoidc.key_import import import_jwks_from_file
 from idpyoidc.message import Message
+from idpyoidc.message.oauth2 import is_error_message
 from idpyoidc.message.oauth2 import ResponseMessage
+from idpyoidc.util import keyjar_combination
 
+from fedservice import save_trust_chains
 from fedservice.defaults import COMBINED_DEFAULT_OAUTH2_SERVICES
 from fedservice.defaults import COMBINED_DEFAULT_OIDC_SERVICES
 from fedservice.defaults import DEFAULT_REGISTRATION_TYPE
+from fedservice.defaults import REGISTER2PREFERRED
+from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.utils import get_federation_entity
 from fedservice.exception import NoTrustedChains
 from fedservice.message import OauthClientMetadata
@@ -105,7 +105,9 @@ class ClientEntity(RP):
                     key_conf=key_config,
                     entity_id=self.entity_id,
                     jwks_uri=jwks_uri,
-                    client_type=self.client_type
+                    client_type=self.client_type,
+                    metadata_class=self.metadata_class,
+                    register2preferred=REGISTER2PREFERRED
                     )
 
         # self.do_services(services=services, config=config)
@@ -563,7 +565,6 @@ class ClientEntity(RP):
         _id_token = token.get("id_token")
         logger.debug(f"ID Token: {_id_token}")
 
-
         if self.get_service(rp_context, "userinfo") and token["access_token"]:
             inforesp = self.get_user_info(
                 rp_context,
@@ -610,3 +611,16 @@ class ClientEntity(RP):
             "session_state": authorization_response.get("session_state", ""),
             "issuer": rp_context.issuer,
         }
+
+    def do_client_registration(
+            self,
+            context,
+            request_args: Optional[dict] = None,
+            behaviour_args: Optional[dict] = None,
+            issuer: Optional[str] = ""
+    ):
+        if 'explicit' not in context.claims.use['client_registration_types']:
+            logger.debug("Doing automatic client registration")
+            return
+
+        return super().do_client_registration(self, context, request_args, behaviour_args, issuer)

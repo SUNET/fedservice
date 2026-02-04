@@ -61,6 +61,7 @@ class TestAutomatic(object):
         _rp_context = self.rp["openid_relying_party"].get_context()
 
         _rp_context.server_metadata = _trust_chains[0].metadata
+        _rp_context.provider_info = _trust_chains[0].metadata['openid_provider']
         self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
 
 

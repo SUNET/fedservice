@@ -123,7 +123,7 @@ def timestamp2local(timestamp):
     return utc + offset
 
 
-def finalize(op_identifier, request_args):
+def finalize(request_args):
     rp = get_rp()
 
     if hasattr(rp, 'status_code') and rp.status_code != 200:
@@ -153,7 +153,6 @@ def finalize(op_identifier, request_args):
         raise excp
 
     if 'userinfo' in res:
-        _context = rp.get_context()
         endpoints = {}
         for k, v in _context.provider_info.items():
             if k.endswith('_endpoint'):
@@ -176,13 +175,13 @@ def finalize(op_identifier, request_args):
         kwargs['logout_url'] = "{}/logout".format(_context.base_url)
 
         _fe = current_app.server["federation_entity"]
-        op = rp.context.provider_info["issuer"]
-        trust_anchor = list(_fe.context.trust_chain[op].keys())[0]
+        op = _context.provider_info["issuer"]
+        # trust_anchor = list(_fe.context.trust_chain[op].keys())[0]
         trust_chain = _fe.context.trust_chain[op]
         trust_path = trust_chain.iss_path
         trust_path_expires = timestamp2local(trust_chain.exp)
         trust_marks = trust_chain.verified_chain[1].get("trust_marks", [])
-        return render_template('rpe_opresult.html', endpoints=endpoints,
+        return render_template('opresult.html', endpoints=endpoints,
                                userinfo=res['userinfo'],
                                access_token=res['token'],
                                id_token=res["id_token"],
@@ -194,9 +193,9 @@ def finalize(op_identifier, request_args):
         return make_response(res['error'], 400)
 
 
-@entity.route('/authz_cb/<entity_id>')
-def authz_cb(entity_id):
-    return finalize(entity_id, request.args)
+@entity.route('/authz_cb')
+def authz_cb():
+    return finalize(request.args)
 
 
 @entity.errorhandler(werkzeug.exceptions.BadRequest)

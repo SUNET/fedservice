@@ -51,6 +51,7 @@ class TestAutomatic(object):
 
         _rp_context = self.rp['openid_relying_party'].context['']
         _rp_context.server_metadata = _trust_chains[0].metadata
+        _rp_context.provider_info = _trust_chains[0].metadata['openid_provider']
         self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
 
         peer_trust_chain = _trust_chains[0].chain[:]
@@ -88,7 +89,8 @@ class TestAutomatic(object):
 
         trust_chain, peer_trust_chain = self.create_trust_chains()
 
-        req_args = {"response_type": "code", "state": rndstr(),
+        req_args = {"response_type": "code",
+                    "state": rndstr(),
                     "entity_id": self.rp["federation_entity"].context.entity_id,
                     "peer_trust_chain": peer_trust_chain,
                     'trust_chain': trust_chain,
@@ -157,6 +159,7 @@ class TestAutomatic(object):
         # But NO this is what is expected
         _rp_context = self.rp["openid_relying_party"].context['']
         _rp_context.server_metadata = _trust_chains[0].metadata
+        _rp_context.provider_info = _trust_chains[0].metadata['openid_provider']
         self.rp["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
 
         # create trust chain client->TA. This will later be added to the Authz request

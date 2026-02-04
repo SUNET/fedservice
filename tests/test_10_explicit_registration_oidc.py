@@ -111,6 +111,7 @@ class TestRpService(object):
             _trust_chains = get_verified_trust_chains(self.rp, server_entity_id)
         # Store it in a number of places
         rp_context.server_metadata = _trust_chains[0].metadata
+        rp_context.provider_info = _trust_chains[0].metadata['openid_provider']
         _fe_context = self.rp["federation_entity"].client.context
         _fe_context.server_metadata = _trust_chains[0].metadata
 
@@ -180,7 +181,7 @@ class TestRpService(object):
 
         # response["metadata"]["openid_relying_party"]["scope"] = "openid profile"
 
-        self.registration_service.update_service_context(response)
+        self.registration_service.update_service_context(rp_context, response)
         # There is a no client secret
         _context = self.rp["openid_relying_party"].context[server_entity_id]
         assert _context.claims.get_usage("client_secret")

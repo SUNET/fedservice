@@ -4,6 +4,8 @@ from fedservice.message import OauthClientMetadata
 from fedservice.message import OAuthProtectedResourceMetadata
 from fedservice.message import OIDCRPMetadata
 from fedservice.message import OPMetadata
+from idpyoidc.transform import REGISTER2PREFERRED as REG2PRE
+
 
 ENTITY_TYPE2METADATA_CLASS = {
     "openid_relying_party": OIDCRPMetadata,
@@ -239,3 +241,9 @@ DEFAULT_SIGNING_ALGORITHM = "RS256"
 DEFAULT_REGISTRATION_TYPE = "automatic"
 
 MAX_302_REDIRECTS = 3
+
+REGISTER2PREFERRED = REG2PRE.copy()
+REGISTER2PREFERRED.update({
+    "client_registration_types": "client_registration_types_supported",
+
+})

@@ -49,7 +49,7 @@ def automatic_registration(context, request_args, service, post_args=None, **kwa
     else:
         raise KeyError(f"Unknown client_type: {_client_type}")
 
-    _registration_type_supported = context.get_metadata_claim('client_registration_types_supported', [_entity_type])
+    _registration_type_supported = context.provider_info.get('client_registration_types_supported', None)
 
     _func = None
     if _registration_type_supported:

@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class Authorization(authorization.Authorization):
+    _supports = authorization.Authorization._supports
+    _supports.update({'client_registration_types': ['automatic','explicit']})
 
     def __init__(self, upstream_get, conf=None):
         authorization.Authorization.__init__(self, upstream_get=upstream_get, conf=conf)
