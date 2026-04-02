@@ -34,23 +34,23 @@ class MetadataVerification(Endpoint):
         _federation_entity = get_federation_entity(self)
         payload = verify_self_signed_signature(request['registration_response'])
         # Do I trust the TA the OP chose ?
-        logger.debug(f"trust_anchor_id: {payload['trust_anchor_id']}")
-        if payload[
-            'trust_anchor_id'] not in _federation_entity.function.trust_chain_collector.trust_anchors:
+        _trust_anchor = payload['trust_anchor']
+        logger.debug(f"trust_anchor_id: {_trust_anchor}")
+        if _trust_anchor not in _federation_entity.function.trust_chain_collector.trust_anchors:
             raise ValueError("Trust anchor I don't trust")
 
         # Verify that I can collect a trust chain from the subject to a trust anchor
         _chains, _ = collect_trust_chains(self.upstream_get('unit'),
                                           entity_id=payload['sub'],
-                                          stop_at=payload['trust_anchor_id'])
+                                          stop_at=_trust_anchor)
         _trust_chains = verify_trust_chains(_federation_entity, _chains,
                                             request['registration_response'])
         # should only be one chain
         if _trust_chains == []:
             raise SystemError(
-                f"Could not verify any trust chain ending in {payload['trust_anchor_id']}")
+                f"Could not verify any trust chain ending in {_trust_anchor}")
         if len(_trust_chains) != 1:
-            raise SystemError(f"More then one chain ending in {payload['trust_anchor_id']}")
+            raise SystemError(f"More then one chain ending in {_trust_anchor}")
 
         _trust_chains[0].verified_chain[-1]['metadata'] = payload['metadata']
         _trust_chains = apply_policies(_federation_entity, _trust_chains)

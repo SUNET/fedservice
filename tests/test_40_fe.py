@@ -116,8 +116,7 @@ class TestFederationEntity(object):
         _resp_args = _endpoint.process_request(_req)
         _jwt = factory(_resp_args['response'])
         payload = _jwt.jwt.payload()
-        assert set(payload.keys()) == {'exp', 'jwks', 'sub', 'iat',
-                                       'metadata', 'iss', 'authority_hints'}
+        assert set(payload.keys()) == {'exp', 'jwks', 'sub', 'iat', 'metadata', 'iss', 'authority_hints'}
         assert payload["iss"] == payload["sub"]
         assert set(payload['metadata'].keys()) == {'federation_entity'}
         # Full set of endpoints
@@ -128,6 +127,9 @@ class TestFederationEntity(object):
                                                                         'federation_trust_mark_endpoint',
                                                                         'federation_trust_mark_list_endpoint',
                                                                         'federation_trust_mark_status_endpoint',
+                                                                        'federation_trust_mark_endpoint_auth_methods',
+                                                                        'federation_trust_mark_list_endpoint_auth_methods',
+                                                                        'federation_trust_mark_status_endpoint_auth_methods',
                                                                         'homepage_uri',
                                                                         'organization_name'
                                                                         }
@@ -138,8 +140,7 @@ class TestFederationEntity(object):
         _resp_args = _endpoint.process_request(_req)
         _jwt = factory(_resp_args['response_msg'])
         payload = _jwt.jwt.payload()
-        assert set(payload.keys()) == {'exp', 'jwks', 'sub', 'iat',
-                                       'metadata_policy', 'iss', 'authority_hints'}
+        assert set(payload.keys()) == {'exp', 'jwks', 'sub', 'iat', 'metadata_policy', 'iss'}
         assert payload["iss"] == ENTITY_ID
         assert payload["sub"] == CHILD_ID
         assert set(payload['metadata_policy'].keys()) == {'openid_provider'}

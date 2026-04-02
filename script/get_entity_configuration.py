@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import sys
 
 from pygments import highlight
 from pygments.formatters.terminal import TerminalFormatter
@@ -39,7 +40,7 @@ if __name__ == '__main__':
     entity_configuration = verify_self_signed_signature(_jws)
     # Print
     json_str = json.dumps(entity_configuration, indent=2)
-    print(20 * "=" + f" Entity Configuration for {args.entity_id} " + 20 * "=")
+    print(20 * "=" + f" Entity Configuration for {args.entity_id} " + 20 * "=", file=sys.stderr)
     if args.format:
         print(highlight(json_str, JsonLexer(), TerminalFormatter()))
     else:

@@ -1,3 +1,4 @@
+import logging
 from typing import Callable
 from typing import Optional
 
@@ -14,6 +15,8 @@ from fedservice.message import TrustMark
 from fedservice.trust_mark_entity import SimpleDB
 from fedservice.trust_mark_entity.context import TrustMarkContext
 
+
+logger = logging.getLogger(__name__)
 
 def create_trust_mark(keyjar, entity_id, **kwargs):
     packer = JWT(key_jar=keyjar, iss=entity_id)
@@ -129,6 +132,7 @@ class TrustMarkEntity(Unit):
             return self.issued.list(trust_mark_id)
 
     def get_metadata(self):
+        logger.debug(f"{self.name}:get_metadata")
         # three endpoints
         md = {}
         for name, endp in self.endpoint.items():
@@ -139,6 +143,7 @@ class TrustMarkEntity(Unit):
                 _val = getattr(endp, arg, None)
                 if _val:
                     md[f"{endp.name}_{txt}"] = _val
+        logger.debug(f"metadata:{self.name} = {md}")
         return {self.name: md}
 
     def get_context(self, *args):

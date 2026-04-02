@@ -51,11 +51,11 @@ This will create a number of things in the *trust_anchor* directory
 All entities in the federation has to have some information about the
 trust mark. The information to pass along is collected by doing::
 
-    ./get_info.py -k -t https://127.0.0.1:7010 > trust_anchor.json
+    ./get_info.py -k -t https://89.46.21.210:7010 > trust_anchor.json
 
 This must be done while the Trust anchor is running.
 Of course if you have changed the entity_id of the trust anchor from
-https://127.0.0.1:7003 to something else you have to change this command accordingly.
+https://89.46.21.210:7003 to something else you have to change this command accordingly.
 
 Now you're done with phase 1 concerning the trust anchor. So you can
 kill that process for the time being.
@@ -92,11 +92,11 @@ Now four things have to happen::
 The first two are simply::
 
     ./add_info.py -s trust_anchor.json -t trust_mark_issuer/trust_anchors
-    echo -e "https://127.0.0.1:7010" >> trust_mark_issuer/authority_hints
+    echo -e "https://89.46.21.210:7010" >> trust_mark_issuer/authority_hints
 
 The third would look like this::
 
-    ./get_info.py -k -s https://127.0.0.1:6010 > tmp.json
+    ./get_info.py -k -s https://89.46.21.210:6010 > tmp.json
     ./add_info.py -s tmp.json -t trust_anchor/subordinates
 
 The fourth is presently done like this (may change in the future)::
@@ -143,11 +143,11 @@ Now four things have to happen::
 The first two are simply::
 
     ./add_info.py -s trust_anchor.json -t openid_provider/trust_anchors
-    echo -e "https://127.0.0.1:7010" >> openid_provider/authority_hints
+    echo -e "https://89.46.21.210:7010" >> openid_provider/authority_hints
 
 The third would look like this::
 
-    ./get_info.py -k -s https://127.0.0.1:4020 > tmp.json
+    ./get_info.py -k -s https://89.46.21.210:4020 > tmp.json
     ./add_info.py -s tmp.json -t trust_anchor/subordinates
 
 
@@ -190,11 +190,11 @@ Now four things have to happen::
 The first two are simply::
 
     ./add_info.py -s trust_anchor.json -t relying_party_explicit/trust_anchors
-    echo -e "https://127.0.0.1:7010" >> relying_party_explicit/authority_hints
+    echo -e "https://89.46.21.210:7010" >> relying_party_explicit/authority_hints
 
 The third would look like this::
 
-    ./get_info.py -k -s https://127.0.0.1:4010 > tmp.json
+    ./get_info.py -k -s https://89.46.21.210:4010 > tmp.json
     ./add_info.py -s tmp.json -t trust_anchor/subordinates
 
 
@@ -237,11 +237,11 @@ Now four things have to happen::
 The first two are simply::
 
     ./add_info.py -s trust_anchor.json -t relying_party_automatic/trust_anchors
-    echo -e "https://127.0.0.1:7010" >> relying_party_automatic/authority_hints
+    echo -e "https://89.46.21.210:7010" >> relying_party_automatic/authority_hints
 
 The third would look like this::
 
-    ./get_info.py -k -s https://127.0.0.1:4015 > tmp.json
+    ./get_info.py -k -s https://89.46.21.210:4010 > tmp.json
     ./add_info.py -s tmp.json -t trust_anchor/subordinates
 
 
@@ -265,7 +265,7 @@ Creating a trust mark for an entity
 For this the script *create_trust_mark.py* is included.
 Typical usage::
 
-    ./create_trust_mark.py -d trust_mark_issuer -m https://refeds.org/category/personalized -e https://127.0.0.1:4010
+    ./create_trust_mark.py -d trust_mark_issuer -m https://refeds.org/category/personalized -e https://89.46.21.210:4010
      > trust_mark.4010
 
 

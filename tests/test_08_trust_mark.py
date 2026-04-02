@@ -207,5 +207,8 @@ class TestSignedTrustMark():
                                                               'federation_trust_mark_endpoint',
                                                               'federation_trust_mark_list_endpoint',
                                                               'federation_trust_mark_status_endpoint',
+                                                              'federation_trust_mark_endpoint_auth_methods',
+                                                              'federation_trust_mark_list_endpoint_auth_methods',
+                                                              'federation_trust_mark_status_endpoint_auth_methods',
                                                               'organization_name'}
         assert _metadata["federation_entity"]["federation_trust_mark_endpoint"] == 'https://tmi.example.com/trust_mark'

@@ -1,4 +1,5 @@
 import pytest
+from cryptojwt import BadSyntax
 from idpyoidc.client.defaults import DEFAULT_OIDC_SERVICES
 from idpyoidc.message.oauth2 import ResponseMessage
 
@@ -100,7 +101,7 @@ class TestClient:
             }
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(BadSyntax):
             self.rp.parse_request_response(self.rp.get_service('registration'), _resp)
 
     def test_redirect(self):

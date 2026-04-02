@@ -5,13 +5,15 @@ from typing import Optional
 from cryptojwt import KeyJar
 from cryptojwt.exception import Expired
 from cryptojwt.jws.jws import factory
+
+from fedservice import get_payload
+from fedservice.entity import FederationEntity
 from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
 
 from fedservice import message
 from fedservice.entity import apply_policies
 from fedservice.entity.function import Function
-from fedservice.entity.function import get_payload
 from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.function import verify_signature
 from fedservice.entity.function.trust_anchor import get_verified_trust_anchor_statement
@@ -31,8 +33,13 @@ class TrustMarkVerifier(Function):
     4) Find a trust chain to the trust mark issuer
     5) Verify the signature of the trust mark
     """
-    def __init__(self, upstream_get: Callable):
+    def __init__(self, upstream_get: Optional[Callable] = None,
+                 federation_entity: Optional[FederationEntity] = None
+                 ):
+        if not upstream_get and not federation_entity:
+            raise ValueError("Must have one of upstream_get and federation_entity")
         Function.__init__(self, upstream_get)
+        self.federation_entity = federation_entity
 
     def check_delegation(self, trust_anchor_statement, trust_mark) -> bool:
         _owners = trust_anchor_statement.get("trust_mark_owners", {})
@@ -85,7 +92,11 @@ class TrustMarkVerifier(Function):
             raise
 
         # Get trust anchor information in order to verify the issuer and if needed the delegator.
-        _federation_entity = get_federation_entity(self)
+        if self.federation_entity:
+            _federation_entity = self.federation_entity
+        else:
+            _federation_entity = get_federation_entity(self)
+
         trust_anchor_statement = get_verified_trust_anchor_statement(_federation_entity, trust_anchor)
 
         # Check delegation
@@ -108,14 +119,16 @@ class TrustMarkVerifier(Function):
             return None
 
         # Now time to verify the signature of the trust mark
-        _trust_chains = get_verified_trust_chains(self, _trust_mark['iss'])
-        if not _trust_chains:
-            logger.warning(f"Could not find any verifiable trust chains for {_trust_mark['iss']}")
-            return None
+        _trust_chains = []
+        if _trust_mark["iss"] != trust_anchor:
+            _trust_chains = get_verified_trust_chains(_federation_entity, _trust_mark['iss'])
+            if not _trust_chains:
+                logger.warning(f"Could not find any verifiable trust chains for {_trust_mark['iss']}")
+                return None
 
-        if trust_anchor not in [_tc.anchor for _tc in _trust_chains]:
-            logger.warning(f'No verified trust chain to the trust anchor: {trust_anchor}')
-            return None
+            if trust_anchor not in [_tc.anchor for _tc in _trust_chains]:
+                logger.warning(f'No verified trust chain to the trust anchor: {trust_anchor}')
+                return None
 
         # Now try to verify the signature on the trust_mark
         # should have the necessary keys
@@ -124,10 +137,16 @@ class TrustMarkVerifier(Function):
 
         keys = keyjar.get_jwt_verify_keys(_jwt.jwt)
         if not keys:
-            _trust_chains = apply_policies(_federation_entity, _trust_chains)
-            keyjar = import_jwks(keyjar,
-                                 _trust_chains[0].verified_chain[-1]["jwks"],
-                                 _trust_chains[0].iss_path[0])
+            if _trust_mark["iss"] != trust_anchor:
+                keyjar = import_jwks(keyjar,
+                                     trust_anchor_statement["jwks"],
+                                     trust_anchor_statement["iss"])
+            else:
+                _trust_chains = apply_policies(_federation_entity, _trust_chains)
+                keyjar = import_jwks(keyjar,
+                                     _trust_chains[0].verified_chain[-1]["jwks"],
+                                     _trust_chains[0].iss_path[0])
+
             keys = keyjar.get_jwt_verify_keys(_jwt.jwt)
 
         try:
@@ -137,11 +156,11 @@ class TrustMarkVerifier(Function):
         else:
             return _mark
 
-    def verify_delegation(self, trust_mark, trust_anchor_id):
+    def verify_delegation(self, trust_mark, trust_anchor):
         _federation_entity = get_federation_entity(self)
         _collector = _federation_entity.function.trust_chain_collector
         # Deal with the delegation
-        _entity_configuration = _collector.get_verified_self_signed_entity_configuration(trust_anchor_id)
+        _entity_configuration = _collector.get_verified_self_signed_entity_configuration(trust_anchor)
 
         if trust_mark['trust_mark_id'] not in _entity_configuration['trust_mark_issuers']:
             return None

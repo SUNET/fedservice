@@ -8,6 +8,7 @@ from idpyoidc.message import Message
 
 from fedservice.defaults import LEAF_ENDPOINTS
 from fedservice.entity.function import get_verified_trust_chains
+from fedservice.message import TrustMark
 from fedservice.utils import make_federation_entity
 from tests import create_trust_chain_messages
 
@@ -189,8 +190,13 @@ class TestTrustMarkEndpoints():
             _parse_req = _server_endpoint.parse_request(_req.to_dict(), get_client_info=get_client_info)
 
         _hw_resp = _server_endpoint.process_request(_parse_req)
-        _resp = _server_endpoint.do_response(_hw_resp)
+        _resp = _server_endpoint.do_response(response_args=_hw_resp)
         assert set(_resp.keys()) == {"response", "http_headers"}
+
+        # Check the signed JWT
+        _tm = TrustMark().from_jwt(_resp["response"], keyjar=_kj)
+        _tm.verify()
+        assert set(_tm.keys()) == {'iat', 'trust_mark_id', 'sub', 'exp', 'iss'}
 
         # should be one item in the list
         _client_service = self.federation_entity.get_service("trust_mark_list")
@@ -215,4 +221,11 @@ class TestTrustMarkEndpoints():
         assert set(_metadata["federation_entity"].keys()) == {'federation_trust_mark_endpoint',
                                                               'federation_trust_mark_list_endpoint',
                                                               'federation_trust_mark_status_endpoint',
+                                                              'federation_trust_mark_endpoint_auth_methods',
+                                                              'federation_trust_mark_list_endpoint_auth_methods',
+                                                              'federation_trust_mark_status_endpoint_auth_methods',
                                                               'organization_name'}
+        fe_metadata = _metadata["federation_entity"]
+        assert fe_metadata["federation_trust_mark_endpoint_auth_methods"] == ["private_key_jwt"]
+        assert fe_metadata["federation_trust_mark_list_endpoint_auth_methods"] == ["none"]
+        assert fe_metadata["federation_trust_mark_status_endpoint_auth_methods"] == ["none"]

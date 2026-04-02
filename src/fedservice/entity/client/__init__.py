@@ -23,6 +23,7 @@ from idpyoidc.exception import ParseError
 from idpyoidc.key_import import import_jwks
 from idpyoidc.message import Message
 from idpyoidc.node import ClientUnit
+from idpyoidc.util import conf_get
 from requests import request
 
 from fedservice.defaults import DEFAULT_FEDERATION_ENTITY_SERVICES
@@ -132,6 +133,7 @@ class FederationServiceContext(FederationContext):
 
 
 class FederationClientEntity(ClientUnit):
+    name = "federation_entity"
 
     def __init__(
             self,
@@ -280,10 +282,7 @@ class FederationClient(FederationClientEntity):
 
         self.httpc = httpc or request
 
-        if isinstance(config, Configuration):
-            _add_ons = config.conf.get("add_ons")
-        else:
-            _add_ons = config.get("add_ons")
+        _add_ons = conf_get(config, "add_ons")
 
         if _add_ons:
             do_add_ons(_add_ons, self.service)
@@ -493,5 +492,7 @@ class FederationClient(FederationClientEntity):
             )
 
     def get_metadata(self, *args):
+        logger.debug(f"{self.name}:get_metadata")
         metadata = self.context.claims.get_use()
+        logger.debug(f"metadata:{self.name} = {metadata}")
         return {self.name: metadata}

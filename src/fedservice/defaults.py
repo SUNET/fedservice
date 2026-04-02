@@ -51,7 +51,7 @@ SERVICES = {
         "kwargs": {}
     },
     "entity_statement": {
-        "class": 'fedservice.entity.client.entity_statement.EntityStatement',
+        "class": 'fedservice.entity.client.entity_statement.SubordinateStatement',
         "kwargs": {}
     },
     "trust_mark_status": {
@@ -221,3 +221,7 @@ def federation_functions(*apis):
 
 DEFAULT_FEDERATION_ENTITY_FUNCTIONS = federation_functions("trust_chain_collector", "verifier",
                                                            "policy", "trust_mark_verifier")
+
+DEFAULT_SIGNING_ALGORITHM = "RS256"
+
+DEFAULT_REGISTRATION_TYPE = "automatic"

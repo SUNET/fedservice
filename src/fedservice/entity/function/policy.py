@@ -549,18 +549,15 @@ class TrustChainPolicy(Function):
         :return: A metadata statement that adheres to a metadata policy
         """
 
+        _metadata_policy = policy.get('metadata_policy', None)
+        if _metadata_policy:
+            metadata = apply_metadata_policy(metadata, _metadata_policy, self.policy_operators)
+
         _metadata = policy.get("metadata", None)
         if _metadata:
             # what's in metadata policy metadata overrides what's in leaf's metadata
             metadata.update(_metadata)
             metadata = _metadata
-
-        _metadata_policy = policy.get('metadata_policy', None)
-        if _metadata_policy:
-            metadata = apply_metadata_policy(metadata, _metadata_policy, self.policy_operators)
-
-        # All that are in metadata but not in policy should just remain
-        # metadata.update(policy.get('metadata', {}))
 
         # This is a protocol specific adjustment
         if protocol in ["oidc", "oauth2"]:
@@ -570,7 +567,7 @@ class TrustChainPolicy(Function):
 
     def _policy(self, trust_chain: TrustChain, entity_type: str):
         combined_policy = self.gather_policies(trust_chain.verified_chain[:-1], entity_type)
-        logger.debug("Combined policy: %s", combined_policy)
+        logger.debug(f"Combined policy for '{entity_type}': {combined_policy}")
         try:
             # This should be the entity configuration
             metadata = trust_chain.verified_chain[-1]['metadata'][entity_type]
@@ -580,7 +577,7 @@ class TrustChainPolicy(Function):
             # apply the combined metadata policies on the metadata
             trust_chain.combined_policy[entity_type] = combined_policy
             _metadata = self.apply_policy(metadata, combined_policy)
-            logger.debug(f"After applied policy: {_metadata}")
+            logger.debug(f"After applied policy for '{entity_type}': {_metadata}")
             return _metadata
 
     def __call__(self, trust_chain: TrustChain, entity_type: Optional[str] = ''):
@@ -592,6 +589,7 @@ class TrustChainPolicy(Function):
             if entity_type:
                 trust_chain.metadata[entity_type] = self._policy(trust_chain, entity_type)
             else:
+                # rotate through the different entity types this entity has
                 for _type in trust_chain.verified_chain[-1]['metadata'].keys():
                     trust_chain.metadata[_type] = self._policy(trust_chain, _type)
         else:

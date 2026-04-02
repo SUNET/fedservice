@@ -46,17 +46,20 @@ def test_eval_chains():
     key_jar = import_jwks_as_json(key_jar, jwks, 'https://feide.no')
 
     _unit = Unit(keyjar=key_jar)
-    _verifier = TrustChainVerifier(upstream_get=_unit.unit_get)
+    _verifier = TrustChainVerifier(upstream_get=_unit.unit_get,
+                                   trust_anchor=['https://feide.no'])
 
-    trust_chain = _verifier(chains[0])
+    trust_chains = _verifier(chains[0])
+    assert len(trust_chains) == 1
 
-    assert trust_chain.anchor == "https://feide.no"
+    for trust_chain in trust_chains:
+        assert trust_chain.anchor == "https://feide.no"
 
-    _policy = TrustChainPolicy(upstream_get=_unit.unit_get)
-    _policy(trust_chain)
+        _policy = TrustChainPolicy(upstream_get=_unit.unit_get)
+        _policy(trust_chain)
 
-    assert set(trust_chain.metadata.keys()) == {'openid_relying_party'}
+        assert set(trust_chain.metadata.keys()) == {'openid_relying_party'}
 
-    assert set(trust_chain.metadata['openid_relying_party'].keys()) == {
-        'response_types', 'claims', 'contacts', 'application_type', 'redirect_uris',
-        'id_token_signing_alg_values_supported', 'jwks_uri'}
+        assert set(trust_chain.metadata['openid_relying_party'].keys()) == {
+            'response_types', 'claims', 'contacts', 'application_type', 'redirect_uris',
+            'id_token_signing_alg_values_supported', 'jwks_uri'}

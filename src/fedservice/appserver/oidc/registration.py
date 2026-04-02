@@ -1,6 +1,5 @@
 import logging
 
-from fedservice.exception import NoTrustedChains
 from idpyoidc.message.oidc import RegistrationRequest
 from idpyoidc.server.oidc import registration
 
@@ -8,6 +7,7 @@ from fedservice import save_trust_chains
 from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.function.trust_chain_collector import verify_self_signed_signature
 from fedservice.entity.utils import get_federation_entity
+from fedservice.exception import NoTrustedChains
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class Registration(registration.Registration):
 
     def __init__(self, upstream_get, **kwargs):
         registration.Registration.__init__(self, upstream_get, **kwargs)
-        self.post_construct.append(self.create_entity_statement)
+        self.post_construct.append(self.create_entity_configuration)
 
     def parse_request(self, request, auth=None, **kwargs):
         return request
@@ -61,27 +61,19 @@ class Registration(registration.Registration):
             logger.debug(f"Registration response args: {response_info['response_args']}")
             _context = _federation_entity.context
 
-            for item in ["jwks", "jwks_uri", "signed_jwks_uri"]:
-                try:
-                    del req[item]
-                except KeyError:
-                    pass
+            _response_metadata = req.to_dict()
+            _response_metadata.update(response_info['response_args'])
 
-            _policy_metadata = req.to_dict()
-            _policy_metadata.update(response_info['response_args'])
-            # Should I filter out stuff I have no reason to change ?
-            _policy_metadata = {k: v for k, v in _policy_metadata.items() if k not in [
-                'application_type',
-                'redirect_uris']}
-            entity_statement = _context.create_entity_statement(
+            entity_configuration = _context.create_entity_configuration(
                 _federation_entity.upstream_get('attribute', 'entity_id'),
-                payload['iss'],
-                trust_anchor_id=trust_chain.anchor,
-                metadata={opponent_entity_type: _policy_metadata},
+                # payload['iss'],
+                trust_anchor=trust_chain.anchor,
+                metadata={opponent_entity_type: _response_metadata},
                 aud=payload['iss'],
-                authority_hints=_federation_entity.get_authority_hints()
+                authority_hints=_federation_entity.get_authority_hints(),
+                include_jwks=False
             )
-            response_info["response_msg"] = entity_statement
+            response_info["response_msg"] = entity_configuration
             del response_info["response_args"]
 
         return response_info
@@ -93,8 +85,7 @@ class Registration(registration.Registration):
         return registration.Registration.process_request(self, req, authn=None, **kwargs)
 
     @staticmethod
-    def create_entity_statement(response_args, request, context,
-                                **kwargs):
+    def create_entity_configuration(response_args, request, context, **kwargs):
         """
         wrap the non-federation response in a federation response
 
@@ -106,7 +97,7 @@ class Registration(registration.Registration):
         """
         _fe = context.federation_entity
         _md = {_fe.opponent_entity_type: response_args.to_dict()}
-        return _fe.create_entity_statement(_fe.entity_id, sub=_fe.entity_id,
-                                           metadata=_md,
-                                           authority_hints=_fe.get_authority_hints(),
-                                           trust_marks=_fe.context.trust_marks)
+        return _fe.create_entity_configuration(_fe.entity_id,
+                                               metadata=_md,
+                                               authority_hints=_fe.get_authority_hints(),
+                                               trust_marks=_fe.context.trust_marks)

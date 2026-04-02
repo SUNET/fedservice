@@ -8,7 +8,7 @@ from cryptojwt.jws.jws import factory
 from idpyoidc.key_import import import_jwks
 from idpyoidc.server.exception import ServiceError
 
-from fedservice.message import EntityStatement
+from fedservice.message import EntityConfiguration
 
 
 def get_self_signed_entity_statement(entity_id):
@@ -18,7 +18,7 @@ def get_self_signed_entity_statement(entity_id):
         raise ServiceError(_response.reason)
     _jws = factory(_response.text)
     _payload = _jws.jwt.payload()
-    entity_statement = EntityStatement(**_payload)
+    entity_statement = EntityConfiguration(**_payload)
     _key_jar = KeyJar()
     # verify  entity_statement["iss"]
     _key_jar = import_jwks(_key_jar, entity_statement['jwks'], entity_id)

@@ -89,26 +89,10 @@ class TestClient(object):
 
     def test_entity_statement_request(self):
         _serv = self.rp_fed.get_service('entity_statement')
-        _res = _serv.get_request_parameters(fetch_endpoint=f"{self.ta_fed.entity_id}/fetch")
+        _res = _serv.get_request_parameters(fetch_endpoint=f"{self.ta_fed.entity_id}/fetch", subject=self.rp_fed.entity_id)
         assert _res == {
             'method': 'GET',
-            'url': 'https://ta.example.org/fetch'
-        }
-        _res = _serv.get_request_parameters(fetch_endpoint=f"{self.ta_fed.entity_id}/fetch",
-                                            issuer=self.ta_fed.entity_id)
-        assert _res == {
-            'method': 'GET',
-            'url':
-                'https://ta.example.org/fetch?iss=https%3A%2F%2Fta.example.org'
-        }
-
-        _res = _serv.get_request_parameters(fetch_endpoint=f"{self.ta_fed.entity_id}/fetch",
-                                            issuer=self.ta_fed.entity_id,
-                                            subject=self.rp_fed.entity_id)
-        assert _res == {
-            'method': 'GET',
-            'url': 'https://ta.example.org/fetch?iss=https%3A%2F%2Fta.example'
-                   '.org&sub=https%3A%2F%2Frp.example.org'
+            'url': 'https://ta.example.org/fetch?sub=https%3A%2F%2Frp.example.org'
         }
 
     def test_resolve_request(self):
@@ -306,6 +290,9 @@ class TestFunction:
 
     def test_trust_chains_to_intermediate(self):
         _federation_entity = self.intermediate
+        # Should not be necessary. It's pytest that messes things up
+        if 'https://2nd.ta.example.org' in _federation_entity.function.trust_chain_collector.trust_anchors:
+            del _federation_entity.function.trust_chain_collector.trust_anchors['https://2nd.ta.example.org']
 
         _msgs = create_trust_chain_messages(self.leaf, self.intermediate, self.ta1)
         _msgs.update(create_trust_chain_messages(self.leaf, self.ta2))

@@ -36,6 +36,7 @@ class TestFedOauth2Client:
                                               'client_uri',
                                               'client_id',
                                               'client_secret',
+                                              'client_registration_types',
                                               'contacts',
                                               'grant_types',
                                               'grant_types_supported',
@@ -88,6 +89,7 @@ class TestFedOauth2Client:
               'client_uri',
               'client_id',
               'client_secret',
+              'client_registration_types',
               'contacts',
               'grant_types',
               'jwks',
@@ -109,7 +111,8 @@ class TestFedOauth2Client:
         )
 
         # These are the claims that has default values. A default value should not be an empty list.
-        assert set(claims.prefer.keys()) == {'grant_types_supported',
+        assert set(claims.prefer.keys()) == {'client_registration_types',
+                                             'grant_types_supported',
                                              'response_types_supported',
                                              'token_endpoint_auth_methods_supported'}
 
@@ -169,7 +172,8 @@ class TestFedOauth2Client:
         )
 
         # These are the claims that the client has default values for after comparing with what the AS supports
-        assert set(claims.prefer.keys()) == {'grant_types_supported',
+        assert set(claims.prefer.keys()) == {'client_registration_types',
+                                             'grant_types_supported',
                                              'response_types_supported',
                                              'token_endpoint_auth_methods_supported'}
 
@@ -193,6 +197,7 @@ class TestFedOauth2Client:
         reg_req = claims.create_registration_request()
 
         assert set(reg_req.keys()) == {'client_name',
+                                       'client_registration_types',
                                        'grant_types',
                                        'example_extension_parameter',
                                        'policy_uri',

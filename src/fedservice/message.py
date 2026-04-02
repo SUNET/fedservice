@@ -1,4 +1,5 @@
 """ Classes and functions used to describe information in an OpenID Connect Federation."""
+import contextlib
 import json
 import logging
 from urllib.parse import parse_qs
@@ -33,13 +34,24 @@ from idpyoidc.message.oidc import RegistrationResponse
 from idpyoidc.message.oidc import SINGLE_OPTIONAL_BOOLEAN
 from idpyoidc.message.oidc import SINGLE_OPTIONAL_DICT
 
-from fedservice.entity.function import get_payload
+from fedservice import get_payload
 from fedservice.exception import UnknownCriticalExtension
 from fedservice.exception import WrongSubject
 
 SINGLE_REQUIRED_DICT = (dict, True, msg_ser_json, dict_deser, False)
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _payload_from_jws(token):
+    """
+    Local helper to decode a compact JWS and return its payload as dict.
+    Replaces dependency on fedservice.entity.function.get_payload to avoid cycles.
+    """
+    with contextlib.suppress(AttributeError, UnicodeDecodeError):
+        token = token.decode()
+    _jwt = factory(token)
+    return _jwt.jwt.payload()
 
 
 def dict_list_deser(val, sformat="dict"):
@@ -151,6 +163,13 @@ class FederationEntity(InformationalMetadataExtensions):
         # If it's a Trust Anchor
         # "trust_mark_owners": SINGLE_OPTIONAL_DICT,
         # "trust_mark_issuers": SINGLE_OPTIONAL_DICT,
+        "federation_fetch_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_list_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_resolve_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_trust_mark_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_trust_mark_status_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_trust_mark_list_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_historical_keys_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
     })
 
 
@@ -485,26 +504,16 @@ class EntityStatement(JsonWebToken):
     """The Entity Statement"""
     c_param = JsonWebToken.c_param.copy()
     c_param.update({
-        "sub": SINGLE_REQUIRED_STRING,
         'iss': SINGLE_REQUIRED_STRING,
-        'exp': SINGLE_REQUIRED_INT,
+        'sub': SINGLE_REQUIRED_STRING,
         'iat': SINGLE_REQUIRED_INT,
+        'exp': SINGLE_REQUIRED_INT,
         'jwks': SINGLE_OPTIONAL_DICT,
-        'aud': SINGLE_OPTIONAL_STRING,
-        "jti": SINGLE_OPTIONAL_STRING,
-        'authority_hints': OPTIONAL_LIST_OF_STRINGS,
+#        'aud': SINGLE_OPTIONAL_STRING,
+#        "jti": SINGLE_OPTIONAL_STRING,
         'metadata': SINGLE_OPTIONAL_METADATA,
-        'metadata_policy': SINGLE_OPTIONAL_METADATA_POLICY,
-        'metadata_policy_crit': OPTIONAL_LIST_OF_STRINGS,
-        'constraints': SINGLE_OPTIONAL_CONSTRAINS,
         "crit": OPTIONAL_LIST_OF_STRINGS,
-        "policy_language_crit": OPTIONAL_LIST_OF_STRINGS,
-        "source_endpoint": SINGLE_OPTIONAL_STRING,
-        'trust_marks': OPTIONAL_LIST_OF_DICT,
-        'trust_mark_owners': SINGLE_OPTIONAL_JSON,
-        'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
-        #
-        'trust_anchor_id': SINGLE_OPTIONAL_STRING
+#        "policy_language_crit": OPTIONAL_LIST_OF_STRINGS,
     })
 
     def verify(self, **kwargs):
@@ -526,12 +535,20 @@ class EntityStatement(JsonWebToken):
                 else:
                     raise UnknownCriticalExtension(_musts.intersection(_extra_parameters))
 
-        _metadata_policy = self.get('metadata_policy')
-        if _metadata_policy:
-            _crit = self.get("policy_language_crit")
-            if _crit:
-                _metadata_policy.verify(policy_language_crit=_crit, **kwargs)
 
+class EntityConfiguration(EntityStatement):
+    c_param = EntityStatement.c_param.copy()
+    c_param.update({
+        'authority_hints': OPTIONAL_LIST_OF_STRINGS,
+        'trust_marks': OPTIONAL_LIST_OF_DICT,
+        'trust_mark_owners': SINGLE_OPTIONAL_JSON,
+        'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
+        #
+        'trust_anchor': SINGLE_OPTIONAL_STRING
+    })
+
+    def verify(self, **kwargs):
+        super(EntityConfiguration, self).verify(**kwargs)
         _trust_mark_issuers = self.get("trust_mark_issuers")
         if _trust_mark_issuers:
             _tmi = TrustMarkIssuers(**_trust_mark_issuers)
@@ -549,7 +566,7 @@ class EntityStatement(JsonWebToken):
             for _tm in _trust_marks:
                 _trust_mark = None
                 if isinstance(_tm["trust_mark"], str):
-                    _payload = get_payload(_tm["trust_mark"])
+                    _payload = _payload_from_jws(_tm["trust_mark"])
                     if _payload["trust_mark_id"] != _tm["trust_mark_id"]:
                         raise ValueError("trust_mark_is values does not match")
                     _trust_mark = TrustMark(**_payload)
@@ -561,6 +578,23 @@ class EntityStatement(JsonWebToken):
                     raise ValueError("Trust mark has a format I didn't expect")
 
                 _trust_mark.verify()
+
+class SubordinateStatement(EntityStatement):
+    c_param = EntityStatement.c_param.copy()
+    c_param.update({
+        'constraints': SINGLE_OPTIONAL_CONSTRAINS,
+        'metadata_policy': SINGLE_OPTIONAL_METADATA_POLICY,
+        'metadata_policy_crit': OPTIONAL_LIST_OF_STRINGS,
+        "source_endpoint": SINGLE_OPTIONAL_STRING,
+    })
+
+    def verify(self, **kwargs):
+        super(SubordinateStatement, self).verify(**kwargs)
+        _metadata_policy = self.get('metadata_policy')
+        if _metadata_policy:
+            _crit = self.get("policy_language_crit")
+            if _crit:
+                _metadata_policy.verify(policy_language_crit=_crit, **kwargs)
 
 
 class TrustMarkDelegation(Message):
@@ -613,7 +647,7 @@ class TrustMark(JsonWebToken):
         _delegation_jwt = self.get("delegation")
         if _delegation_jwt:
             # Not verifying the signature
-            _delegation = TrustMarkDelegation(**get_payload(_delegation_jwt))
+            _delegation = TrustMarkDelegation(**_payload_from_jws(_delegation_jwt))
             _delegation.verify()
             if self.get("iss") != _delegation["sub"]:
                 raise ValueError("Not the issuer the delegation applies to")

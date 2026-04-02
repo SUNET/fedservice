@@ -47,7 +47,7 @@ class TrustMark(Endpoint):
 
         _jws = _trust_mark_issuer.create_trust_mark(_id, _sub)
 
-        return {"http_response": _jws}
+        return {"response": _jws}
 
     def response_info(
             self,
@@ -56,5 +56,7 @@ class TrustMark(Endpoint):
             error: Optional[str] = "",
             **kwargs
     ) -> dict:
+        if "http_response" in response_args:
+            return response_args["response"]
         if "response" in response_args:
             return response_args["response"]

@@ -8,6 +8,7 @@ from fedservice.utils import load_values_from_file
 from fedservice.utils import make_federation_combo
 
 subdir = sys.argv[1]
+
 config_file = sys.argv[2]
 
 _cnf = load_values_from_file(load_config_file(f"{subdir}/{config_file}"))

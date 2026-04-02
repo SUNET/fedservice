@@ -159,6 +159,7 @@ class ServerEntity(ServerUnit):
         return self
 
     def get_metadata(self, entity_type="", *args):
+        logger.debug(f"{self.name}:get_metadata")
         if not entity_type:
             entity_type = self.name
         _claims = self.get_context().claims
@@ -169,13 +170,7 @@ class ServerEntity(ServerUnit):
             if param in self.metadata_schema.c_param:
                 metadata[param] = self.context.entity_id
 
-        # remove these from the metadata
-        # for item in ["jwks", "jwks_uri", "signed_jwks_uri"]:
-        #     try:
-        #         del metadata[item]
-        #     except KeyError:
-        #         pass
-        # collect endpoints
+        logger.debug(f"metadata:{entity_type} = {metadata}")
         return {entity_type: metadata}
 
     def pick_guise(self, entity_type: Optional[str] = "", *args):

@@ -10,7 +10,7 @@ from fedservice.entity.function import apply_policies
 from fedservice.entity.function import collect_trust_chains
 from fedservice.entity.function import verify_trust_chains
 from fedservice.entity.utils import get_federation_entity
-from fedservice.entity_statement.create import create_entity_statement
+from fedservice.entity_statement.create import create_entity_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class Resolve(Endpoint):
                                                                              trust_anchor=_trust_anchor)
             if _verified_mark:
                 verified_trust_marks.append({
-                    "trust_mark_id":_verified_mark["trust_mark_id"],
+                    "trust_mark_id": _verified_mark["trust_mark_id"],
                     "trust_mark": _trust_mark
                 })
 
@@ -67,12 +67,12 @@ class Resolve(Endpoint):
         else:
             args = {}
 
-        _jws = create_entity_statement(_federation_entity.entity_id,
-                                       sub=request["sub"],
-                                       key_jar=_federation_entity.get_attribute('keyjar'),
-                                       metadata=metadata,
-                                       trust_chain=trust_chain,
-                                       **args)
+        _jws = create_entity_configuration(_federation_entity.entity_id,
+                                           # sub=request["sub"],
+                                           key_jar=_federation_entity.get_attribute('keyjar'),
+                                           metadata=metadata,
+                                           trust_chain=trust_chain,
+                                           **args)
         return {'response_args': _jws}
 
     def response_info(

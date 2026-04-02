@@ -142,7 +142,7 @@ class TestClaimsFRP():
                               'userinfo_signed_response_alg'}
 
         # IN this case the Combo has no keys, The federation entity and the openid relying party has
-        # separate key jars. Same initial key owner IDs in both keyjars.
+        # separate key jars. Same initial key owner IDs in both key jars.
         assert self.combo.keyjar is None
         for _name, _item in self.combo._part.items():
             assert set(_item.keyjar.owners()) == {'', 'https://anchor.example.com'}

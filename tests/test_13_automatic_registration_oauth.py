@@ -1,19 +1,20 @@
 import os
 
+import pytest
+import responses
 from idpyoidc.client.defaults import DEFAULT_KEY_DEFS
 from idpyoidc.server.oidc.token import Token
 from idpyoidc.util import rndstr
-import pytest
-import responses
 
+from fedservice import get_payload
 from fedservice.defaults import COMBINED_DEFAULT_OAUTH2_SERVICES
 from fedservice.defaults import DEFAULT_OAUTH2_FED_SERVICES
 from fedservice.defaults import federation_endpoints
 from fedservice.defaults import federation_services
 from fedservice.entity.function import get_verified_trust_chains
+from . import create_trust_chain_messages
 from . import CRYPT_CONFIG
 from . import RESPONSE_TYPES_SUPPORTED
-from . import create_trust_chain_messages
 from .build_federation import build_federation
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -266,3 +267,81 @@ class TestAutomatic(object):
 
         # Assert that the client"s entity_id has been registered as a client
         assert self.oc.entity_id in self.oas["oauth_authorization_server"].get_context().cdb
+
+    def test_authz_request_with_trust_chain(self):
+        # No clients registered with the OP at the beginning
+        assert len(self.oas["oauth_authorization_server"].get_context().cdb.keys()) == 0
+
+        ####################################################
+        # [1] Let the RP gather some provider info discovery
+
+        # Point the RP to the OP
+        self.oc["oauth_client"].get_context().issuer = self.oas.entity_id
+
+        # Create the URLs and messages that will be involved in this process AS -> TA
+        _msgs = create_trust_chain_messages(self.oas, self.ta)
+
+        with responses.RequestsMock() as rsps:
+            for _url, _jwks in _msgs.items():
+                rsps.add("GET", _url, body=_jwks,
+                         adding_headers={"Content-Type": "application/entity-statement+jwt"},
+                         status=200)
+
+            # The client collects trust chain from the AS
+            _trust_chains = get_verified_trust_chains(self.oc, self.oas["federation_entity"].entity_id)
+
+        # one would assume this
+        # self.oc["oauth_client"].context.server_metadata = _trust_chains[0].metadata['oauth_authorization_server']
+        # But NO this is what is expected
+        self.oc["oauth_client"].context.server_metadata = _trust_chains[0].metadata
+        self.oc["federation_entity"].client.context.server_metadata = _trust_chains[0].metadata
+
+        # create trust chain client->TA. This will later be added to the Authz request
+        _msgs = create_trust_chain_messages(self.oc, self.im, self.ta)
+        trust_chain = [_msgs[es] for es in ['https://client.example.org/.well-known/openid-federation',
+                                            'https://im.example.org/fetch',
+                                            'https://ta.example.org/fetch']]
+
+        # create authorization request with request object
+        _auth_service = self.oc["oauth_client"].get_service("authorization")
+        authn_request = _auth_service.construct(
+            request_args={"response_type": "code", "state": rndstr(), "trust_chain": trust_chain,
+                          "redirect_uri": self.oc["oauth_client"].context.claims.get_preference("redirect_uris")[0]})
+
+        assert "request" in authn_request
+        _req_args = get_payload(authn_request["request"])
+        assert set(_req_args.keys()) == {'aud',
+                                         'client_id',
+                                         'exp',
+                                         'iat',
+                                         'iss',
+                                         'jti',
+                                         'redirect_uri',
+                                         'response_type',
+                                         'state',
+                                         'trust_chain'}
+
+        # ------------------------------
+        # <<<<<< On the AS's side >>>>>>>
+
+        # _msgs = create_trust_chain_messages(self.oc, self.im, self.ta)
+        _msgs = {}
+        # add the jwks_uri
+        _jwks_uri = self.oc["oauth_client"].get_context().get_preference("jwks_uri")
+        if _jwks_uri:
+            _msgs[_jwks_uri] = self.oc["oauth_client"].keyjar.export_jwks_as_json()
+
+        with responses.RequestsMock() as rsps:
+            for _url, _jwks in _msgs.items():
+                rsps.add("GET", _url, body=_jwks,
+                         adding_headers={"Content-Type": "application/entity-statement+jwt"},
+                         status=200)
+
+            # The OP handles the authorization request
+            _authz_endpoint = self.oas["oauth_authorization_server"].get_endpoint("authorization")
+            try:
+                req = _authz_endpoint.parse_request(authn_request)
+            except Exception as err:
+                print(err)
+
+        assert "response_type" in req

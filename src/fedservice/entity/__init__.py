@@ -1,3 +1,5 @@
+__author__ = 'Roland Hedberg'
+
 import logging
 from typing import Callable
 from typing import Optional
@@ -5,26 +7,45 @@ from typing import Union
 
 from cryptojwt import KeyJar
 from cryptojwt.utils import importer
+from idpyoidc.claims import Claims as ClaimsBase
 from idpyoidc.client.client_auth import client_auth_setup
+from idpyoidc.key_import import import_jwks
+from idpyoidc.node import Unit
 from idpyoidc.server.util import execute
 from idpyoidc.util import instantiate
 from requests import request
 
 from fedservice import message
+from fedservice.entity.context import FederationContext
 from fedservice.entity.function import apply_policies
 from fedservice.entity.function import collect_trust_chains
-from fedservice.entity.function import get_payload
 from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.function import verify_trust_chains
 
-__author__ = 'Roland Hedberg'
-
-from fedservice.entity.context import FederationContext
-from idpyoidc.node import Unit
-
-from idpyoidc.key_import import import_jwks
-
 logger = logging.getLogger(__name__)
+
+
+class FederationEntityClaims(ClaimsBase):
+    _supports = {
+        'organization_name': None,
+        'contacts': None,
+        'policy_uri': None,
+        'logo_uri': None,
+        'homepage_uri': None,
+        'trust_mark_owners': None,
+        'trust_mark_issuers': None
+    }
+
+    def metadata(self, supports):
+        _info = {}
+        for key in message.FederationEntity.c_param.keys():
+            _val = self.get_preference(key, supports.get(key, None))
+            if _val is not None:
+                _info[key] = _val
+        return _info
+
+    def get_id(self, configuration: dict):
+        return ''
 
 
 class FederationEntity(Unit):
@@ -158,6 +179,7 @@ class FederationEntity(Unit):
         return {entity_type: metadata}
 
     def get_metadata(self, entity_type="federation_entity", *args):
+        logger.debug(f"{self.name}:get_metadata")
         _context = self.get_context()
         _claims = _context.claims
 
@@ -165,6 +187,7 @@ class FederationEntity(Unit):
         metadata = _claims.get_server_metadata(endpoints=self.get_all_endpoints(),
                                                metadata_schema=message.FederationEntity)
 
+        logger.debug(f"metadata:{entity_type} = {metadata}")
         return {entity_type: metadata}
 
     def get_preferences(self):
