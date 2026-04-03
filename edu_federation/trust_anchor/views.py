@@ -185,5 +185,6 @@ def wkof():
         lifetime=_ctx.default_lifetime)
 
     response = make_response(_statement)
-    response.headers['Content-Type'] = 'application/jose; charset=UTF-8'
+    if 'Content-Type' not in response.headers:
+        response.headers['Content-Type'] = 'application/entity-statement+jwt'
     return response

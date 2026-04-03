@@ -1,7 +1,10 @@
 __author__ = 'Roland Hedberg'
-__version__ = '5.1.0'
+__version__ = '5.3.0'
 
 from typing import Optional
+
+from cryptojwt import as_unicode
+from cryptojwt.jws.jws import factory
 
 from fedservice.entity_statement.statement import chains2dict
 
@@ -29,3 +32,8 @@ def get_trust_chain(federation_context, entity_id: str, trust_anchor: Optional[s
     else:
         return trust_info
 
+
+def get_payload(self_signed_statement):
+    _jws = as_unicode(self_signed_statement)
+    _jwt = factory(_jws)
+    return _jwt.jwt.payload()

@@ -3,18 +3,17 @@ from typing import Optional
 from typing import Union
 
 from idpyoidc.message import Message
-
-from fedservice.entity.utils import get_federation_entity
-from fedservice.entity_statement.create import create_entity_statement
 from idpyoidc.message import oauth2
 from idpyoidc.server import Endpoint
 
-from fedservice.message import EntityStatement
+from fedservice import message
+from fedservice.entity.utils import get_federation_entity
+from fedservice.entity_statement.create import create_entity_configuration
 
 
 class EntityConfiguration(Endpoint):
     request_cls = oauth2.Message
-    response_cls = EntityStatement
+    response_cls = message.EntityConfiguration
     request_format = ""
     response_format = "jose"
     response_placement = "body"
@@ -48,28 +47,27 @@ class EntityConfiguration(Endpoint):
 
         _trust_mark_issuers = _fed_entity.context.trust_mark_issuers
         if _trust_mark_issuers:
-            args["trust_mark_issuers"] = _trust_mark_issuers
+            # Ensure trust_mark_issuers is JSON-serializable by wrapping in dict()
+            args["trust_mark_issuers"] = dict(_trust_mark_issuers)
 
         _trust_mark_owners = _fed_entity.context.trust_mark_owners
         if _trust_mark_owners:
-            args["trust_mark_owners"] = _trust_mark_owners
+            args["trust_mark_owners"] = dict(_trust_mark_owners)
 
-
-        _ec = create_entity_statement(iss=_entity_id,
-                                      sub=_entity_id,
-                                      key_jar=_fed_entity.get_attribute('keyjar'),
-                                      metadata=_metadata,
-                                      authority_hints=_server.upstream_get('authority_hints'),
-                                      **args
-                                      )
+        _ec = create_entity_configuration(iss=_entity_id,
+                                          key_jar=_fed_entity.get_attribute('keyjar'),
+                                          metadata=_metadata,
+                                          authority_hints=_server.upstream_get('authority_hints'),
+                                          **args
+                                          )
         return {"response": _ec}
 
     def response_info(
-        self,
-        response_args: Optional[dict] = None,
-        request: Optional[Union[Message, dict]] = None,
-        error: Optional[str] = "",
-        **kwargs
+            self,
+            response_args: Optional[dict] = None,
+            request: Optional[Union[Message, dict]] = None,
+            error: Optional[str] = "",
+            **kwargs
     ) -> dict:
         if "response" in kwargs:
             return kwargs["response"]

@@ -13,7 +13,7 @@ from idpyoidc.node import topmost_unit
 from fedservice.entity import FederationEntity
 from fedservice.entity.service import FederationService
 from fedservice.entity.utils import get_federation_entity
-from fedservice.message import EntityStatement
+from fedservice.message import EntityConfiguration as MSG_EntityConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def construct_tenant_well_known_url(entity_id, typ):
 
 class EntityConfiguration(FederationService):
     msg_type = oauth2.Message
-    response_cls = EntityStatement
+    response_cls = MSG_EntityConfiguration
     error_msg = ResponseMessage
     synchronous = True
     service_name = "entity_configuration"

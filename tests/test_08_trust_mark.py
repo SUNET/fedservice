@@ -107,7 +107,7 @@ class TestSignedTrustMark():
         _endpoint = self.tmi.get_endpoint('trust_mark_status')
         _issuer = _endpoint.upstream_get("unit")
         _trust_mark = _issuer.self_signed_trust_mark(
-            trust_mark_id='https://openid.net/certification',
+            trust_mark_type='https://openid.net/certification',
             logo_uri=("http://openid.net/wordpress-content/uploads/2016/05/"
                       "oid-l-certification-mark-l-cmyk-150dpi-90mm.jpg")
         )
@@ -116,10 +116,10 @@ class TestSignedTrustMark():
         _mark = _issuer.unpack_trust_mark(_trust_mark)
 
         assert isinstance(_mark, TrustMark)
-        assert _mark["trust_mark_id"] == "https://openid.net/certification"
+        assert _mark["trust_mark_type"] == "https://openid.net/certification"
         assert _mark['iss'] == _mark['sub']
         assert _mark['iss'] == self.tmi.entity_id
-        assert set(_mark.keys()) == {'iss', 'sub', 'iat', 'trust_mark_id', 'logo_uri'}
+        assert set(_mark.keys()) == {'iss', 'sub', 'iat', 'trust_mark_type', 'logo_uri'}
 
     def test_create_unpack_trust_3rd_party(self):
         _sub = "https://op.ntnu.no"
@@ -148,7 +148,7 @@ class TestSignedTrustMark():
 
         _jws = factory(_trust_mark)
         _payload = _jws.jwt.payload()
-        query = {"sub": _payload["sub"], "trust_mark_id": _payload["trust_mark_id"]}
+        query = {"sub": _payload["sub"], "trust_mark_type": _payload["trust_mark_type"]}
         resp = self.tmi.get_endpoint('trust_mark_status').process_request(query)
         assert resp == {'response_args': {'active': True}}
 
@@ -167,7 +167,7 @@ class TestSignedTrustMark():
         req = tms.get_request_parameters(
             request_args={
                 'sub': _payload['sub'],
-                'trust_mark_id': _payload['trust_mark_id']
+                'trust_mark_type': _payload['trust_mark_type']
             },
             fetch_endpoint=self.tmi.get_endpoint('trust_mark_status').full_path
         )
@@ -184,7 +184,7 @@ class TestSignedTrustMark():
             "ref": 'https://refeds.org/sirtfi'
         }
 
-        _trust_mark = _issuer.create_trust_mark(id="https://refeds.org/sirtfi",
+        _trust_mark = _issuer.create_trust_mark(trust_mark_type="https://refeds.org/sirtfi",
                                                 sub=self.tmi.entity_id)
 
         where_and_what = create_trust_chain_messages(self.tmi, self.ta)
@@ -198,7 +198,7 @@ class TestSignedTrustMark():
                 trust_mark=_trust_mark, trust_anchor=self.ta.entity_id)
 
         assert verified_trust_mark
-        assert set(verified_trust_mark.keys()) == {'iat', 'iss', 'trust_mark_id', 'sub', 'ref'}
+        assert set(verified_trust_mark.keys()) == {'iat', 'iss', 'trust_mark_type', 'sub', 'ref'}
 
     def test_metadata(self):
         _metadata = self.tmi.get_metadata()
@@ -207,5 +207,8 @@ class TestSignedTrustMark():
                                                               'federation_trust_mark_endpoint',
                                                               'federation_trust_mark_list_endpoint',
                                                               'federation_trust_mark_status_endpoint',
+                                                              'federation_trust_mark_endpoint_auth_methods',
+                                                              'federation_trust_mark_list_endpoint_auth_methods',
+                                                              'federation_trust_mark_status_endpoint_auth_methods',
                                                               'organization_name'}
         assert _metadata["federation_entity"]["federation_trust_mark_endpoint"] == 'https://tmi.example.com/trust_mark'

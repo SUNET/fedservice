@@ -1,5 +1,5 @@
-from cryptojwt.jwt import utc_time_sans_frac
 import pytest
+from cryptojwt.jwt import utc_time_sans_frac
 
 from fedservice.entity_statement.constraints import calculate_path_length
 from fedservice.entity_statement.constraints import excluded
@@ -9,42 +9,39 @@ from fedservice.exception import UnknownCriticalExtension
 from fedservice.message import Constraints
 from fedservice.message import EntityStatement
 from fedservice.message import NamingConstraints
+from fedservice.message import SubordinateStatement
 
 
-def test_max_path_length_start():
+# def test_max_path_length_start():
+#     current_max_path_length = 0
+#     max_assigned = False
+#     constraints = Constraints(max_path_length=1)
+#     current_max_path_length = calculate_path_length(constraints, current_max_path_length,
+#                                                     max_assigned)
+#     assert current_max_path_length == 1
+
+@pytest.mark.parametrize(
+    "sequence, path_len",
+    [
+        ([2, 1, -1], 0),
+        ([4, 2, -1], 1),
+        ([4, -1, 2], 2),
+        ([1, -1, -1], -1)
+    ]
+)
+def test_max_path_length_1(sequence, path_len):
     current_max_path_length = 0
-    max_assigned = False
-    constraints = Constraints(max_path_length=1)
-    current_max_path_length = calculate_path_length(constraints, current_max_path_length,
-                                                    max_assigned)
-    assert current_max_path_length == 1
+    assigned = False
+    for i in sequence:
+        if i >= 0:
+            constraints = Constraints(max_path_length=i)
+            current_max_path_length = calculate_path_length(constraints, current_max_path_length, assigned)
+            assigned = True
+        else :
+            constraints = Constraints()
+            current_max_path_length = calculate_path_length(constraints, current_max_path_length, assigned)
 
-
-def test_max_path_length_decrease():
-    current_max_path_length = 2
-    max_assigned = True
-    constraints = Constraints(max_path_length=1)
-    current_max_path_length = calculate_path_length(constraints, current_max_path_length,
-                                                    max_assigned)
-    assert current_max_path_length == 1
-
-
-def test_max_path_length_ignore():
-    current_max_path_length = 2
-    max_assigned = True
-    constraints = Constraints(max_path_length=3)
-    current_max_path_length = calculate_path_length(constraints, current_max_path_length,
-                                                    max_assigned)
-    assert current_max_path_length == 1
-
-
-def test_max_path_length_no():
-    current_max_path_length = 2
-    max_assigned = True
-    constraints = Constraints()
-    current_max_path_length = calculate_path_length(constraints, current_max_path_length,
-                                                    max_assigned)
-    assert current_max_path_length == 1
+    assert current_max_path_length == path_len
 
 
 def test_naming_constr_1():
@@ -260,8 +257,8 @@ def test_crit_known_unknown_not_critical():
 def test_crit_critical_not_supported():
     entity_id = "https://ent.example.org"
     _now = utc_time_sans_frac()
-    _statement = EntityStatement(sub=entity_id, iss=entity_id, iat=_now, exp=_now + 3600,
-                                 foo="bar", crit=["foo"])
+    _statement = SubordinateStatement(sub=entity_id, iss=entity_id, iat=_now, exp=_now + 3600,
+                                      foo="bar", crit=["foo"])
 
     with pytest.raises(UnknownCriticalExtension):
         _statement.verify(known_extensions=["xyz"])
@@ -296,8 +293,7 @@ MSG = {
 
 def test_policy_language_crit_not_supported():
     _now = utc_time_sans_frac()
-    _statement = EntityStatement(iat=_now, exp=_now + 3600, **MSG)
-
+    _statement = SubordinateStatement(iat=_now, exp=_now + 3600, **MSG)
     _statement.verify(known_policy_extensions=["regexp"])
 
     with pytest.raises(UnknownCriticalExtension):

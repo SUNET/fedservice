@@ -274,3 +274,12 @@ class TestAutomatic(object):
 
         # Assert that the client's entity_id has been registered as a client
         assert self.rp.entity_id in self.op["openid_provider"].get_context().cdb
+        # Check that the RP's keys are reflected in the OP's keyjar
+        assert self.rp.entity_id in self.op["openid_provider"].keyjar
+        # There are three RP keys. One EC, one RSA and one OCT
+        rp_keyjar = self.rp["openid_relying_party"].keyjar
+        op_keyjar = self.op["openid_provider"].keyjar
+        for key_type in ["EC", "RSA", "OCT"]:
+            for key in rp_keyjar.get_signing_key(key_type=key_type):
+                vk = op_keyjar.get_verify_key(key_type=key_type, kid=key.kid, issuer_id=self.rp.entity_id)
+                assert vk

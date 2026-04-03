@@ -173,15 +173,15 @@ Typical usage::
     ./create_trust_mark.py -d trust_mark_issuer -m http://dc4eu.example.com/EHICCredential/se -e https://127.0.0.1:8080
     ./create_trust_mark.py -d trust_mark_issuer -m http://dc4eu.example.com/PDA1Credential/se -e https://127.0.0.1:8080
 
-usage: create_trust_mark.py [-h] [-d DIR_NAME] [-e ENTITY_ID] [-m TRUST_MARK_ID] ::
+usage: create_trust_mark.py [-h] [-d DIR_NAME] [-e ENTITY_ID] [-m TRUST_MARK_TYPE] ::
 
     options:
       -h, --help            show this help message and exit
       -d DIR_NAME, --dir_name DIR_NAME
       -e ENTITY_ID, --entity_id ENTITY_ID
-      -m TRUST_MARK_ID, --trust_mark_id TRUST_MARK_ID
+      -m TRUST_MARK_TYPE, --trust_mark_type TRUST_MARK_TYPE
 
-The TRUST_MARK_ID is http://dc4eu.example.com/PersonIdentificationData/se.
+The TRUST_MARK_TYPE is http://dc4eu.example.com/PersonIdentificationData/se.
 Which is something I just invented for this setup
 https://127.0.0.1:8080 is where the Credential Issuer (The OpenID4VCI SATOSA frontend)
 should be found.

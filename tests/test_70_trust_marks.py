@@ -8,6 +8,7 @@ from idpyoidc.message import Message
 
 from fedservice.defaults import LEAF_ENDPOINTS
 from fedservice.entity.function import get_verified_trust_chains
+from fedservice.message import TrustMark
 from fedservice.utils import make_federation_entity
 from tests import create_trust_chain_messages
 
@@ -17,7 +18,7 @@ TA_ID = "https://ta.example.org"
 TMI_ID = "https://tmi.example.org"
 FE_ID = "https://entity.example.org"
 
-TRUST_MARK_ID = "https://example.com/trust_mark"
+TRUST_MARK_TYPE = "https://example.com/trust_mark"
 
 BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 
@@ -51,7 +52,7 @@ class TestTrustMarkEndpoints():
                 "homepage_uri": "https://ta.example.com",
                 "contacts": "operations@ta.example.com",
                 "trust_mark_issuers": {
-                    TRUST_MARK_ID: TMI_ID
+                    TRUST_MARK_TYPE: TMI_ID
                 }
             },
             key_config={"key_defs": DEFAULT_KEY_DEFS},
@@ -74,11 +75,11 @@ class TestTrustMarkEndpoints():
                 "class": "fedservice.trust_mark_entity.entity.TrustMarkEntity",
                 "kwargs": {
                     "trust_mark_specification": {
-                        TRUST_MARK_ID: {"lifetime": 2592000}
+                        TRUST_MARK_TYPE: {"lifetime": 2592000}
                     },
                     "trust_mark_db": {
                         "class": "fedservice.trust_mark_entity.FileDB",
-                        "kwargs": {TRUST_MARK_ID: full_path("trust_mark")}
+                        "kwargs": {TRUST_MARK_TYPE: full_path("trust_mark")}
                     },
                     "endpoint": {
                         "trust_mark": {
@@ -149,7 +150,7 @@ class TestTrustMarkEndpoints():
         _client_service = self.federation_entity.get_service("trust_mark_list")
         _server_endpoint = self.trust_mark_issuer.get_endpoint("trust_mark_list")
 
-        req_info = _client_service.get_request_parameters(request_args={"trust_mark_id": TRUST_MARK_ID},
+        req_info = _client_service.get_request_parameters(request_args={"trust_mark_type": TRUST_MARK_TYPE},
                                                           fetch_endpoint=_server_endpoint.full_path)
 
         _query = req_info["url"].split("?")[1]
@@ -168,7 +169,7 @@ class TestTrustMarkEndpoints():
         _audience = _server_endpoint.full_path
 
         req_info = _client_service.get_request_parameters(
-            request_args={"trust_mark_id": TRUST_MARK_ID, "sub": self.federation_entity.entity_id},
+            request_args={"trust_mark_type": TRUST_MARK_TYPE, "sub": self.federation_entity.entity_id},
             endpoint=_audience,
             audience=_audience,
             algorithm="ES256")
@@ -189,12 +190,17 @@ class TestTrustMarkEndpoints():
             _parse_req = _server_endpoint.parse_request(_req.to_dict(), get_client_info=get_client_info)
 
         _hw_resp = _server_endpoint.process_request(_parse_req)
-        _resp = _server_endpoint.do_response(_hw_resp)
+        _resp = _server_endpoint.do_response(response_args=_hw_resp)
         assert set(_resp.keys()) == {"response", "http_headers"}
+
+        # Check the signed JWT
+        _tm = TrustMark().from_jwt(_resp["response"], keyjar=_kj)
+        _tm.verify()
+        assert set(_tm.keys()) == {'iat', 'trust_mark_type', 'sub', 'exp', 'iss'}
 
         # should be one item in the list
         _client_service = self.federation_entity.get_service("trust_mark_list")
-        req_info = _client_service.get_request_parameters(request_args={"trust_mark_id": TRUST_MARK_ID},
+        req_info = _client_service.get_request_parameters(request_args={"trust_mark_type": TRUST_MARK_TYPE},
                                                           fetch_endpoint=f"{self.trust_mark_issuer.entity_id}/trust_mark_list")
 
         _server_endpoint = self.trust_mark_issuer.get_endpoint("trust_mark_list")
@@ -215,4 +221,11 @@ class TestTrustMarkEndpoints():
         assert set(_metadata["federation_entity"].keys()) == {'federation_trust_mark_endpoint',
                                                               'federation_trust_mark_list_endpoint',
                                                               'federation_trust_mark_status_endpoint',
+                                                              'federation_trust_mark_endpoint_auth_methods',
+                                                              'federation_trust_mark_list_endpoint_auth_methods',
+                                                              'federation_trust_mark_status_endpoint_auth_methods',
                                                               'organization_name'}
+        fe_metadata = _metadata["federation_entity"]
+        assert fe_metadata["federation_trust_mark_endpoint_auth_methods"] == ["private_key_jwt"]
+        assert fe_metadata["federation_trust_mark_list_endpoint_auth_methods"] == ["none"]
+        assert fe_metadata["federation_trust_mark_status_endpoint_auth_methods"] == ["none"]

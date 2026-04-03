@@ -25,11 +25,11 @@ class Who(Endpoint):
         self.entity_type = kwargs.get("entity_type", "credential_issuer")
         if self.entity_type == "credential_issuer":
             self.credential_type = kwargs.get("credential_type", "PersonIdentificationData")
-            self.trust_mark_id = kwargs.get("trust_mark_id",
+            self.trust_mark_type = kwargs.get("trust_mark_type",
                                             "http://dc4eu.example.com/PersonIdentificationData/se")
         else:
             self.credential_type = ""
-            self.trust_mark_id = kwargs.get("trust_mark_id", "")
+            self.trust_mark_type = kwargs.get("trust_mark_type", "")
 
     def process_request(self, request=None, trust_anchor: str = "" ,**kwargs):
         if not request:
@@ -73,7 +73,7 @@ class Who(Endpoint):
                         _srv[eid] = _metadata
                         break
 
-        tm_id = request.get("trust_mark_id", self.trust_mark_id)
+        tm_id = request.get("trust_mark_type", self.trust_mark_type)
         if tm_id:
             server_to_use = []
             for eid, metadata in _srv.items():
@@ -88,7 +88,7 @@ class Who(Endpoint):
                     for _mark in _ec["trust_marks"]:
                         _verified_trust_mark = _federation_entity.verify_trust_mark(
                             _mark, check_with_issuer=True)
-                        if _verified_trust_mark.get("trust_mark_id") == tm_id:
+                        if _verified_trust_mark.get("trust_mark_type") == tm_id:
                             server_to_use.append(eid)
         else:
             server_to_use = list(_srv.keys())

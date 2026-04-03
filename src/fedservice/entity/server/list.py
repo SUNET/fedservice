@@ -24,7 +24,7 @@ class List(Endpoint):
     def filter(self,
                subordinates: dict,
                entity_type: str = '',
-               trust_mark_id: str = '',
+               trust_mark_type: str = '',
                trust_marked=None,
                **kwargs):
         match = []
@@ -38,11 +38,11 @@ class List(Endpoint):
                     matched = True
                 else:
                     matched = False
-            if trust_mark_id:
-                trust_marks = conf.get('trust_marks')
+            if trust_mark_type:
+                trust_marks = conf.get('trust_marks') or []
                 matched = False
                 for trust_mark in trust_marks:
-                    if trust_mark['trust_mark_id'] == trust_mark_id:
+                    if trust_mark['trust_mark_type'] == trust_mark_type:
                         matched = True
 
             if matched:
@@ -67,7 +67,7 @@ class List(Endpoint):
                         matched_entity_ids.add(entity_id)
 
             # I don't expect to know about trust marks from the registration
-            if "trust_marked" in request or "trust_mark_id" in request:
+            if "trust_marked" in request or "trust_mark_type" in request:
                 subordinate_conf = self.collect_subordinates()
                 matched_entity_ids.update(self.filter(subordinates=subordinate_conf, **request))
 

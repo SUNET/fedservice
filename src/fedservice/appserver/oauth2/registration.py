@@ -20,12 +20,13 @@ from idpyoidc.util import rndstr
 from idpyoidc.util import sanitize
 from idpyoidc.util import split_uri
 
+from fedservice import save_trust_chains
 from fedservice.appserver import import_client_keys
 from fedservice.entity.function import apply_policies
-from fedservice.entity.function import collect_trust_chains
-from fedservice.entity.function import verify_trust_chains
+from fedservice.entity.function import get_verified_trust_chains
 from fedservice.entity.function.trust_chain_collector import verify_self_signed_signature
 from fedservice.entity.utils import get_federation_entity
+from fedservice.exception import NoTrustedChains
 from fedservice.message import OauthClientInformationResponse
 
 logger = logging.getLogger(__name__)
@@ -64,32 +65,32 @@ class Registration(Endpoint):
                                                                            'trust_mark_issuer'}).pop()
         _federation_entity = get_federation_entity(self)
 
-        # Collect trust chains
-        _chains, _ = collect_trust_chains(self.upstream_get('unit'),
-                                          entity_id=payload['sub'],
-                                          signed_entity_configuration=request)
-        _trust_chains = verify_trust_chains(_federation_entity, _chains, request)
+        # Collect trust chains for client
+        _trust_chains = get_verified_trust_chains(self, entity_id=payload['sub'])
+        if not _trust_chains:
+            raise NoTrustedChains(f"No trust chains for {payload['sub']}")
+
+        save_trust_chains(self.upstream_get("context"), _trust_chains)
+
         _trust_chains = apply_policies(_federation_entity, _trust_chains)
         trust_chain = _federation_entity.pick_trust_chain(_trust_chains)
         _federation_entity.trust_chain_anchor = trust_chain.anchor
+
         # Perform non-federation registration
-        req = oauth2.OauthClientMetadata(**trust_chain.metadata[opponent_entity_type])
+        req = oauth2.OauthClientMetadata(**payload['metadata'][opponent_entity_type])
         response_info = self.step2_process_request(req, **kwargs)
         if "response_args" in response_info:
             _context = _federation_entity.context
-            _policy_metadata = req.to_dict()
-            _policy_metadata.update(response_info['response_args'])
-            # Should I filter out stuff I have no reason to change ?
-            _policy_metadata = {k: v for k, v in _policy_metadata.items() if k not in [
-                'application_type',
-                'jwks',
-                'redirect_uris']}
-            entity_statement = _context.create_entity_statement(
+            _response_metadata = req.to_dict()
+            _response_metadata.update(response_info['response_args'])
+
+            entity_statement = _context.create_entity_configuration(
                 _federation_entity.upstream_get('attribute', 'entity_id'),
-                payload['iss'],
-                trust_anchor_id=trust_chain.anchor,
-                metadata={opponent_entity_type: _policy_metadata},
+                # payload['iss'],
+                trust_anchor=trust_chain.anchor,
+                metadata={opponent_entity_type: _response_metadata},
                 aud=payload['iss'],
+                include_jwks=False
             )
             response_info["response_msg"] = entity_statement
             del response_info["response_args"]

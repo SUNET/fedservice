@@ -114,9 +114,9 @@ def verify_trust_chains(unit, chains: List[List[str]], *entity_statements):
     for c in chains:
         if entity_statements:
             c.extend(entity_statements)
-        trust_chain = _verifier(c)
-        if trust_chain:
-            res.append(trust_chain)
+        trust_chains = _verifier(c)
+        if trust_chains:
+            res.extend(trust_chains)
     return res
 
 
@@ -144,13 +144,6 @@ def apply_policies(unit, trust_chains):
         res.append(trust_chain)
     return res
 
-
-def get_payload(self_signed_statement):
-    _jws = as_unicode(self_signed_statement)
-    _jwt = factory(_jws)
-    return _jwt.jwt.payload()
-
-
 class Function(ImpExp):
 
     def __init__(self, upstream_get: Callable):
@@ -158,8 +151,8 @@ class Function(ImpExp):
         self.upstream_get = upstream_get
 
 
-def get_verified_trust_chains(unit, entity_id):
-    chains, leaf_ec = collect_trust_chains(unit, entity_id)
+def get_verified_trust_chains(unit, entity_id: str, stop_at: Optional[str] = ""):
+    chains, leaf_ec = collect_trust_chains(unit, entity_id, stop_at=stop_at)
     if len(chains) == 0:
         return []
 

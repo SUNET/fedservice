@@ -65,7 +65,7 @@
           "kwargs": {
             "entity_type": "credential_issuer",
             "credential_type": "PersonIdentificationData",
-            "trust_mark_id": "http://dc4eu.example.com/PersonIdentificationData/se"
+            "trust_mark_type": "http://dc4eu.example.com/PersonIdentificationData/se"
           }
         }
       }

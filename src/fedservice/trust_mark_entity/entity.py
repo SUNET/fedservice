@@ -1,3 +1,4 @@
+import logging
 from typing import Callable
 from typing import Optional
 
@@ -14,6 +15,8 @@ from fedservice.message import TrustMark
 from fedservice.trust_mark_entity import SimpleDB
 from fedservice.trust_mark_entity.context import TrustMarkContext
 
+
+logger = logging.getLogger(__name__)
 
 def create_trust_mark(keyjar, entity_id, **kwargs):
     packer = JWT(key_jar=keyjar, iss=entity_id)
@@ -64,24 +67,24 @@ class TrustMarkEntity(Unit):
 
         self.context = TrustMarkContext(client_authn_methods=auth_set)
 
-    def create_trust_mark(self, id: [str], sub: [str], **kwargs) -> str:
+    def create_trust_mark(self, trust_mark_type: [str], sub: [str], **kwargs) -> str:
         """
 
-        :param id: Trust Mark identifier
+        :param trust_mark_type: Trust Mark identifier
         :param sub: The receiver of the Trust Mark
         :param kwargs: extra claims to be added to the Trust Mark's claims
         :return: Trust Mark
         """
         _now = utc_time_sans_frac()
-        _add = {'iat': _now, 'trust_mark_id': id, 'sub': sub}
-        lifetime = self.tm_lifetime.get(id)
+        _add = {'iat': _now, 'trust_mark_type': trust_mark_type, 'sub': sub}
+        lifetime = self.tm_lifetime.get(trust_mark_type)
         if lifetime:
             _add['exp'] = _now + lifetime
 
-        if id not in self.trust_mark_specification:
-            raise ValueError('Unknown trust mark ID')
+        if trust_mark_type not in self.trust_mark_specification:
+            raise ValueError('Unknown trust mark type')
 
-        content = self.trust_mark_specification[id].copy()
+        content = self.trust_mark_specification[trust_mark_type].copy()
         content.update(_add)
         if kwargs:
             content.update(kwargs)
@@ -118,17 +121,18 @@ class TrustMarkEntity(Unit):
             kwargs['sub'] = _entity_id
         return packer.pack(payload=kwargs)
 
-    def find(self, trust_mark_id, sub: str, iat: Optional[int] = 0) -> bool:
-        return self.issued.find(trust_mark_id=trust_mark_id, sub=sub, iat=iat)
+    def find(self, trust_mark_type, sub: str, iat: Optional[int] = 0) -> bool:
+        return self.issued.find(trust_mark_type=trust_mark_type, sub=sub, iat=iat)
 
-    def list(self, trust_mark_id: str, sub: Optional[str] = "") -> list:
+    def list(self, trust_mark_type: str, sub: Optional[str] = "") -> list:
         if sub:
-            if self.find(trust_mark_id, sub):
+            if self.find(trust_mark_type, sub):
                 return [sub]
         else:
-            return self.issued.list(trust_mark_id)
+            return self.issued.list(trust_mark_type)
 
     def get_metadata(self):
+        logger.debug(f"{self.name}:get_metadata")
         # three endpoints
         md = {}
         for name, endp in self.endpoint.items():
@@ -139,6 +143,7 @@ class TrustMarkEntity(Unit):
                 _val = getattr(endp, arg, None)
                 if _val:
                     md[f"{endp.name}_{txt}"] = _val
+        logger.debug(f"metadata:{self.name} = {md}")
         return {self.name: md}
 
     def get_context(self, *args):
@@ -154,7 +159,7 @@ class SelfSignedTrustMarkEntity(Unit):
     def __init__(self,
                  entity_id: str = "",
                  upstream_get: Optional[Callable] = None,
-                 trust_mark_ids: Optional[list] = None,
+                 trust_mark_types: Optional[list] = None,
                  trust_mark_specification: Optional[dict] = None,
                  **kwargs
                  ):
@@ -162,30 +167,30 @@ class SelfSignedTrustMarkEntity(Unit):
         Unit.__init__(self, upstream_get=upstream_get)
 
         self.entity_id = entity_id or upstream_get("attribute", "entity_id")
-        self.trust_mark_ids = trust_mark_ids or []
+        self.trust_mark_types = trust_mark_types or []
         self.trust_mark_specification = trust_mark_specification or {}
         self.issued = []
         self.tm_lifetime = 86400*30
 
-    def __call__(self, id: [str], **kwargs) -> str:
+    def __call__(self, trust_mark_type: [str], **kwargs) -> str:
         """
 
-        :param id: Trust Mark identifier
+        :param trust_mark_type: Trust Mark identifier
         :param sub: The receiver of the Trust Mark
         :param kwargs: extra claims to be added to the Trust Mark's claims
         :return: Trust Mark
         """
         _now = utc_time_sans_frac()
         sub = self.upstream_get('attribute', 'entity_id')
-        _add = {'iat': _now, 'trust_mark_id': id, 'sub': sub}
+        _add = {'iat': _now, 'trust_mark_type': trust_mark_type, 'sub': sub}
         lifetime = self.tm_lifetime
         if lifetime:
             _add['exp'] = _now + lifetime
 
-        if id not in self.trust_mark_specification:
-            raise ValueError('Unknown trust mark ID')
+        if trust_mark_type not in self.trust_mark_specification:
+            raise ValueError('Unknown trust mark type')
 
-        content = self.trust_mark_specification[id].copy()
+        content = self.trust_mark_specification[trust_mark_type].copy()
         content.update(_add)
         if kwargs:
             content.update(kwargs)

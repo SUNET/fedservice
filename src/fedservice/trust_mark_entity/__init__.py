@@ -9,16 +9,16 @@ class FileDB(object):
 
     def __init__(self, **kwargs):
         self.config = kwargs
-        for trust_mark_id, file_name in self.config.items():
+        for trust_mark_type, file_name in self.config.items():
             if not os.path.exists(file_name):
                 # Only need to touch it
                 fp = open(file_name, "w")
                 fp.close()
 
     def add(self, tm_info: dict):
-        trust_mark_id = tm_info['trust_mark_id']
+        trust_mark_type = tm_info['trust_mark_type']
         # adds a line with info about a trust mark info to the end of a file
-        with open(self.config[trust_mark_id], "a") as fp:
+        with open(self.config[trust_mark_type], "a") as fp:
             fp.write(json.dumps(tm_info) + '\n')
 
     def _match(self, sub, iat, tmi):
@@ -30,8 +30,8 @@ class FileDB(object):
                 return True
         return False
 
-    def find(self, trust_mark_id: str, sub: str, iat: Optional[int] = 0):
-        with open(self.config[trust_mark_id], "r") as fp:
+    def find(self, trust_mark_type: str, sub: str, iat: Optional[int] = 0):
+        with open(self.config[trust_mark_type], "r") as fp:
             # Get the last issued
             for line in reversed(list(fp)):
                 _tmi = json.loads(line.rstrip())
@@ -72,10 +72,10 @@ class FileDB(object):
     def loads(self, str):
         self.load(json.loads(str))
 
-    def list(self, trust_mark_id: str, sub: Optional[str] = ""):
+    def list(self, trust_mark_type: str, sub: Optional[str] = ""):
         res = []
         try:
-            with open(self.config[trust_mark_id], "r") as fp:
+            with open(self.config[trust_mark_type], "r") as fp:
                 # Get the last issued
                 for line in reversed(list(fp)):
                     _tmi = json.loads(line.rstrip())
@@ -97,20 +97,20 @@ class SimpleDB(object):
         self._db = {}
 
     def add(self, tm_info: dict):
-        if tm_info['trust_mark_id'] in self._db:
-            self._db[tm_info['trust_mark_id']].append({tm_info['sub']: tm_info})
+        if tm_info['trust_mark_type'] in self._db:
+            self._db[tm_info['trust_mark_type']].append({tm_info['sub']: tm_info})
         else:
-            self._db[tm_info['trust_mark_id']] = {tm_info["sub"]: tm_info}
+            self._db[tm_info['trust_mark_type']] = {tm_info["sub"]: tm_info}
 
-    def list(self, trust_mark_id, sub: Optional[str] = ""):
+    def list(self, trust_mark_type, sub: Optional[str] = ""):
         if sub:
-            if self._db[trust_mark_id].get(sub, None):
+            if self._db[trust_mark_type].get(sub, None):
                 return [sub]
-        elif trust_mark_id in self._db:
-            return self._db[trust_mark_id]
+        elif trust_mark_type in self._db:
+            return self._db[trust_mark_type]
 
-    def find(self, trust_mark_id, sub: str, iat: Optional[int] = 0) -> bool:
-        _tmi = self._db[trust_mark_id].get(sub, None)
+    def find(self, trust_mark_type, sub: str, iat: Optional[int] = 0) -> bool:
+        _tmi = self._db[trust_mark_type].get(sub, None)
         if _tmi:
             if iat:
                 if iat == _tmi["iat"]:

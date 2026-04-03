@@ -1,4 +1,5 @@
 """ Classes and functions used to describe information in an OpenID Connect Federation."""
+import contextlib
 import json
 import logging
 from urllib.parse import parse_qs
@@ -33,13 +34,24 @@ from idpyoidc.message.oidc import RegistrationResponse
 from idpyoidc.message.oidc import SINGLE_OPTIONAL_BOOLEAN
 from idpyoidc.message.oidc import SINGLE_OPTIONAL_DICT
 
-from fedservice.entity.function import get_payload
+from fedservice import get_payload
 from fedservice.exception import UnknownCriticalExtension
 from fedservice.exception import WrongSubject
 
 SINGLE_REQUIRED_DICT = (dict, True, msg_ser_json, dict_deser, False)
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _payload_from_jws(token):
+    """
+    Local helper to decode a compact JWS and return its payload as dict.
+    Replaces dependency on fedservice.entity.function.get_payload to avoid cycles.
+    """
+    with contextlib.suppress(AttributeError, UnicodeDecodeError):
+        token = token.decode()
+    _jwt = factory(token)
+    return _jwt.jwt.payload()
 
 
 def dict_list_deser(val, sformat="dict"):
@@ -151,6 +163,13 @@ class FederationEntity(InformationalMetadataExtensions):
         # If it's a Trust Anchor
         # "trust_mark_owners": SINGLE_OPTIONAL_DICT,
         # "trust_mark_issuers": SINGLE_OPTIONAL_DICT,
+        "federation_fetch_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_list_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_resolve_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_trust_mark_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_trust_mark_status_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_trust_mark_list_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
+        "federation_historical_keys_endpoint_auth_methods": OPTIONAL_LIST_OF_STRINGS,
     })
 
 
@@ -442,18 +461,18 @@ class TrustMarks(Message):
         for _id, spec in self.items():
             _trust_mark = spec.get("trust_mark")
             if _trust_mark:
-                _trust_mark_id = spec.get("trust_mark_id")
-                if _trust_mark_id:
+                _trust_mark_type = spec.get("trust_mark_type")
+                if _trust_mark_type:
                     # Have to peek into the trust mark
                     _jws = factory(_trust_mark)
                     if not _jws:
                         raise ValueError(f"Not a proper signed JWT: {_trust_mark}")
-                    _tm_id = _jws.jwt.payload().get("trust_mark_id")
-                    if _tm_id != _trust_mark_id:
-                        raise ValueError("The Trust Mark identifier MUST have the same value as the trust_mark_id "
+                    _tm_id = _jws.jwt.payload().get("trust_mark_type")
+                    if _tm_id != _trust_mark_type:
+                        raise ValueError("The Trust Mark identifier MUST have the same value as the trust_mark_type "
                                          "claim")
                 else:
-                    raise MissingRequiredAttribute("trust_mark_id")
+                    raise MissingRequiredAttribute("trust_mark_type")
             else:
                 raise MissingRequiredAttribute("trust_mark")
 
@@ -485,26 +504,16 @@ class EntityStatement(JsonWebToken):
     """The Entity Statement"""
     c_param = JsonWebToken.c_param.copy()
     c_param.update({
-        "sub": SINGLE_REQUIRED_STRING,
         'iss': SINGLE_REQUIRED_STRING,
-        'exp': SINGLE_REQUIRED_INT,
+        'sub': SINGLE_REQUIRED_STRING,
         'iat': SINGLE_REQUIRED_INT,
+        'exp': SINGLE_REQUIRED_INT,
         'jwks': SINGLE_OPTIONAL_DICT,
-        'aud': SINGLE_OPTIONAL_STRING,
-        "jti": SINGLE_OPTIONAL_STRING,
-        'authority_hints': OPTIONAL_LIST_OF_STRINGS,
+#        'aud': SINGLE_OPTIONAL_STRING,
+#        "jti": SINGLE_OPTIONAL_STRING,
         'metadata': SINGLE_OPTIONAL_METADATA,
-        'metadata_policy': SINGLE_OPTIONAL_METADATA_POLICY,
-        'metadata_policy_crit': OPTIONAL_LIST_OF_STRINGS,
-        'constraints': SINGLE_OPTIONAL_CONSTRAINS,
         "crit": OPTIONAL_LIST_OF_STRINGS,
-        "policy_language_crit": OPTIONAL_LIST_OF_STRINGS,
-        "source_endpoint": SINGLE_OPTIONAL_STRING,
-        'trust_marks': OPTIONAL_LIST_OF_DICT,
-        'trust_mark_owners': SINGLE_OPTIONAL_JSON,
-        'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
-        #
-        'trust_anchor_id': SINGLE_OPTIONAL_STRING
+#        "policy_language_crit": OPTIONAL_LIST_OF_STRINGS,
     })
 
     def verify(self, **kwargs):
@@ -526,12 +535,20 @@ class EntityStatement(JsonWebToken):
                 else:
                     raise UnknownCriticalExtension(_musts.intersection(_extra_parameters))
 
-        _metadata_policy = self.get('metadata_policy')
-        if _metadata_policy:
-            _crit = self.get("policy_language_crit")
-            if _crit:
-                _metadata_policy.verify(policy_language_crit=_crit, **kwargs)
 
+class EntityConfiguration(EntityStatement):
+    c_param = EntityStatement.c_param.copy()
+    c_param.update({
+        'authority_hints': OPTIONAL_LIST_OF_STRINGS,
+        'trust_marks': OPTIONAL_LIST_OF_DICT,
+        'trust_mark_owners': SINGLE_OPTIONAL_JSON,
+        'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
+        #
+        'trust_anchor': SINGLE_OPTIONAL_STRING
+    })
+
+    def verify(self, **kwargs):
+        super(EntityConfiguration, self).verify(**kwargs)
         _trust_mark_issuers = self.get("trust_mark_issuers")
         if _trust_mark_issuers:
             _tmi = TrustMarkIssuers(**_trust_mark_issuers)
@@ -549,12 +566,12 @@ class EntityStatement(JsonWebToken):
             for _tm in _trust_marks:
                 _trust_mark = None
                 if isinstance(_tm["trust_mark"], str):
-                    _payload = get_payload(_tm["trust_mark"])
-                    if _payload["trust_mark_id"] != _tm["trust_mark_id"]:
+                    _payload = _payload_from_jws(_tm["trust_mark"])
+                    if _payload["trust_mark_type"] != _tm["trust_mark_type"]:
                         raise ValueError("trust_mark_is values does not match")
                     _trust_mark = TrustMark(**_payload)
                 elif isinstance(_tm["trust_mark"], dict):
-                    if _tm["trust_mark"]["trust_mark_id"] != _tm["trust_mark_id"]:
+                    if _tm["trust_mark"]["trust_mark_type"] != _tm["trust_mark_type"]:
                         raise ValueError("trust_mark_is values does not match")
                     _trust_mark = TrustMark(**_tm["trust_mark"])
                 else:
@@ -562,12 +579,29 @@ class EntityStatement(JsonWebToken):
 
                 _trust_mark.verify()
 
+class SubordinateStatement(EntityStatement):
+    c_param = EntityStatement.c_param.copy()
+    c_param.update({
+        'constraints': SINGLE_OPTIONAL_CONSTRAINS,
+        'metadata_policy': SINGLE_OPTIONAL_METADATA_POLICY,
+        'metadata_policy_crit': OPTIONAL_LIST_OF_STRINGS,
+        "source_endpoint": SINGLE_OPTIONAL_STRING,
+    })
+
+    def verify(self, **kwargs):
+        super(SubordinateStatement, self).verify(**kwargs)
+        _metadata_policy = self.get('metadata_policy')
+        if _metadata_policy:
+            _crit = self.get("policy_language_crit")
+            if _crit:
+                _metadata_policy.verify(policy_language_crit=_crit, **kwargs)
+
 
 class TrustMarkDelegation(Message):
     c_param = {
         "iss": SINGLE_REQUIRED_STRING,
         "sub": SINGLE_REQUIRED_STRING,
-        "trust_mark_id": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_REQUIRED_STRING,
         "iat": SINGLE_REQUIRED_INT,
         "exp": SINGLE_OPTIONAL_INT,
         "ref": SINGLE_OPTIONAL_STRING
@@ -589,7 +623,7 @@ class TrustMark(JsonWebToken):
         "sub": SINGLE_REQUIRED_STRING,
         'iss': SINGLE_REQUIRED_STRING,
         'iat': SINGLE_REQUIRED_INT,
-        "trust_mark_id": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_REQUIRED_STRING,
         "logo_uri": SINGLE_OPTIONAL_STRING,
         "exp": SINGLE_OPTIONAL_INT,
         "ref": SINGLE_OPTIONAL_STRING,
@@ -603,22 +637,16 @@ class TrustMark(JsonWebToken):
 
         if entity_id is not None and entity_id != self["sub"]:
             raise WrongSubject("Mismatch between subject in trust mark and entity_id of entity")
-
-        exp = self.get("exp", 0)
-        if exp:
-            _now = utc_time_sans_frac()
-            if _now > exp:  # have passed the time of expiration
-                raise Expired()
-
+       
         _delegation_jwt = self.get("delegation")
         if _delegation_jwt:
             # Not verifying the signature
-            _delegation = TrustMarkDelegation(**get_payload(_delegation_jwt))
+            _delegation = TrustMarkDelegation(**_payload_from_jws(_delegation_jwt))
             _delegation.verify()
             if self.get("iss") != _delegation["sub"]:
                 raise ValueError("Not the issuer the delegation applies to")
-            if self.get("trust_mark_id") != _delegation["trust_mark_id"]:
-                raise ValueError("Not the trust mark id the delegation applies to")
+            if self.get("trust_mark_type") != _delegation["trust_mark_type"]:
+                raise ValueError("Not the trust mark type the delegation applies to")
             self["__delegation"] = _delegation
 
         return True
@@ -627,15 +655,15 @@ class TrustMark(JsonWebToken):
 class TrustMarkStatusRequest(Message):
     c_param = {
         "sub": SINGLE_OPTIONAL_STRING,
-        "trust_mark_id": SINGLE_OPTIONAL_STRING,
+        "trust_mark_type": SINGLE_OPTIONAL_STRING,
         "iat": SINGLE_OPTIONAL_INT,
         "trust_mark": SINGLE_OPTIONAL_STRING
     }
 
     def verify(self, **kwargs):
         if 'trust_mark' not in self:
-            if 'sub' not in self or 'trust_mark_id' not in self:
-                raise AttributeError('Must have both "sub" and "trust_mark_id" or "trust_mark"')
+            if 'sub' not in self or 'trust_mark_type' not in self:
+                raise AttributeError('Must have both "sub" and "trust_mark_type" or "trust_mark"')
 
 
 def trust_mark_deser(val, sformat="json"):
@@ -650,7 +678,7 @@ OPTIONAL_LIST_OF_TRUST_MARKS = ([Message], False, msg_ser, trust_mark_deser, Fal
 class ResolveRequest(Message):
     c_param = {
         "sub": SINGLE_REQUIRED_STRING,
-        "anchor": SINGLE_REQUIRED_STRING,
+        "trust_anchor": SINGLE_REQUIRED_STRING,
         "type": SINGLE_OPTIONAL_STRING
     }
 
@@ -668,7 +696,7 @@ class ListRequest(Message):
     c_param = {
         "entity_type": SINGLE_OPTIONAL_STRING,
         "trust_marked": SINGLE_OPTIONAL_BOOLEAN,
-        "trust_mark_id": SINGLE_OPTIONAL_STRING,
+        "trust_mark_type": SINGLE_OPTIONAL_STRING,
         "intermediate": SINGLE_OPTIONAL_BOOLEAN
     }
 
@@ -740,7 +768,7 @@ class HistoricalKeysResponse(Message):
 
 class TrustMarkRequest(Message):
     c_param = {
-        "trust_mark_id": SINGLE_REQUIRED_STRING,
+        "trust_mark_type": SINGLE_REQUIRED_STRING,
         "sub": SINGLE_REQUIRED_STRING
     }
 
@@ -749,7 +777,7 @@ class WhoRequest(Message):
     c_param = {
         "entity_type": SINGLE_OPTIONAL_STRING,
         "credential_type": SINGLE_OPTIONAL_STRING,
-        "trust_mark_id": SINGLE_OPTIONAL_STRING
+        "trust_mark_type": SINGLE_OPTIONAL_STRING
     }
 
 

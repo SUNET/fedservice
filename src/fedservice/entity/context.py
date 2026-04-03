@@ -11,7 +11,7 @@ from idpyoidc.impexp import ImpExp
 from idpyoidc.transform import preferred_to_registered
 
 from fedservice.entity.claims import FederationEntityClaims
-from fedservice.entity_statement.create import create_entity_statement
+from fedservice.entity_statement.create import create_entity_configuration
 
 
 def entity_type(metadata):
@@ -108,8 +108,8 @@ class FederationContext(ImpExp):
     def setup_client_authn_methods(self):
         self.client_authn_methods = client_auth_setup(self.config.get("client_authn_methods"))
 
-    def create_entity_statement(self, iss, sub, key_jar=None, metadata=None, metadata_policy=None,
-                                authority_hints=None, lifetime=0, jwks=None, **kwargs):
+    def create_entity_configuration(self, iss, key_jar=None, metadata=None, metadata_policy=None,
+                                    authority_hints=None, lifetime=0, jwks=None, **kwargs):
         if jwks:
             kwargs["jwks"] = jwks
         else:
@@ -130,9 +130,23 @@ class FederationContext(ImpExp):
         if _trust_marks:
             kwargs["trust_marks"] = _trust_marks
 
-        return create_entity_statement(iss, sub, key_jar=key_jar, metadata=metadata,
-                                       metadata_policy=metadata_policy,
-                                       authority_hints=authority_hints, lifetime=lifetime, **kwargs)
+        _trust_mark_owners = kwargs.get("trust_mark_owners")
+        if not _trust_mark_owners:
+            _trust_marks = self.get_trust_mark_owners()
+        if _trust_mark_owners:
+            kwargs["trust_mark_owners"] = _trust_mark_owners
+
+        _trust_mark_issuers = kwargs.get("trust_mark_issuers")
+        if not _trust_mark_issuers:
+            _trust_mark_issuers = self.get_trust_mark_issuers()
+        if _trust_mark_issuers:
+            kwargs["trust_mark_issuers"] = _trust_mark_issuers
+
+        if metadata_policy:
+            kwargs["metadata_policy"] = metadata_policy
+
+        return create_entity_configuration(iss, key_jar=key_jar, metadata=metadata,
+                                           authority_hints=authority_hints, lifetime=lifetime, **kwargs)
 
     def map_preferred_to_registered(self, registration_response: Optional[dict] = None):
         self.claims.use = preferred_to_registered(
@@ -167,7 +181,7 @@ class FederationContext(ImpExp):
         else:
             raise ValueError("trusted_roots")
 
-    def get_trust_marks(self)-> Optional[list]:
+    def get_trust_marks(self) -> Optional[list]:
         if self.trust_marks == None:
             return []
         elif isinstance(self.trust_marks, str):
@@ -178,6 +192,30 @@ class FederationContext(ImpExp):
             return self.trust_marks()
         else:
             raise ValueError("trust_marks")
+
+    def get_trust_mark_owners(self) -> Optional[dict]:
+        if self.trust_mark_owners == None:
+            return {}
+        elif isinstance(self.trust_mark_owners, str):
+            return json.loads(open(self.trust_mark_owners).read())
+        elif isinstance(self.trust_mark_owners, dict):
+            return self.trust_mark_owners
+        elif isinstance(self.trust_mark_owners, Callable):
+            return self.trust_mark_owners()
+        else:
+            raise ValueError("trust_mark_owners")
+
+    def get_trust_mark_issuers(self) -> Optional[dict]:
+        if self.trust_mark_issuers == None:
+            return {}
+        elif isinstance(self.trust_mark_issuers, str):
+            return json.loads(open(self.trust_mark_issuers).read())
+        elif isinstance(self.trust_mark_issuers, dict):
+            return self.trust_mark_issuers
+        elif isinstance(self.trust_mark_issuers, Callable):
+            return self.trust_mark_issuers()
+        else:
+            raise ValueError("trust_mark_issuers")
 
 
 class FederationServerContext(FederationContext):
@@ -201,10 +239,10 @@ class FederationServerContext(FederationContext):
         _sstm = config.get("self_signed_trust_marks")
         if _sstm:
             _keyjar = upstream_get('attribute', "keyjar")
-            self.signed_trust_marks = self.create_entity_statement(iss=self.entity_id,
-                                                                   sub=self.entity_id,
-                                                                   keyjar=_keyjar,
-                                                                   trust_marks=_sstm)
+            self.signed_trust_marks = self.create_entity_configuration(iss=self.entity_id,
+                                                                       # sub=self.entity_id,
+                                                                       keyjar=_keyjar,
+                                                                       trust_marks=_sstm)
 
         self.trust_marks = trust_marks
         self.jti_db = {}

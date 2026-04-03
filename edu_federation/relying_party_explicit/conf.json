@@ -79,7 +79,7 @@
     "services": [
       "entity_configuration",
       "entity_statement",
-      "oauth_registration",
+      "oidc_registration",
       "list"
     ],
     "entity_type": {
@@ -197,6 +197,7 @@
     "port": 4010,
     "server_cert": "certs/cert.pem",
     "server_key": "certs/key.pem",
-    "domain": "127.0.0.1"
+    "domain": "127.0.0.1",
+    "debug": true
   }
 }

@@ -1,6 +1,7 @@
 import logging
 from typing import Callable
 from typing import List
+from typing import Optional
 
 from cryptojwt import KeyBundle
 from cryptojwt.exception import MissingKey
@@ -10,50 +11,56 @@ from fedservice.entity.function import Function
 from fedservice.entity.utils import get_federation_entity
 from fedservice.entity_statement.constraints import meets_restrictions
 from fedservice.entity_statement.statement import TrustChain
-from fedservice.exception import UnknownTrustAnchor
 
 logger = logging.getLogger(__name__)
 
 
 class TrustChainVerifier(Function):
 
-    def __init__(self, upstream_get: Callable):
+    def __init__(self, upstream_get: Callable, trust_anchor: Optional[List[str]] = None):
         Function.__init__(self, upstream_get)
+        self.trust_anchor = trust_anchor or []
 
-    def trusted_anchor(self, entity_statement):
+    def trusted_anchor(self, entity_statement) -> bool:
         _jwt = factory(entity_statement)
         payload = _jwt.jwt.payload()
-        _federation_entity = get_federation_entity(self)
-        if _federation_entity:
-            if payload['iss'] not in _federation_entity.keyjar:
-                logger.warning(
-                    f"Trust chain ending in a trust anchor I do not know: {payload['iss']}", )
-                return False
-        else:
-            _keyjar = self.upstream_get("attribute", "keyjar")
-            if not _keyjar:
-                return False
-            elif payload['iss'] not in _keyjar:
-                logger.warning(
-                    f"Trust chain ending in a trust anchor I do not know: {payload['iss']}", )
-                return False
+        if self.trust_anchor:
+            return payload['iss'] in self.trust_anchor
+        elif self.upstream_get:
+            _federation = get_federation_entity(self)
+            return payload["iss"] in _federation.function.trust_chain_collector.trust_anchors
+        return False
 
-        return True
+    def verify_trust_chain(self, entity_statement_list: List) -> Optional[List]:
+        """
+        Verifies the trust chain. Works its way down from the Trust Anchor to the leaf.
 
-    def verify_trust_chain(self, entity_statement_list):
+        :param entity_statement_list: List of entity statements. The entity's self-signed statement last.
+        :return: List of lists of verified entity statements
+        """
+        logger.debug("Find verified trust chains")
+        res = []
+
+        for i in range(len(entity_statement_list) - 1, -1, -1):
+            if self.trusted_anchor(entity_statement_list[i]):
+                # Trust chain ending in a trust anchor I know.
+                verified_trust_chain = self._verify_trust_chain(entity_statement_list[i:])
+                if verified_trust_chain:
+                    res.append(verified_trust_chain)
+        if not res:
+            logger.debug("Found no verified trust anchors")
+        return res
+
+    def _verify_trust_chain(self, entity_statement_list: List) -> Optional[List]:
         """
         Verifies the trust chain. Works its way down from the Trust Anchor to the leaf.
 
         :param entity_statement_list: List of entity statements. The entity's self-signed statement last.
         :return: A sequence of verified entity statements
         """
-        ves = []
-
         logger.debug("verify_trust_chain")
-        if not self.trusted_anchor(entity_statement_list[0]):
-            # Trust chain ending in a trust anchor I don't know.
-            logger.debug("Unknown trust anchor")
-            return ves
+
+        verified_entity_statement = []
 
         n = len(entity_statement_list) - 1
         _keyjar = self.upstream_get("attribute", "keyjar")
@@ -75,7 +82,7 @@ class TrustChainVerifier(Function):
                 try:
                     _jwks = res['jwks']
                 except KeyError:
-                    if len(ves) != n:
+                    if len(verified_entity_statement) != n:
                         raise ValueError('Missing signing JWKS')
                 else:
                     _kb = KeyBundle(keys=_jwks['keys'])
@@ -95,10 +102,10 @@ class TrustChainVerifier(Function):
                             _kb.set(new)
                             _keyjar.add_kb(res['sub'], _kb)
 
-                ves.append(res)
+                verified_entity_statement.append(res)
 
-        if ves and meets_restrictions(ves):
-            return ves
+        if verified_entity_statement and meets_restrictions(verified_entity_statement):
+            return verified_entity_statement
         else:
             return []
 
@@ -112,7 +119,7 @@ class TrustChainVerifier(Function):
                 exp = entity_statement['exp']
         return exp
 
-    def __call__(self, chain: List[str]):
+    def __call__(self, chain: List[str]) -> Optional[List]:
         """
 
         :param chain: A chain of Entity Statements. The first one issued by a TA about an
@@ -120,19 +127,24 @@ class TrustChainVerifier(Function):
         :returns: A TrustChain instances
         """
         logger.debug("Evaluate trust chain")
-        verified_trust_chain = self.verify_trust_chain(chain)
+        verified_trust_chains = self.verify_trust_chain(chain)
 
-        if not verified_trust_chain:
+        if not verified_trust_chains:
             return None
 
-        _expires_at = self.trust_chain_expires_at(verified_trust_chain)
+        trust_chains = []
+        for verified_trust_chain in verified_trust_chains:
+            _expires_at = self.trust_chain_expires_at(verified_trust_chain)
 
-        trust_chain = TrustChain(exp=_expires_at, verified_chain=verified_trust_chain)
+            trust_chain = TrustChain(exp=_expires_at, verified_chain=verified_trust_chain)
 
-        iss_path = [x['iss'] for x in verified_trust_chain]
-        trust_chain.anchor = iss_path[0]
-        iss_path.reverse()
-        trust_chain.iss_path = iss_path
-        trust_chain.chain = chain
+            # Collect the issuers in the trust path
+            iss_path = [x['iss'] for x in verified_trust_chain]
+            trust_chain.anchor = iss_path[0]
+            iss_path.reverse()
+            trust_chain.iss_path = iss_path
 
-        return trust_chain
+            trust_chain.chain = chain
+            trust_chains.append(trust_chain)
+
+        return trust_chains

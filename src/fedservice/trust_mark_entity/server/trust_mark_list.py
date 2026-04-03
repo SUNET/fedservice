@@ -37,11 +37,11 @@ class TrustMarkList(Endpoint):
                         **kwargs) -> dict:
         _trust_mark_entity = self.upstream_get("unit")
 
-        if 'sub' in request and 'trust_mark_id' in request:
-            if _trust_mark_entity.find(request['trust_mark_id'], request['sub']):
+        if 'sub' in request and 'trust_mark_type' in request:
+            if _trust_mark_entity.find(request['trust_mark_type'], request['sub']):
                 return {"response_msg": json.dumps([request["sub"]])}
-        elif 'trust_mark_id' in request:
-            _lst = _trust_mark_entity.list(request["trust_mark_id"])
+        elif 'trust_mark_type' in request:
+            _lst = _trust_mark_entity.list(request["trust_mark_type"])
             if _lst:
                 return {"response_msg": json.dumps(_lst)}
 

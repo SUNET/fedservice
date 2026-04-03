@@ -1,64 +1,24 @@
+import logging
+
 from idpyoidc.client.exception import OtherError
 from idpyoidc.client.oidc import authorization
 from idpyoidc.exception import UnSupported
+from idpyoidc.util import conf_get
 
+from fedservice.appclient.oauth2.authorization import automatic_registration
+from fedservice.appclient.oauth2.authorization import create_request
+from fedservice.appclient.oauth2.authorization import use_authorization_endpoint
+from fedservice.appclient.oauth2.authorization import use_pushed_authorization_endpoint
+
+logger = logging.getLogger(__name__)
 
 class Authorization(authorization.Authorization):
 
     def __init__(self, upstream_get, conf=None):
         authorization.Authorization.__init__(self, upstream_get=upstream_get, conf=conf)
-        self.pre_construct.append(self._automatic_registration)
+        self.pre_construct.append(automatic_registration)
+        self.post_construct.append(create_request)
 
-    def _use_authorization_endpoint(self, context, post_args, ams):
-        if 'pushed_authorization' in context.add_on:
-            # Turn off pushed auth
-            context.add_on['pushed_authorization']['apply'] = False
+        self._use_authorization_endpoint = use_authorization_endpoint
+        self._use_pushed_authorization_endpoint = use_pushed_authorization_endpoint
 
-        if "request_object" in ams['authorization_endpoint']:
-            post_args['request_param'] = "request"
-            post_args['recv'] = context.get_metadata_claim("authorization_endpoint",
-                                                           ['openid_provider', 'oauth_authorization_server'])
-            post_args["with_jti"] = True
-            post_args["lifetime"] = self.conf.get("request_object_expires_in", 300)
-            post_args['issuer'] = self.upstream_get('attribute', 'entity_id')
-        else:
-            raise OtherError("Using request object in authentication not supported by OP")
-
-        return post_args
-
-    def _use_pushed_authorization_endpoint(self, context, post_args, ams):
-        if 'pushed_authorization' not in context.add_on:
-            raise UnSupported('Pushed Authorization not supported')
-        else:  # Make it happen
-            context.add_on['pushed_authorization']['apply'] = True
-
-    def _automatic_registration(self, request_args, post_args=None, **kwargs):
-        _context = self.upstream_get("context")
-        if post_args is None:
-            post_args = {}
-
-        _request_endpoints = _context.config.get('authorization_request_endpoints')
-        if not _request_endpoints:
-            _request_endpoints = _context.config.conf.get('authorization_request_endpoints')
-
-        _auth_meth_supported = _context.get_metadata_claim('request_authentication_methods_supported',
-                                           ['openid_provider', 'oauth_authorization_server'])
-        # what if request_param is already set ??
-        # What if request_param in not in client_auth ??
-        if _auth_meth_supported:
-            for endpoint in _request_endpoints:
-                if endpoint in _auth_meth_supported:
-                    _func = getattr(self, f'_use_{endpoint}')
-                    post_args = _func(_context, post_args, _auth_meth_supported)
-                    break
-        else:  # The OP does not support any authn methods
-            # am I already registered ?
-            if not _context.registration_response:  # Not registered
-                raise OtherError("Can not send an authorization request without being registered"
-                                 " and automatic registration not supported")
-
-        client_id = request_args.get('client_id')
-        if not client_id:
-            request_args['client_id'] = self.upstream_get('attribute', 'entity_id')
-
-        return request_args, post_args

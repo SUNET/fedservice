@@ -27,6 +27,7 @@ from idpyoidc.node import ClientUnit
 
 from fedservice.defaults import COMBINED_DEFAULT_OAUTH2_SERVICES
 from fedservice.defaults import COMBINED_DEFAULT_OIDC_SERVICES
+from fedservice.defaults import DEFAULT_REGISTRATION_TYPE
 from fedservice.message import OauthClientMetadata
 from fedservice.message import OIDCRPMetadata
 
@@ -110,6 +111,22 @@ class ClientEntity(ClientUnit):
         if "add_ons" in config:
             do_add_ons(config["add_ons"], self._service)
 
+        # What's the default ? explicit/automatic ? automatic for the time being.
+        _preference = config.get("preference")
+        if _preference:
+            registration_types = _preference.get("client_registration_types", [DEFAULT_REGISTRATION_TYPE])
+        else:
+            registration_types = [DEFAULT_REGISTRATION_TYPE]
+
+        if "automatic" not in registration_types:
+            authz_service = self._service.get("authorization")
+            # Is it safe to assume it's the last item ?
+            # authz_service.pre_construct.pop()
+            try:
+                authz_service.pre_construct.remove(authz_service._automatic_registration)
+            except AttributeError:
+                pass
+
     def setup_client_authn_methods(self, config):
         if config and "client_authn_methods" in config:
             _methods = config.get("client_authn_methods")
@@ -143,14 +160,17 @@ class ClientEntity(ClientUnit):
         return self.entity_id
 
     def get_metadata(self, entity_type="", *args):
+        logger.debug(f"{self.name}:get_metadata")
         if not entity_type:
             if self.client_type == "oauth2":
                 entity_type = "oauth_client"
             elif self.client_type == "oidc":
                 entity_type = "openid_relying_party"
 
-        return self.context.claims.get_client_metadata(entity_type=entity_type,
-                                                       metadata_schema=self.metadata_class)
+        res = self.context.claims.get_client_metadata(entity_type=entity_type,
+                                                      metadata_schema=self.metadata_class)
+        logger.debug(f"metadata:{entity_type} = {res}")
+        return res
 
     def get_registration_metadata(self, entity_type="", *args):
         if not entity_type:

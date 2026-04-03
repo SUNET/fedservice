@@ -49,7 +49,7 @@
 ./get_trust_chains.py -k -t ../setup_federation/trust_anchor.json https://127.0.0.1:8080
 
 # ============= Get new trust mark =============
-#usage: get_trust_mark.py [-h] [-k] [-f] [-t TRUST_ANCHORS] [-i TRUST_MARK_ID] [-s SUBJECT] entity_id
+#usage: get_trust_mark.py [-h] [-k] [-f] [-t TRUST_ANCHORS] [-i TRUST_MARK_TYPE] [-s SUBJECT] entity_id
 #
 #positional arguments:
 #  entity_id
@@ -59,13 +59,13 @@
 #  -k, --insecure
 #  -f, --format
 #  -t TRUST_ANCHORS, --trust_anchors TRUST_ANCHORS
-#  -i TRUST_MARK_ID, --trust_mark_id TRUST_MARK_ID
+#  -i TRUST_MARK_TYPE, --trust_mark_type TRUST_MARK_TYPE
 #  -s SUBJECT, --subject SUBJECT
 
 ./get_trust_mark.py -k -t ../setup_federation/trust_anchor.json -i http://dc4eu.example.com/PersonIdentificationData/se -s https://127.0.0.1:8080 https://127.0.0.1:6000
 
 # ============= Check Trust Mark status =============
-#usage: get_trust_mark_status.py [-h] [-k] [-f] [-i TRUST_MARK_ID] [-s SUBJECT] [-t TRUST_ANCHORS] entity_id
+#usage: get_trust_mark_status.py [-h] [-k] [-f] [-i TRUST_MARK_TYPE] [-s SUBJECT] [-t TRUST_ANCHORS] entity_id
 #
 #positional arguments:
 #  entity_id
@@ -73,7 +73,7 @@
 #options:
 #  -h, --help            show this help message and exit
 #  -k, --insecure
-#  -i TRUST_MARK_ID, --trust_mark_id TRUST_MARK_ID
+#  -i TRUST_MARK_TYPE, --trust_mark_type TRUST_MARK_TYPE
 #  -s SUBJECT, --subject SUBJECT
 #  -t TRUST_ANCHORS, --trust_anchors TRUST_ANCHORS
 

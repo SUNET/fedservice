@@ -36,6 +36,7 @@ def create_trust_chain_messages(leaf, *entity):
         _endpoint = get_federation_entity(leaf).server.get_endpoint('entity_configuration')
         where_and_what[_endpoint.full_path] = _endpoint.process_request({})["response"]
 
+    # now for each intermediate up to the trust anchor
     for n in range(0, len(entity)):
         ent = entity[n]
         if isinstance(ent, FederationEntity):
@@ -43,10 +44,11 @@ def create_trust_chain_messages(leaf, *entity):
         else:  # A Combo
             _entity = ent['federation_entity']
 
+        # First the entity configuration for the entity
         _endpoint = _entity.server.get_endpoint('entity_configuration')
-
         where_and_what[_endpoint.full_path] = _endpoint.process_request({})["response"]
 
+        # then for the subordinate statement
         _endpoint = _entity.server.get_endpoint('fetch')
         if n == 0:
             if isinstance(leaf, str):

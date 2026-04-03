@@ -1,0 +1,11 @@
+{
+  "https://oidfed.luikyv.com": [
+    "https://federation.pr-2721.ci.raidiam.io/federation_entity/5d0acc74-a8ea-4f9e-8238-3b4b22166e9a",
+    "https://ta.oidfed.data.kit.edu"
+  ],
+  "https://testop.nimbleidm.fi": [
+    "https://federation.pr-2721.ci.raidiam.io/federation_entity/5d0acc74-a8ea-4f9e-8238-3b4b22166e9a",
+    "https://ta.oidfed.data.kit.edu"
+  ],
+  "https://circle.oidfed.data.kit.edu": ["https://ta.oidfed.data.kit.edu"]
+}

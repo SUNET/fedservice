@@ -1,30 +1,31 @@
+import logging
 from typing import List
 from typing import Union
 
+from fedservice.message import Constraints
 from idpyoidc.message import Message
 
-from fedservice.entity_statement.statement import TrustChain
-from fedservice.message import EntityStatement
+from fedservice import message
 
+logger = logging.getLogger(__name__)
 
-def calculate_path_length(constraints, current_max_path_length, max_assigned):
-    try:
-        _max_len = constraints['max_path_length']
-    except KeyError:
-        if max_assigned:
+def calculate_path_length(constraints, current_max_path_length, assigned):
+    _max_len = constraints.get('max_path_length')
+    if _max_len is None:
+        current_max_path_length -= 1
+        return current_max_path_length
+    elif _max_len >= 0:
+        if assigned:
             current_max_path_length -= 1
-            return current_max_path_length
-
-        return 0
-
-    if max_assigned:
-        new_current = current_max_path_length - 1
-        if _max_len < new_current:
+            if current_max_path_length < _max_len:
+                logger.error("Subordinate can not increase Max Path Length")
+                return -1
             return _max_len
         else:
-            return new_current
-
-    return _max_len
+            return _max_len
+    else:
+        logger.error("Too many intermediates, Max Path Length exceeded")
+        return -1
 
 
 def remove_scheme(url):
@@ -78,7 +79,7 @@ def update_specs(new_constraints: list, old_constraints: list):
 
 
 def add_constraints(new_constraints: dict, naming_constraints: dict):
-    for key in ['permitted','excluded']:
+    for key in ['permitted', 'excluded']:
         if not naming_constraints[key]:
             if key in new_constraints and new_constraints[key]:
                 naming_constraints[key] = new_constraints[key][:]
@@ -119,7 +120,7 @@ def permitted(subject_id: str, permitted_id: List[str]):
     return False
 
 
-def meets_restrictions(trust_chain: List[EntityStatement]) -> bool:
+def meets_restrictions(trust_chain: List[message.EntityConfiguration]) -> bool:
     """
     Verifies that the trust chain fulfills the constraints specified in it.
 
@@ -129,20 +130,19 @@ def meets_restrictions(trust_chain: List[EntityStatement]) -> bool:
     """
 
     current_max_path_length = 0
-    max_assigned = False
+    _assigned = False
     naming_constraints = {
         "permitted": None,
         "excluded": None
     }
 
     for statement in trust_chain[:-1]:  # All but the last
-        try:
-            _constraints = statement['constraints']
-        except KeyError:
-            continue
-
-        current_max_path_length = calculate_path_length(_constraints, current_max_path_length,
-                                                        max_assigned)
+        _constraints = statement.get('constraints')
+        if _constraints is None:
+            _constraints = Constraints()
+        else:
+            current_max_path_length = calculate_path_length(_constraints, current_max_path_length, _assigned)
+            _assigned = True
 
         if current_max_path_length < 0:
             return False

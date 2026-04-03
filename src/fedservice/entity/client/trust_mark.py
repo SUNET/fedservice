@@ -51,8 +51,8 @@ class TrustMark(FederationService):
         :return: Dictionary with the necessary information for the HTTP request
         """
 
-        if "trust_mark_id" not in request_args:
-            raise MissingAttribute("Need a trust mark id")
+        if "trust_mark_type" not in request_args:
+            raise MissingAttribute("Need a trust mark type")
 
         return TrustMarkRequest(**request_args)
 

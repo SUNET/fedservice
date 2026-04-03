@@ -2,11 +2,14 @@ import logging
 from typing import List
 from typing import Optional
 
+from idpyoidc.message import Message
+
 from idpyoidc.message import oauth2
 from idpyoidc.message.oauth2 import OauthClientMetadata
 from idpyoidc.node import topmost_unit
 from idpyoidc.server.oauth2 import authorization
 
+from fedservice import get_payload
 from fedservice.appserver import import_client_keys
 from fedservice.entity.function import apply_policies
 from fedservice.entity.function import collect_trust_chains
@@ -65,7 +68,7 @@ class Authorization(authorization.Authorization):
 
         # pick one of the possible
         trust_chain = trust_chains[0]
-        _fe = topmost_unit(self)['federation_entity']
+        _fe = get_federation_entity(self)
         _fe.trust_chain_anchor = trust_chain.anchor
 
         # handle the registration request as in the non-federation case.
@@ -86,6 +89,21 @@ class Authorization(authorization.Authorization):
         except KeyError:
             return None
 
+    def get_trust_chain(self, request: Message) -> Optional[list]:
+        _trust_chain = request.get('trust_chain', [])
+        if not _trust_chain:
+            payload = {}
+            if "request" in request:
+                payload = get_payload(request["request"])
+            elif "request_uri" in request:
+                # Fetch the request
+                _context = self.upstream_get("context")
+                _req = self._do_request_uri(request, client_id="", context=_context)
+                payload = get_payload(_req)
+
+            _trust_chain = payload.get("trust_chain")
+        return _trust_chain
+
     def client_authentication(self, request, auth=None, **kwargs):
         _cid = request["client_id"]
         _context = self.upstream_get("context")
@@ -93,8 +111,8 @@ class Authorization(authorization.Authorization):
         client_info = _context.cdb.get(_cid)
         if client_info is None:
             if 'automatic' in _context.provider_info.get('client_registration_types_supported'):
-                # try the federation way
-                _trust_chain = request.get('trust_chain', [])
+                _trust_chain = self.get_trust_chain(request)
+                # try the federation way. First, not using request object or request_uri
                 registered_client_id = self.do_automatic_registration(_cid, _trust_chain)
                 if registered_client_id is None:
                     return {
@@ -126,5 +144,5 @@ class Authorization(authorization.Authorization):
         if _client_id:
             _tcs = _fe.trust_chain.get(_client_id, {})
             if _tcs:
-                aresp['trust_anchor_id'] = _tcs[0].anchor
+                aresp['trust_anchor'] = _tcs[0].anchor
         return aresp
