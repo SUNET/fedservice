@@ -135,5 +135,5 @@ class Authorization(authorization.Authorization):
         if _client_id:
             _tcs = _fe.trust_chain.get(_client_id, {})
             if _tcs:
-                aresp['trust_anchor_id'] = _tcs[0].anchor
+                aresp['trust_anchor'] = _tcs[0].anchor
         return aresp

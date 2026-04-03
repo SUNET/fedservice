@@ -137,11 +137,11 @@ class TrustMarkVerifier(Function):
         else:
             return _mark
 
-    def verify_delegation(self, trust_mark, trust_anchor_id):
+    def verify_delegation(self, trust_mark, trust_anchor):
         _federation_entity = get_federation_entity(self)
         _collector = _federation_entity.function.trust_chain_collector
         # Deal with the delegation
-        _entity_configuration = _collector.get_verified_self_signed_entity_configuration(trust_anchor_id)
+        _entity_configuration = _collector.get_verified_self_signed_entity_configuration(trust_anchor)
 
         if trust_mark['trust_mark_id'] not in _entity_configuration['trust_mark_issuers']:
             return None

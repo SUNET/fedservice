@@ -504,7 +504,7 @@ class EntityStatement(JsonWebToken):
         'trust_mark_owners': SINGLE_OPTIONAL_JSON,
         'trust_mark_issuers': SINGLE_OPTIONAL_JSON,
         #
-        'trust_anchor_id': SINGLE_OPTIONAL_STRING
+        'trust_anchor': SINGLE_OPTIONAL_STRING
     })
 
     def verify(self, **kwargs):

@@ -117,8 +117,8 @@ class Registration(registration.Registration):
 
         return resp
 
-    def _get_trust_anchor_id(self, entity_statement):
-        return entity_statement.get('trust_anchor_id')
+    def _get_trust_anchor(self, entity_statement):
+        return entity_statement.get('trust_anchor')
 
     def _signature_verifies(self, entity_id, trust_anchor, federation_entity):
         _chains, _ = collect_trust_chains(self.upstream_get('unit'),
@@ -143,9 +143,9 @@ class Registration(registration.Registration):
 
         payload = verify_self_signed_signature(resp)
         # Do I trust the TA the OP chose ?
-        logger.debug(f"trust_anchor_id: {payload['trust_anchor_id']}")
+        logger.debug(f"trust_anchor: {payload['trust_anchor']}")
         if (payload[
-            'trust_anchor_id'] not in
+            'trust_anchor'] not in
                 _federation_entity.function.trust_chain_collector.trust_anchors):
             raise ValueError("Trust anchor I don't trust")
 
@@ -160,7 +160,7 @@ class Registration(registration.Registration):
                 return _verifier_response
         else:
             # verify the signature on the response from the OP
-            if not self._signature_verifies(payload["iss"], payload['trust_anchor_id'],
+            if not self._signature_verifies(payload["iss"], payload['trust_anchor'],
                                             _federation_entity):
                 raise SignatureFailure("Could not verify signature")
 
@@ -170,7 +170,7 @@ class Registration(registration.Registration):
 
             # should only be one chain
             if len(_trust_chains) != 1:
-                raise SystemError(f"More then one chain ending in {payload['trust_anchor_id']}")
+                raise SystemError(f"More then one chain ending in {payload['trust_anchor']}")
 
             _metadata = payload.get("metadata")
             if _metadata:
